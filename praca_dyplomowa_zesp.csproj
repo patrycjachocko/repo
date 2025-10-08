@@ -7,10 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\Comments\" />
+    <Folder Include="Models\Interactions\Comments\" />
+    <Folder Include="Models\Interactions\" />
     <Folder Include="Models\Tips\" />
-    <Folder Include="Models\Rates\" />
-    <Folder Include="Models\Reactions\" />
+    <Folder Include="Models\Interactions\Rates\" />
+    <Folder Include="Models\Interactions\Reactions\" />
     <Folder Include="Models\Users\" />
   </ItemGroup>
 
