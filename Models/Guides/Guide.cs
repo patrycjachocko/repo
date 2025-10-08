@@ -9,6 +9,7 @@
         public DateTime UpdatedAt { get; set; }
         public string Author { get; set; } //ściągać z usera nazwę czy odnośnik do usera? żeby wejść na profil
         public string Category { get; set; } //tytuł gry?
+        public string PrimaryImage { get; set; }
         public string ImageUrl { get; set; } //czy wiele? raczej tak. jak to zrobić? nw
         public bool IsPublished { get; set; } //nw czy bedzie potrzebne
         public int Views { get; set; } //nw jak to niby bedziemy liczyc ale slay
