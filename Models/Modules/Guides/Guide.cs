@@ -1,4 +1,4 @@
-﻿namespace praca_dyplomowa_zesp.Models.Guides
+﻿namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {
     public class Guide
     {
