@@ -25,5 +25,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         //public string Difficulty { get; set; } //raczej nbd
         public int EstimatedReadTime { get; set; } //to by bylo cool
         //public string SourceUrl { get; set; } //?
+        public string? Version { get; set; } //wersja gry //moze nie byc potrzebna
+        public ICollection<Models.Interactions.Comments.Comment> Comments { get; set; } //lista komow?
     }
 }
