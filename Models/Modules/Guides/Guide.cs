@@ -1,7 +1,10 @@
-﻿namespace praca_dyplomowa_zesp.Models.Modules.Guides
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {
     public class Guide
     {
+        [Key]
         public int Id { get; set; }
         public string Title { get; set; }
         public string Content { get; set; }
