@@ -7,9 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\Modules\Libraries\UserLibrary\" />
-    <Folder Include="Models\Modules\Libraries\MainLibrary\" />
     <Folder Include="Models\Users\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
 </Project>
