@@ -9,7 +9,7 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Comments
     public class Comment
     {
             [Key]
-            public Guid Id { get; set; } = Guid.NewGuid();
+            public Guid Id { get; set; }
 
             [Required]
             [MaxLength(2000)]
@@ -20,7 +20,7 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Comments
 
             public User User { get; set; } = null!;
 
-            public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+            public DateTime CreatedAt { get; set; }
             public DateTime? UpdatedAt { get; set; }
 
             public ICollection<Reply> Replies { get; set; } = new List<Reply>();

@@ -1,59 +1,80 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Identity; // Niezbędne do dziedziczenia po IdentityUser
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace praca_dyplomowa_zesp.Models.Users
 {
-    public class User
+    public class User : IdentityUser<Guid>
     {
-        [Key]
-        public Guid Id { get; set; }
-
         [Required]
         [StringLength(16)]
         public string Login { get; set; } = string.Empty;
 
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        public string NormalizedEmail { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Password is required.")]
-        [Display(Name = "Password")]
-        [RegularExpression(@"^[a-zA-Z0-9]+$", ErrorMessage = "Password must be alphanumeric.")]
-        [DataType(DataType.Password)]
-        [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]
-        [Compare("ConfirmPassword", ErrorMessage = "Passwords do not match.")]
-        public string PasswordHash { get; set; } = string.Empty;
-
         public string Role { get; set; } = "User";
-        public bool IsEmailConfirmed { get; set; } = false;
-        [MaxLength(500)]
-        public string? EmailConfirmationToken { get; set; }
-        public DateTime? EmailConfirmationTokenCreatedAt { get; set; }
+
         public bool isBanned { get; set; } = false;
-        public DateTimeOffset BanEnd { get; set; }
+        public DateTimeOffset? BanEnd { get; set; }
         public string? BanReason { get; set; }
-        [MaxLength(500)]
-        public string? PasswordResetToken { get; set; }
-        public DateTime? PasswordResetTokenCreatedAt { get; set; }
-        public bool TwoFactorEnabled { get; set; } = false;
-        public string? UserName { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime? LastActive { get; set; }
+
         public byte[]? ProfilePicture { get; set; }
         public string? ProfilePictureContentType { get; set; }
+
         public byte[]? Banner { get; set; }
         public string? BannerContentType { get; set; }
 
-        /// <summary>
-        /// Konstruktor zapewniający, że nowe Id i data utworzenia
-        /// są przypisywane tylko podczas tworzenia nowej instancji obiektu.
-        /// </summary>
-        public User()
+        /*public User()
         {
-            Id = Guid.NewGuid();
             CreatedAt = DateTime.UtcNow;
-        }
+            LastActive = DateTime.UtcNow;
+        }*/
+    }
+    public class LoginViewModel
+    {
+        [Required(ErrorMessage = "Login jest wymagany.")]
+        [StringLength(16)]
+        public string Login { get; set; }
+
+        [Required(ErrorMessage = "Hasło jest wymagane.")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+
+        [Display(Name = "Zapamiętaj mnie")]
+        public bool RememberMe { get; set; }
+    }
+
+    public class RegisterViewModel
+    {
+        [Required(ErrorMessage = "Login jest wymagany.")]
+        [StringLength(16, MinimumLength = 3, ErrorMessage = "Login musi mieć od 3 do 16 znaków.")]
+        public string Login { get; set; }
+
+        [Required(ErrorMessage = "Nazwa użytkownika jest wymagana.")]
+        [Display(Name = "Nazwa użytkownika")]
+        public string UserName { get; set; }
+
+        [Required(ErrorMessage = "Adres e-mail jest wymagany.")]
+        [EmailAddress(ErrorMessage = "Nieprawidłowy format adresu e-mail.")]
+        public string Email { get; set; }
+
+        [Required(ErrorMessage = "Hasło jest wymagane.")]
+        [DataType(DataType.Password)]
+        [StringLength(100, ErrorMessage = "{0} musi mieć co najmniej {2} i maksymalnie {1} znaków.", MinimumLength = 8)]
+        [Display(Name = "Hasło")]
+        public string Password { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Potwierdź hasło")]
+        [Compare("Password", ErrorMessage = "Hasła nie są zgodne.")]
+        public string ConfirmPassword { get; set; }
+    }
+
+    public class ForgotPasswordViewModel
+    {
+        [Required(ErrorMessage = "Adres e-mail jest wymagany.")]
+        [EmailAddress]
+        public string Email { get; set; }
     }
 }

@@ -7,7 +7,7 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Reactions
         public int Id { get; set; }
         public ReactionType Type { get; set; }
         public User User { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
-        public DateTime LastUpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } 
+        public DateTime LastUpdatedAt { get; set; }
     }
 }

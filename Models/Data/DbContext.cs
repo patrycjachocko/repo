@@ -1,17 +1,19 @@
-﻿using praca_dyplomowa_zesp.Models.Interactions.Comments;
-using praca_dyplomowa_zesp.Models.Users;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection.Emit;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using praca_dyplomowa_zesp.Models.Modules.Guides;
-using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
+using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
+using praca_dyplomowa_zesp.Models.Modules.Guides;
+using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
+using praca_dyplomowa_zesp.Models.Users;
 
 namespace praca_dyplomowa.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -41,20 +43,7 @@ namespace praca_dyplomowa.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Definiujemy tutaj naszego testowego użytkownika, podając WSZYSTKIE wymagane wartości na sztywno
-            modelBuilder.Entity<User>().HasData(
-                new User
-                {
-                    Id = Guid.Parse("f2e330a6-5c93-4a7a-8b1a-952934c7a694"),
-                    Login = "TestUser",
-                    Email = "test@example.com",
-                    PasswordHash = "dummy_hash_for_testing_purposes",
-                    NormalizedEmail = "TEST@EXAMPLE.COM",
-                    UserName = "Użytkownik Testowy",
-                    // Dodajemy na sztywno datę, aby uniknąć dynamicznej wartości z konstruktora
-                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-                }
-            );
+            
 
             // Konfiguracja relacji pozostaje bez zmian
             modelBuilder.Entity<GameInLibrary>()

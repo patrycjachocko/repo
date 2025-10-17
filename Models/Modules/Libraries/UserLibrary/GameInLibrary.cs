@@ -10,9 +10,6 @@ public class GameInLibrary
     [Required]
     public long IgdbGameId { get; set; }
 
-    /// <summary>
-    /// Klucz obcy - musi być tego samego typu co User.Id, czyli Guid
-    /// </summary>
     public Guid UserId { get; set; } // ZMIANA Z INT NA GUID
     public virtual User User { get; set; }
 
