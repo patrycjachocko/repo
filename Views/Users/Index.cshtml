@@ -1,0 +1,155 @@
+﻿@model IEnumerable<praca_dyplomowa_zesp.Models.Users.User>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Login)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Email)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.NormalizedEmail)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PasswordHash)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Role)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IsEmailConfirmed)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.EmailConfirmationToken)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.EmailConfirmationTokenCreatedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.isBanned)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BanEnd)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BanReason)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PasswordResetToken)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PasswordResetTokenCreatedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TwoFactorEnabled)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.UserName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CreatedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.LastActive)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ProfilePicture)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ProfilePictureContentType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Banner)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BannerContentType)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Login)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Email)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.NormalizedEmail)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PasswordHash)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Role)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IsEmailConfirmed)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.EmailConfirmationToken)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.EmailConfirmationTokenCreatedAt)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.isBanned)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.BanEnd)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.BanReason)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PasswordResetToken)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PasswordResetTokenCreatedAt)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TwoFactorEnabled)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.UserName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedAt)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.LastActive)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ProfilePicture)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ProfilePictureContentType)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Banner)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.BannerContentType)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

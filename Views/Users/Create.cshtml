@@ -1,0 +1,133 @@
+﻿@model praca_dyplomowa_zesp.Models.Users.User
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h1>Create</h1>
+
+<h4>User</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Login" class="control-label"></label>
+                <input asp-for="Login" class="form-control" />
+                <span asp-validation-for="Login" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Email" class="control-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NormalizedEmail" class="control-label"></label>
+                <input asp-for="NormalizedEmail" class="form-control" />
+                <span asp-validation-for="NormalizedEmail" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PasswordHash" class="control-label"></label>
+                <input asp-for="PasswordHash" class="form-control" />
+                <span asp-validation-for="PasswordHash" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Role" class="control-label"></label>
+                <input asp-for="Role" class="form-control" />
+                <span asp-validation-for="Role" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="IsEmailConfirmed" /> @Html.DisplayNameFor(model => model.IsEmailConfirmed)
+                </label>
+            </div>
+            <div class="form-group">
+                <label asp-for="EmailConfirmationToken" class="control-label"></label>
+                <input asp-for="EmailConfirmationToken" class="form-control" />
+                <span asp-validation-for="EmailConfirmationToken" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="EmailConfirmationTokenCreatedAt" class="control-label"></label>
+                <input asp-for="EmailConfirmationTokenCreatedAt" class="form-control" />
+                <span asp-validation-for="EmailConfirmationTokenCreatedAt" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="isBanned" /> @Html.DisplayNameFor(model => model.isBanned)
+                </label>
+            </div>
+            <div class="form-group">
+                <label asp-for="BanEnd" class="control-label"></label>
+                <input asp-for="BanEnd" class="form-control" />
+                <span asp-validation-for="BanEnd" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="BanReason" class="control-label"></label>
+                <input asp-for="BanReason" class="form-control" />
+                <span asp-validation-for="BanReason" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PasswordResetToken" class="control-label"></label>
+                <input asp-for="PasswordResetToken" class="form-control" />
+                <span asp-validation-for="PasswordResetToken" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PasswordResetTokenCreatedAt" class="control-label"></label>
+                <input asp-for="PasswordResetTokenCreatedAt" class="form-control" />
+                <span asp-validation-for="PasswordResetTokenCreatedAt" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="TwoFactorEnabled" /> @Html.DisplayNameFor(model => model.TwoFactorEnabled)
+                </label>
+            </div>
+            <div class="form-group">
+                <label asp-for="UserName" class="control-label"></label>
+                <input asp-for="UserName" class="form-control" />
+                <span asp-validation-for="UserName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CreatedAt" class="control-label"></label>
+                <input asp-for="CreatedAt" class="form-control" />
+                <span asp-validation-for="CreatedAt" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="LastActive" class="control-label"></label>
+                <input asp-for="LastActive" class="form-control" />
+                <span asp-validation-for="LastActive" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="ProfilePicture" class="control-label"></label>
+                <input asp-for="ProfilePicture" class="form-control" />
+                <span asp-validation-for="ProfilePicture" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="ProfilePictureContentType" class="control-label"></label>
+                <input asp-for="ProfilePictureContentType" class="form-control" />
+                <span asp-validation-for="ProfilePictureContentType" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Banner" class="control-label"></label>
+                <input asp-for="Banner" class="form-control" />
+                <span asp-validation-for="Banner" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="BannerContentType" class="control-label"></label>
+                <input asp-for="BannerContentType" class="form-control" />
+                <span asp-validation-for="BannerContentType" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
