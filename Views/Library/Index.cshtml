@@ -1,59 +1,59 @@
-﻿@model IEnumerable<GameInLibrary>
+﻿@model IEnumerable<MainLibraryViewModel>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Moja Biblioteka";
 }
 
-<h1>Index</h1>
+<style>
+    .game-card {
+        transition: transform .2s ease-in-out;
+        border: 1px solid #ddd;
+    }
+
+        .game-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .game-card a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+    .card-img-top {
+        width: 100%;
+        height: 350px;
+        object-fit: cover;
+    }
+</style>
+
+<h1>Moja Biblioteka</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" class="btn btn-primary">Dodaj nową grę (testowo)</a>
 </p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.IgdbGameId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UserId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DateAddedToLibrary)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CurrentUserStoryMission)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CurrentUserStoryProgressPercent)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.IgdbGameId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UserId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DateAddedToLibrary)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CurrentUserStoryMission)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CurrentUserStoryProgressPercent)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info" role="alert">
+        Twoja biblioteka jest pusta. Dodaj swoją pierwszą grę!
+    </div>
 }
-    </tbody>
-</table>
+else
+{
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        @foreach (var item in Model)
+        {
+            <div class="col">
+                <div class="card h-100 game-card">
+                    <a asp-action="Details" asp-route-id="@item.DbId">
+                        <img src="@item.CoverUrl" class="card-img-top" alt="Okładka @item.Name">
+                        <div class="card-body">
+                            <h5 class="card-title text-center">@Html.DisplayFor(modelItem => item.Name)</h5>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+}

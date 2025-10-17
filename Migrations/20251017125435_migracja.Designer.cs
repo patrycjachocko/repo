@@ -11,8 +11,8 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251017112940_migracja1")]
-    partial class migracja1
+    [Migration("20251017125435_migracja")]
+    partial class migracja
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,15 +38,12 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Property<long>("IgdbGameId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("UserId1")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId1");
+                    b.HasIndex("UserId");
 
                     b.ToTable("GamesInLibraries");
                 });
@@ -67,15 +64,12 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Property<bool>("IsUnlocked")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("UserId1")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId1");
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserAchievements");
                 });
@@ -375,13 +369,30 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("f2e330a6-5c93-4a7a-8b1a-952934c7a694"),
+                            BanEnd = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "test@example.com",
+                            IsEmailConfirmed = false,
+                            Login = "TestUser",
+                            NormalizedEmail = "TEST@EXAMPLE.COM",
+                            PasswordHash = "dummy_hash_for_testing_purposes",
+                            Role = "User",
+                            TwoFactorEnabled = false,
+                            UserName = "Użytkownik Testowy",
+                            isBanned = false
+                        });
                 });
 
             modelBuilder.Entity("GameInLibrary", b =>
                 {
                     b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId1")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -392,7 +403,7 @@ namespace praca_dyplomowa_zesp.Migrations
                 {
                     b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId1")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

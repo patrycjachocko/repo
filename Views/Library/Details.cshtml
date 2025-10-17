@@ -1,48 +1,130 @@
-﻿@model GameInLibrary
+﻿@model GameInLibraryViewModel
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = Model.Name;
 }
 
-<h1>Details</h1>
+<style>
+    .achievement-icon {
+        width: 64px;
+        height: 64px;
+        cursor: pointer;
+        transition: filter .2s ease-in-out;
+        border-radius: 5px;
+    }
 
-<div>
-    <h4>GameInLibrary</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IgdbGameId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IgdbGameId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.UserId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.UserId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DateAddedToLibrary)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DateAddedToLibrary)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CurrentUserStoryMission)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CurrentUserStoryMission)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CurrentUserStoryProgressPercent)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CurrentUserStoryProgressPercent)
-        </dd>
-    </dl>
+        .achievement-icon.locked {
+            filter: grayscale(100%);
+        }
+
+        .achievement-icon:hover {
+            filter: brightness(1.2);
+        }
+</style>
+
+<h1>@Model.Name</h1>
+<hr />
+
+<div class="row">
+    <div class="col-md-4">
+        <img src="@Model.CoverUrl" class="img-fluid rounded" alt="Okładka @Model.Name" />
+        <div class="d-grid gap-2 mt-3">
+            <a asp-action="Edit" asp-route-id="@Model.DbId" class="btn btn-warning">Edytuj postęp</a>
+            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-danger">Usuń z biblioteki</a>
+            <a asp-action="Index" class="btn btn-secondary">Wróć do listy</a>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <h4>Informacje o grze</h4>
+        <dl class="row">
+            <dt class="col-sm-4">Deweloper</dt>
+            <dd class="col-sm-8">@Model.Developer</dd>
+
+            <dt class="col-sm-4">Data wydania</dt>
+            <dd class="col-sm-8">@Model.ReleaseDate</dd>
+
+            <dt class="col-sm-4">Gatunki</dt>
+            <dd class="col-sm-8">@(Model.Genres != null ? string.Join(", ", Model.Genres) : "Brak")</dd>
+        </dl>
+
+        <h4 class="mt-4">Twój postęp</h4>
+        <dl class="row">
+            <dt class="col-sm-4">Data dodania</dt>
+            <dd class="col-sm-8">@Model.DateAddedToLibrary.ToString("d MMMM yyyy")</dd>
+
+            <dt class="col-sm-4">Aktualna misja</dt>
+            <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.CurrentUserStoryMission) ? "Nie podano" : Model.CurrentUserStoryMission)</dd>
+
+            <dt class="col-sm-4">Ukończenie fabuły</dt>
+            <dd class="col-sm-8">
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: @Model.CurrentUserStoryProgressPercent%;" aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">@Model.CurrentUserStoryProgressPercent%</div>
+                </div>
+            </dd>
+        </dl>
+
+        <h4 class="mt-4">Osiągnięcia</h4>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var ach in Model.Achievements)
+            {
+                <img src="@ach.IconUrl"
+                     id="ach-@ach.ExternalId"
+                     class="achievement-icon @(ach.IsUnlocked ? "" : "locked")"
+                     title="@ach.Name: @ach.Description"
+                     data-bs-toggle="tooltip"
+                     data-bs-placement="top"
+                     onclick="toggleAchievement('@Model.IgdbGameId', '@ach.ExternalId')">
+            }
+        </div>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+
+@section Scripts {
+    <script>
+        // Inicjalizacja tooltipów z Bootstrapa
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        async function toggleAchievement(igdbGameId, achievementExternalId) {
+            const icon = document.getElementById(`ach-${achievementExternalId}`);
+            if (!icon) return;
+
+            // Pobieramy token walidacyjny, aby żądanie POST było bezpieczne
+            const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            try {
+                const response = await fetch('/Library/ToggleAchievement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': antiforgeryToken // Ważne dla bezpieczeństwa!
+                    },
+                    body: `igdbGameId=${igdbGameId}&achievementExternalId=${achievementExternalId}`
+                });
+
+                if (!response.ok) {
+                    throw new Error("Błąd serwera");
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.isUnlocked) {
+                        icon.classList.remove('locked');
+                    } else {
+                        icon.classList.add('locked');
+                    }
+                } else {
+                    console.error("Błąd:", result.error);
+                    alert("Wystąpił błąd podczas zmiany statusu osiągnięcia.");
+                }
+
+            } catch (error) {
+                console.error("Błąd sieci:", error);
+                alert("Wystąpił błąd komunikacji z serwerem.");
+            }
+        }
+    </script>
+}

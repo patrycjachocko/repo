@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace praca_dyplomowa_zesp.Migrations
 {
     /// <inheritdoc />
-    public partial class migracja1 : Migration
+    public partial class migracja : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -125,8 +125,7 @@ namespace praca_dyplomowa_zesp.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     IgdbGameId = table.Column<long>(type: "INTEGER", nullable: false),
-                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
-                    UserId1 = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     DateAddedToLibrary = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CurrentUserStoryMission = table.Column<string>(type: "TEXT", nullable: true),
                     CurrentUserStoryProgressPercent = table.Column<int>(type: "INTEGER", nullable: false)
@@ -135,8 +134,8 @@ namespace praca_dyplomowa_zesp.Migrations
                 {
                     table.PrimaryKey("PK_GamesInLibraries", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_GamesInLibraries_Users_UserId1",
-                        column: x => x.UserId1,
+                        name: "FK_GamesInLibraries_Users_UserId",
+                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -190,8 +189,7 @@ namespace praca_dyplomowa_zesp.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
-                    UserId1 = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     IgdbGameId = table.Column<long>(type: "INTEGER", nullable: false),
                     AchievementExternalId = table.Column<string>(type: "TEXT", nullable: false),
                     IsUnlocked = table.Column<bool>(type: "INTEGER", nullable: false)
@@ -200,8 +198,8 @@ namespace praca_dyplomowa_zesp.Migrations
                 {
                     table.PrimaryKey("PK_UserAchievements", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_UserAchievements_Users_UserId1",
-                        column: x => x.UserId1,
+                        name: "FK_UserAchievements_Users_UserId",
+                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -235,6 +233,11 @@ namespace praca_dyplomowa_zesp.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "Id", "BanEnd", "BanReason", "Banner", "BannerContentType", "CreatedAt", "Email", "EmailConfirmationToken", "EmailConfirmationTokenCreatedAt", "IsEmailConfirmed", "LastActive", "Login", "NormalizedEmail", "PasswordHash", "PasswordResetToken", "PasswordResetTokenCreatedAt", "ProfilePicture", "ProfilePictureContentType", "Role", "TwoFactorEnabled", "UserName", "isBanned" },
+                values: new object[] { new Guid("f2e330a6-5c93-4a7a-8b1a-952934c7a694"), new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "test@example.com", null, null, false, null, "TestUser", "TEST@EXAMPLE.COM", "dummy_hash_for_testing_purposes", null, null, null, null, "User", false, "Użytkownik Testowy", false });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Comments_GuideId",
                 table: "Comments",
@@ -246,9 +249,9 @@ namespace praca_dyplomowa_zesp.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_GamesInLibraries_UserId1",
+                name: "IX_GamesInLibraries_UserId",
                 table: "GamesInLibraries",
-                column: "UserId1");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rates_UserId",
@@ -271,9 +274,9 @@ namespace praca_dyplomowa_zesp.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserAchievements_UserId1",
+                name: "IX_UserAchievements_UserId",
                 table: "UserAchievements",
-                column: "UserId1");
+                column: "UserId");
         }
 
         /// <inheritdoc />

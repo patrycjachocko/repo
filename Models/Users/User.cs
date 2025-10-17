@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace praca_dyplomowa_zesp.Models.Users
 {
     public class User
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid Id { get; set; }
 
         [Required]
         [StringLength(16)]
@@ -23,10 +24,9 @@ namespace praca_dyplomowa_zesp.Models.Users
         [DataType(DataType.Password)]
         [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]
         [Compare("ConfirmPassword", ErrorMessage = "Passwords do not match.")]
-
         public string PasswordHash { get; set; } = string.Empty;
-        public string Role { get; set; } = "User"; // Default role is "User"
 
+        public string Role { get; set; } = "User";
         public bool IsEmailConfirmed { get; set; } = false;
         [MaxLength(500)]
         public string? EmailConfirmationToken { get; set; }
@@ -39,12 +39,21 @@ namespace praca_dyplomowa_zesp.Models.Users
         public DateTime? PasswordResetTokenCreatedAt { get; set; }
         public bool TwoFactorEnabled { get; set; } = false;
         public string? UserName { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
         public DateTime? LastActive { get; set; }
-        public byte[]? ProfilePicture { get; set; } //podmienic na deafultowy
+        public byte[]? ProfilePicture { get; set; }
         public string? ProfilePictureContentType { get; set; }
-        public byte[]? Banner { get; set; } //podmienic na deafultowy
+        public byte[]? Banner { get; set; }
         public string? BannerContentType { get; set; }
 
+        /// <summary>
+        /// Konstruktor zapewniający, że nowe Id i data utworzenia
+        /// są przypisywane tylko podczas tworzenia nowej instancji obiektu.
+        /// </summary>
+        public User()
+        {
+            Id = Guid.NewGuid();
+            CreatedAt = DateTime.UtcNow;
+        }
     }
 }

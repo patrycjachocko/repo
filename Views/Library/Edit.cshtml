@@ -1,54 +1,42 @@
 ﻿@model GameInLibrary
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edytuj postęp";
 }
 
-<h1>Edit</h1>
-
-<h4>GameInLibrary</h4>
+<h1>Edytuj postęp</h1>
+<h4>Gra o ID IGDB: @Model.IgdbGameId</h4>
 <hr />
+
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <form asp-action="Edit">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="IgdbGameId" class="control-label"></label>
-                <input asp-for="IgdbGameId" class="form-control" />
-                <span asp-validation-for="IgdbGameId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UserId" class="control-label"></label>
-                <input asp-for="UserId" class="form-control" />
-                <span asp-validation-for="UserId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="DateAddedToLibrary" class="control-label"></label>
-                <input asp-for="DateAddedToLibrary" class="form-control" />
-                <span asp-validation-for="DateAddedToLibrary" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CurrentUserStoryMission" class="control-label"></label>
+            <input type="hidden" asp-for="IgdbGameId" />
+            <input type="hidden" asp-for="UserId" />
+            <input type="hidden" asp-for="DateAddedToLibrary" />
+
+            <div class="form-group mb-3">
+                <label asp-for="CurrentUserStoryMission" class="control-label">Aktualna misja fabularna</label>
                 <input asp-for="CurrentUserStoryMission" class="form-control" />
                 <span asp-validation-for="CurrentUserStoryMission" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="CurrentUserStoryProgressPercent" class="control-label"></label>
-                <input asp-for="CurrentUserStoryProgressPercent" class="form-control" />
+            <div class="form-group mb-3">
+                <label asp-for="CurrentUserStoryProgressPercent" class="control-label">Procent ukończenia fabuły</label>
+                <input type="range" class="form-range" min="0" max="100" asp-for="CurrentUserStoryProgressPercent">
                 <span asp-validation-for="CurrentUserStoryProgressPercent" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+                <input type="submit" value="Zapisz zmiany" class="btn btn-primary" />
+                <a asp-action="Index" class="btn btn-secondary">Anuluj</a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }
