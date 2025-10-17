@@ -14,7 +14,7 @@ namespace praca_dyplomowa_zesp.Models.API
     public class ApiGame { public long Id { get; set; } public string Name { get; set; } public ApiCover Cover { get; set; } public List<ApiGenre> Genres { get; set; } public List<ApiInvolvedCompany> Involved_companies { get; set; } public List<ApiReleaseDate> Release_dates { get; set; } }
     public class ApiCover { public string Url { get; set; } }
     public class ApiGenre { public string Name { get; set; } }
-    public class ApiInvolvedCompany { public ApiCompany Company { get; set; } }
+    public class ApiInvolvedCompany { public ApiCompany Company { get; set; } public bool developer { get; set; } }
     public class ApiCompany { public string Name { get; set; } }
     public class ApiReleaseDate { public string Human { get; set; } }
     public class ApiAchievement { public long Id { get; set; } public string Name { get; set; } public string Description { get; set; } public ApiAchievementIcon Achievement_icon { get; set; } }
@@ -78,7 +78,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var gameFromDb = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == TEST_USER_ID);
             if (gameFromDb == null) return NotFound();
 
-            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, release_dates.human; where id = {gameFromDb.IgdbGameId}; limit 1;";
+            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human; where id = {gameFromDb.IgdbGameId}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
             var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<Models.API.ApiGame>>(gameJsonResponse) ?? new List<Models.API.ApiGame>()).FirstOrDefault();
 
@@ -103,7 +103,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 Name = gameDetailsFromApi?.Name ?? "Brak nazwy",
                 CoverUrl = gameDetailsFromApi?.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
                 Genres = gameDetailsFromApi?.Genres?.Select(g => g.Name).ToList(),
-                Developer = gameDetailsFromApi?.Involved_companies?.FirstOrDefault()?.Company?.Name,
+                Developer = gameDetailsFromApi?.Involved_companies?.FirstOrDefault(ic => ic.developer)?.Company?.Name,
                 ReleaseDate = gameDetailsFromApi?.Release_dates?.FirstOrDefault()?.Human,
                 DateAddedToLibrary = gameFromDb.DateAddedToLibrary,
                 CurrentUserStoryMission = gameFromDb.CurrentUserStoryMission,
