@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json; // Ważne: dodaj ten using
+using praca_dyplomowa_zesp.Models.API;
 
 // Definicje minimalnych klas do odbioru danych z API. Można je przenieść do osobnych plików.
 namespace praca_dyplomowa_zesp.Models.API
@@ -83,7 +84,13 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var achievementQuery = $"fields name, description, achievement_icon.url; where game = {gameFromDb.IgdbGameId}; limit 50;";
             var achievementJsonResponse = await _igdbClient.ApiRequestAsync("achievements", achievementQuery);
-            var achievementsFromApi = JsonConvert.DeserializeObject<List<Models.API.ApiAchievement>>(achievementJsonResponse) ?? new List<Models.API.ApiAchievement>();
+
+            // Sprawdzamy, czy odpowiedź z API nie jest pusta, ZANIM ją przetworzymy.
+            var achievementsFromApi = new List<ApiAchievement>();
+            if (!string.IsNullOrEmpty(achievementJsonResponse))
+            {
+                achievementsFromApi = JsonConvert.DeserializeObject<List<ApiAchievement>>(achievementJsonResponse) ?? new List<ApiAchievement>();
+            }
 
             var userAchievementsFromDb = await _context.UserAchievements
                 .Where(ua => ua.UserId == TEST_USER_ID && ua.IgdbGameId == gameFromDb.IgdbGameId)
