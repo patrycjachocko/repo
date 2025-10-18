@@ -1,0 +1,50 @@
+﻿@model praca_dyplomowa_zesp.Models.Modules.Games.GameDetailViewModel
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<h1>@Model.Name</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded" alt="Okładka @Model.Name">
+
+        <div class="d-grid gap-2 mt-3">
+            @if (Model.IsInLibrary)
+            {
+                <a asp-controller="Library" asp-action="Index" class="btn btn-success btn-lg">Gra jest już w Twojej bibliotece</a>
+            }
+            else
+            {
+                <form asp-controller="Library" asp-action="Create" method="post">
+                    <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Dodaj do biblioteki</button>
+                </form>
+            }
+            <a asp-action="Index" class="btn btn-secondary">Powrót do przeglądarki</a>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <h3>Szczegóły gry</h3>
+        <dl class="row">
+            <dt class="col-sm-3">Deweloper</dt>
+            <dd class="col-sm-9">@(Model.Developer ?? "Nieznany")</dd>
+
+            <dt class="col-sm-3">Data wydania</dt>
+            <dd class="col-sm-9">@(Model.ReleaseDate ?? "Nieznana")</dd>
+
+            <dt class="col-sm-3">Gatunki</dt>
+            <dd class="col-sm-9">
+                @if (Model.Genres.Any())
+                {
+                    @string.Join(", ", Model.Genres)
+                }
+                else
+                {
+                    <span>Nieznane</span>
+                }
+            </dd>
+        </dl>
+
+    </div>
+</div>

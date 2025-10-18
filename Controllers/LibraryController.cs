@@ -165,7 +165,8 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             ModelState.AddModelError("IgdbGameId", "Ta gra jest już w Twojej bibliotece.");
-            return View(gameInLibrary);
+            // Przekierowanie do szczegółów gry w nowym kontrolerze 'Games'
+            return RedirectToAction("Details", "Games", new { id = gameInLibrary.IgdbGameId });
         }
 
         // GET: Library/Edit/5
@@ -189,7 +190,9 @@ namespace praca_dyplomowa_zesp.Controllers
 
             _context.Update(gameInLibrary);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            // --- POPRAWKA TUTAJ ---
+            // Zamiast wracać do indeksu, wracamy do szczegółów edytowanej gry
+            return RedirectToAction(nameof(Details), new { id = id });
         }
 
         // GET: Library/Delete/5
