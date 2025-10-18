@@ -5,10 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json; // Ważne: dodaj ten using
+using Newtonsoft.Json;
 using praca_dyplomowa_zesp.Models.API;
+using Microsoft.AspNetCore.Identity;      // <-- DODANE
+using praca_dyplomowa_zesp.Models.Users; // <-- DODANE
+using Microsoft.AspNetCore.Authorization;  // <-- DODANE
 
-// Definicje minimalnych klas do odbioru danych z API. Można je przenieść do osobnych plików.
+// Definicje klas API (bez zmian)
 namespace praca_dyplomowa_zesp.Models.API
 {
     public class ApiGame { public long Id { get; set; } public string Name { get; set; } public ApiCover Cover { get; set; } public List<ApiGenre> Genres { get; set; } public List<ApiInvolvedCompany> Involved_companies { get; set; } public List<ApiReleaseDate> Release_dates { get; set; } }
@@ -21,27 +24,43 @@ namespace praca_dyplomowa_zesp.Models.API
     public class ApiAchievementIcon { public string Url { get; set; } }
 }
 
-
 namespace praca_dyplomowa_zesp.Controllers
 {
+    [Authorize] // <-- DODANE: Wymusza logowanie dla wszystkich akcji w tym kontrolerze
     public class LibraryController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IGDBClient _igdbClient;
-        // Zmień tę linię na górze kontrolera
-        private static readonly Guid TEST_USER_ID = Guid.Parse("f2e330a6-5c93-4a7a-8b1a-952934c7a694"); // ZMIANA Z INT NA GUID
+        private readonly UserManager<User> _userManager; // <-- DODANE: Do zarządzania użytkownikiem
 
-        public LibraryController(ApplicationDbContext context, IGDBClient igdbClient)
+        // private static readonly Guid TEST_USER_ID = ...; // <-- USUNIĘTE
+
+        public LibraryController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager)
         {
             _context = context;
             _igdbClient = igdbClient;
+            _userManager = userManager; // <-- DODANE
+        }
+
+        /// <summary>
+        /// Metoda pomocnicza do pobierania ID (Guid) aktualnie zalogowanego użytkownika
+        /// </summary>
+        private Guid GetCurrentUserId()
+        {
+            var userIdString = _userManager.GetUserId(User);
+            if (Guid.TryParse(userIdString, out Guid userId))
+            {
+                return userId;
+            }
+            return Guid.Empty; // Sytuacja awaryjna, nie powinna wystąpić przy [Authorize]
         }
 
         // GET: Library
         public async Task<IActionResult> Index()
         {
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
             var userGamesFromDb = await _context.GamesInLibraries
-                .Where(g => g.UserId == TEST_USER_ID)
+                .Where(g => g.UserId == currentUserId) // <-- ZMIANA
                 .ToListAsync();
 
             if (!userGamesFromDb.Any())
@@ -53,7 +72,9 @@ namespace praca_dyplomowa_zesp.Controllers
             var query = $"fields name, cover.url; where id = ({string.Join(",", igdbGameIds)});";
             var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
 
-            var gamesFromApi = JsonConvert.DeserializeObject<List<Models.API.ApiGame>>(jsonResponse) ?? new List<Models.API.ApiGame>();
+            var gamesFromApi = string.IsNullOrEmpty(jsonResponse)
+                ? new List<ApiGame>()
+                : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
             var viewModels = userGamesFromDb.Select(dbGame =>
             {
@@ -75,17 +96,17 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (id == null) return NotFound();
 
-            var gameFromDb = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == TEST_USER_ID);
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            var gameFromDb = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId); // <-- ZMIANA
             if (gameFromDb == null) return NotFound();
 
             var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human; where id = {gameFromDb.IgdbGameId}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
-            var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<Models.API.ApiGame>>(gameJsonResponse) ?? new List<Models.API.ApiGame>()).FirstOrDefault();
+            var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
 
             var achievementQuery = $"fields name, description, achievement_icon.url; where game = {gameFromDb.IgdbGameId}; limit 50;";
             var achievementJsonResponse = await _igdbClient.ApiRequestAsync("achievements", achievementQuery);
 
-            // Sprawdzamy, czy odpowiedź z API nie jest pusta, ZANIM ją przetworzymy.
             var achievementsFromApi = new List<ApiAchievement>();
             if (!string.IsNullOrEmpty(achievementJsonResponse))
             {
@@ -93,7 +114,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             var userAchievementsFromDb = await _context.UserAchievements
-                .Where(ua => ua.UserId == TEST_USER_ID && ua.IgdbGameId == gameFromDb.IgdbGameId)
+                .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId) // <-- ZMIANA
                 .ToListAsync();
 
             var viewModel = new GameInLibraryViewModel
@@ -131,14 +152,15 @@ namespace praca_dyplomowa_zesp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("IgdbGameId")] GameInLibrary gameInLibrary)
         {
-            gameInLibrary.UserId = TEST_USER_ID;
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            gameInLibrary.UserId = currentUserId; // <-- ZMIANA (GŁÓWNA POPRAWKA BŁĘDU)
             gameInLibrary.DateAddedToLibrary = DateTime.Now;
 
-            bool alreadyExists = await _context.GamesInLibraries.AnyAsync(g => g.UserId == TEST_USER_ID && g.IgdbGameId == gameInLibrary.IgdbGameId);
+            bool alreadyExists = await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameInLibrary.IgdbGameId); // <-- ZMIANA
             if (!alreadyExists)
             {
                 _context.Add(gameInLibrary);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(); // Ten błąd już nie wystąpi
                 return RedirectToAction(nameof(Index));
             }
 
@@ -150,7 +172,8 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
-            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == id && g.UserId == TEST_USER_ID);
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == id && g.UserId == currentUserId); // <-- ZMIANA
             if (gameInLibrary == null) return NotFound();
             return View(gameInLibrary);
         }
@@ -160,7 +183,10 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> Edit(int id, [Bind("Id,IgdbGameId,UserId,DateAddedToLibrary,CurrentUserStoryMission,CurrentUserStoryProgressPercent")] GameInLibrary gameInLibrary)
         {
             if (id != gameInLibrary.Id) return NotFound();
-            if (gameInLibrary.UserId != TEST_USER_ID) return Forbid();
+
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            if (gameInLibrary.UserId != currentUserId) return Forbid(); // <-- ZMIANA (Zabezpieczenie)
+
             _context.Update(gameInLibrary);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
@@ -170,7 +196,8 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
-            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == TEST_USER_ID);
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId); // <-- ZMIANA
             if (gameInLibrary == null) return NotFound();
             return View(gameInLibrary);
         }
@@ -179,11 +206,12 @@ namespace praca_dyplomowa_zesp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
             var gameInLibrary = await _context.GamesInLibraries.FindAsync(id);
-            if (gameInLibrary != null && gameInLibrary.UserId == TEST_USER_ID)
+            if (gameInLibrary != null && gameInLibrary.UserId == currentUserId) // <-- ZMIANA
             {
                 _context.GamesInLibraries.Remove(gameInLibrary);
-                var achievements = await _context.UserAchievements.Where(ua => ua.UserId == TEST_USER_ID && ua.IgdbGameId == gameInLibrary.IgdbGameId).ToListAsync();
+                var achievements = await _context.UserAchievements.Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameInLibrary.IgdbGameId).ToListAsync(); // <-- ZMIANA
                 _context.UserAchievements.RemoveRange(achievements);
                 await _context.SaveChangesAsync();
             }
@@ -198,15 +226,16 @@ namespace praca_dyplomowa_zesp.Controllers
                 return Json(new { success = false, error = "Brak ID osiągnięcia." });
             }
 
+            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
             var achievement = await _context.UserAchievements
-                .FirstOrDefaultAsync(ua => ua.UserId == TEST_USER_ID && ua.IgdbGameId == igdbGameId && ua.AchievementExternalId == achievementExternalId);
+                .FirstOrDefaultAsync(ua => ua.UserId == currentUserId && ua.IgdbGameId == igdbGameId && ua.AchievementExternalId == achievementExternalId); // <-- ZMIANA
 
             bool newStatus;
             if (achievement == null)
             {
                 var newAchievement = new UserAchievement
                 {
-                    UserId = TEST_USER_ID,
+                    UserId = currentUserId, // <-- ZMIANA
                     IgdbGameId = igdbGameId,
                     AchievementExternalId = achievementExternalId,
                     IsUnlocked = true
