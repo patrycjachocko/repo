@@ -78,13 +78,14 @@ namespace praca_dyplomowa_zesp.Controllers
             if (!string.IsNullOrEmpty(searchString))
             {
                 // Wyszukiwanie gier
-                query = $"fields name, cover.url; search \"{searchString}\"; limit {PageSize}; offset {offset};";
+                // --- ZMIANA: Dodano 'where cover.url != null & parent_game = null' ---
+                query = $"fields name, cover.url; search \"{searchString}\"; where cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
             }
             else
             {
                 // Domyślny widok - popularne gry
-                // Sortujemy po 'rating' malejąco, bierzemy tylko te z oceną i okładką
-                query = $"fields name, cover.url, rating; sort rating desc; where rating != null & cover.url != null; limit {PageSize}; offset {offset};";
+                // --- ZMIANA: Dodano '& parent_game = null' ---
+                query = $"fields name, cover.url, rating; sort rating desc; where rating != null & cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
             }
 
             var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
