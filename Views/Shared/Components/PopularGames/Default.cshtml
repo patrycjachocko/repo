@@ -1,0 +1,24 @@
+﻿@model IEnumerable<praca_dyplomowa_zesp.Models.API.ApiGame>
+
+@if (Model != null && Model.Any())
+{
+    @foreach (var game in Model)
+    {
+        <li>
+            <a class="dropdown-item" asp-controller="Guides" asp-action="Index" asp-route-gameId="@game.Id">
+                @game.Name
+            </a>
+        </li>
+    }
+}
+else
+{
+    <li><span class="dropdown-item-text">Nie udało się załadować popularnych gier.</span></li>
+}
+
+<li><hr class="dropdown-divider"></li>
+<li>
+    <a class="dropdown-item" asp-controller="Games" asp-action="Index">
+        Pokaż wszystkie gry
+    </a>
+</li>

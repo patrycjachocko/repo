@@ -119,7 +119,7 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 DbId = gameFromDb.Id,
                 IgdbGameId = gameFromDb.IgdbGameId,
-                UserId = gameFromDb.UserId, // <-- DODANE PRZYPISANIE UserId
+                UserId = gameFromDb.UserId,
                 Name = gameDetailsFromApi?.Name ?? "Brak nazwy",
                 CoverUrl = gameDetailsFromApi?.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
                 Genres = gameDetailsFromApi?.Genres?.Select(g => g.Name).ToList(),
@@ -128,6 +128,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 DateAddedToLibrary = gameFromDb.DateAddedToLibrary,
                 CurrentUserStoryMission = gameFromDb.CurrentUserStoryMission,
                 CurrentUserStoryProgressPercent = gameFromDb.CurrentUserStoryProgressPercent,
+                Notes = gameFromDb.Notes, // <-- DODANE PRZYPISANIE Notatek
                 Achievements = achievementsFromApi.Select(apiAch => new AchievementViewModel
                 {
                     Name = apiAch.Name,
@@ -144,7 +145,6 @@ namespace praca_dyplomowa_zesp.Controllers
         // GET: Library/Create
         public IActionResult Create()
         {
-            // Ten widok nie jest już używany, ale akcja POST jest
             return View();
         }
 
@@ -180,7 +180,8 @@ namespace praca_dyplomowa_zesp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,IgdbGameId,UserId,DateAddedToLibrary,CurrentUserStoryMission,CurrentUserStoryProgressPercent")] GameInLibrary gameInLibrary)
+        // <-- ZAKTUALIZOWANY BIND -->
+        public async Task<IActionResult> Edit(int id, [Bind("Id,IgdbGameId,UserId,DateAddedToLibrary,CurrentUserStoryMission,CurrentUserStoryProgressPercent,Notes")] GameInLibrary gameInLibrary)
         {
             if (id != gameInLibrary.Id) return NotFound();
 

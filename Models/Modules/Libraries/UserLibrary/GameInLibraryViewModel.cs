@@ -5,7 +5,7 @@ public class GameInLibraryViewModel
 {
     public int DbId { get; set; }
     public long IgdbGameId { get; set; }
-    public Guid UserId { get; set; } // <-- DODANE BRAKUJĄCE POLE
+    public Guid UserId { get; set; }
     public string Name { get; set; }
     public string? CoverUrl { get; set; }
     public List<string>? Genres { get; set; }
@@ -14,5 +14,6 @@ public class GameInLibraryViewModel
     public DateTime DateAddedToLibrary { get; set; }
     public string? CurrentUserStoryMission { get; set; }
     public int CurrentUserStoryProgressPercent { get; set; }
+    public string? Notes { get; set; } // <-- DODANE NOWE POLE
     public List<AchievementViewModel>? Achievements { get; set; }
 }

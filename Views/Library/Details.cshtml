@@ -44,26 +44,24 @@
         <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded mb-3" alt="Okładka @Model.Name">
 
         <h4>Postęp Fabularny</h4>
-        <form asp-action="Edit" asp-route-id="@Model.DbId">
+        <p class="mb-1">
+            <strong>Obecna misja:</strong>
+        </p>
+        <p class="text-muted">
+            @(Model.CurrentUserStoryMission ?? "Nie ustawiono")
+        </p>
 
-            <input type="hidden" name="Id" value="@Model.DbId" />
-            <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
-            <input type="hidden" name="UserId" value="@Model.UserId" />
-            <input type="hidden" name="DateAddedToLibrary" value="@Model.DateAddedToLibrary" />
+        <p class="mb-1">
+            <strong>Postęp (%):</strong>
+        </p>
+        <div class="progress mb-3" style="height: 20px;">
+            <div class="progress-bar" role="progressbar" style="width: @Model.CurrentUserStoryProgressPercent%;" aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">@Model.CurrentUserStoryProgressPercent%</div>
+        </div>
 
-            <div class="mb-3">
-                <label asp-for="CurrentUserStoryMission" class="form-label">Obecna misja:</label>
-                <input asp-for="CurrentUserStoryMission" class="form-control" />
-            </div>
-            <div class="mb-3">
-                <label asp-for="CurrentUserStoryProgressPercent" class="form-label">Postęp (%):</label>
-                <input asp-for="CurrentUserStoryProgressPercent" type="number" min="0" max="100" class="form-control" />
-                <div class="progress mt-2" style="height: 20px;">
-                    <div class="progress-bar" role="progressbar" style="width: @Model.CurrentUserStoryProgressPercent%;" aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">@Model.CurrentUserStoryProgressPercent%</div>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary">Zapisz postęp</button>
-        </form>
+        <h4>Notatki</h4>
+        <div class="notes-display bg-light p-3 rounded" style="min-height: 100px; white-space: pre-wrap; border: 1px solid #ddd;">
+            @(Model.Notes ?? "Brak notatek.")
+        </div>
 
     </div>
 
@@ -75,7 +73,7 @@
             <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info">
                 Przejdź do Poradników i Wskazówek
             </a>
-            <a asp-action="Edit" asp-route-id="@Model.DbId" class="btn btn-secondary">Edytuj Postęp</a>
+            <a asp-action="Edit" asp-route-id="@Model.DbId" class="btn btn-secondary">Edytuj Postęp i Notatki</a>
             <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-danger">Usuń z biblioteki</a>
         </div>
 

@@ -50,6 +50,7 @@ builder.Services.AddSingleton<IGDBClient>(provider =>
     return new IGDBClient(clientId, clientSecret);
 });
 
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
