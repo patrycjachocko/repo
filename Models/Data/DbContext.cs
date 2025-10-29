@@ -43,7 +43,7 @@ namespace praca_dyplomowa.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            
+
 
             // Konfiguracja relacji pozostaje bez zmian
             modelBuilder.Entity<GameInLibrary>()
@@ -55,6 +55,10 @@ namespace praca_dyplomowa.Data
                 .HasOne(ua => ua.User)
                 .WithMany()
                 .HasForeignKey(ua => ua.UserId);
+
+            // <-- DODANE: Konfiguracja dla nowego pola w Guide -->
+            modelBuilder.Entity<Guide>()
+                .HasIndex(g => g.IgdbGameId);
         }
 
 

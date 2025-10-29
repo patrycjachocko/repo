@@ -22,16 +22,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Games
         public string? SearchString { get; set; }
     }
 
-    public class GameDetailViewModel
-    {
-        public long IgdbGameId { get; set; }
-        public string Name { get; set; } = "Brak nazwy";
-        public string? CoverUrl { get; set; }
-        public List<string> Genres { get; set; } = new List<string>();
-        public string? Developer { get; set; }
-        public string? ReleaseDate { get; set; }
-        public bool IsInLibrary { get; set; } = false; // Czy gra jest już w bibliotece usera?
-    }
+    // --- USUNIĘTO KLASĘ GameDetailViewModel ---
 }
 
 
@@ -78,13 +69,11 @@ namespace praca_dyplomowa_zesp.Controllers
             if (!string.IsNullOrEmpty(searchString))
             {
                 // Wyszukiwanie gier
-                // --- ZMIANA: Dodano 'where cover.url != null & parent_game = null' ---
                 query = $"fields name, cover.url; search \"{searchString}\"; where cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
             }
             else
             {
                 // Domyślny widok - popularne gry
-                // --- ZMIANA: Dodano '& parent_game = null' ---
                 query = $"fields name, cover.url, rating; sort rating desc; where rating != null & cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
             }
 
@@ -109,44 +98,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(viewModel);
         }
 
-        // GET: Games/Details/5 (gdzie 5 to IGDB Game ID)
-        public async Task<IActionResult> Details(long? id)
-        {
-            if (id == null) return NotFound();
-
-            long igdbGameId = id.Value;
-
-            // Zapytanie o szczegóły gry
-            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human; where id = {igdbGameId}; limit 1;";
-            var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
-            var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
-
-            if (gameDetailsFromApi == null) return NotFound();
-
-            bool isInLibrary = false;
-            // Sprawdzamy, czy gra jest w bibliotece (tylko jeśli user jest zalogowany)
-            if (User.Identity != null && User.Identity.IsAuthenticated)
-            {
-                var currentUserId = GetCurrentUserId();
-                if (currentUserId != Guid.Empty)
-                {
-                    isInLibrary = await _context.GamesInLibraries
-                        .AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == igdbGameId);
-                }
-            }
-
-            var viewModel = new Models.Modules.Games.GameDetailViewModel
-            {
-                IgdbGameId = gameDetailsFromApi.Id,
-                Name = gameDetailsFromApi.Name ?? "Brak nazwy",
-                CoverUrl = gameDetailsFromApi.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
-                Genres = gameDetailsFromApi.Genres?.Select(g => g.Name).ToList() ?? new List<string>(),
-                Developer = gameDetailsFromApi.Involved_companies?.FirstOrDefault(ic => ic.developer)?.Company?.Name,
-                ReleaseDate = gameDetailsFromApi.Release_dates?.FirstOrDefault()?.Human,
-                IsInLibrary = isInLibrary
-            };
-
-            return View(viewModel);
-        }
+        // --- USUNIĘTO AKCJĘ Details(long? id) ---
     }
 }

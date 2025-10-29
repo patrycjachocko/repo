@@ -7,9 +7,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using praca_dyplomowa_zesp.Models.API;
-using Microsoft.AspNetCore.Identity;      // <-- DODANE
-using praca_dyplomowa_zesp.Models.Users; // <-- DODANE
-using Microsoft.AspNetCore.Authorization;  // <-- DODANE
+using Microsoft.AspNetCore.Identity;
+using praca_dyplomowa_zesp.Models.Users;
+using Microsoft.AspNetCore.Authorization;
 
 // Definicje klas API (bez zmian)
 namespace praca_dyplomowa_zesp.Models.API
@@ -26,20 +26,18 @@ namespace praca_dyplomowa_zesp.Models.API
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    [Authorize] // <-- DODANE: Wymusza logowanie dla wszystkich akcji w tym kontrolerze
+    [Authorize] // Wymusza logowanie dla wszystkich akcji w tym kontrolerze
     public class LibraryController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IGDBClient _igdbClient;
-        private readonly UserManager<User> _userManager; // <-- DODANE: Do zarządzania użytkownikiem
-
-        // private static readonly Guid TEST_USER_ID = ...; // <-- USUNIĘTE
+        private readonly UserManager<User> _userManager;
 
         public LibraryController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager)
         {
             _context = context;
             _igdbClient = igdbClient;
-            _userManager = userManager; // <-- DODANE
+            _userManager = userManager;
         }
 
         /// <summary>
@@ -58,9 +56,9 @@ namespace praca_dyplomowa_zesp.Controllers
         // GET: Library
         public async Task<IActionResult> Index()
         {
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            var currentUserId = GetCurrentUserId();
             var userGamesFromDb = await _context.GamesInLibraries
-                .Where(g => g.UserId == currentUserId) // <-- ZMIANA
+                .Where(g => g.UserId == currentUserId)
                 .ToListAsync();
 
             if (!userGamesFromDb.Any())
@@ -96,8 +94,8 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (id == null) return NotFound();
 
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
-            var gameFromDb = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId); // <-- ZMIANA
+            var currentUserId = GetCurrentUserId();
+            var gameFromDb = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId);
             if (gameFromDb == null) return NotFound();
 
             var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human; where id = {gameFromDb.IgdbGameId}; limit 1;";
@@ -114,13 +112,14 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             var userAchievementsFromDb = await _context.UserAchievements
-                .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId) // <-- ZMIANA
+                .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId)
                 .ToListAsync();
 
             var viewModel = new GameInLibraryViewModel
             {
                 DbId = gameFromDb.Id,
                 IgdbGameId = gameFromDb.IgdbGameId,
+                UserId = gameFromDb.UserId, // <-- DODANE PRZYPISANIE UserId
                 Name = gameDetailsFromApi?.Name ?? "Brak nazwy",
                 CoverUrl = gameDetailsFromApi?.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
                 Genres = gameDetailsFromApi?.Genres?.Select(g => g.Name).ToList(),
@@ -145,6 +144,7 @@ namespace praca_dyplomowa_zesp.Controllers
         // GET: Library/Create
         public IActionResult Create()
         {
+            // Ten widok nie jest już używany, ale akcja POST jest
             return View();
         }
 
@@ -152,29 +152,28 @@ namespace praca_dyplomowa_zesp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("IgdbGameId")] GameInLibrary gameInLibrary)
         {
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
-            gameInLibrary.UserId = currentUserId; // <-- ZMIANA (GŁÓWNA POPRAWKA BŁĘDU)
+            var currentUserId = GetCurrentUserId();
+            gameInLibrary.UserId = currentUserId;
             gameInLibrary.DateAddedToLibrary = DateTime.Now;
 
-            bool alreadyExists = await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameInLibrary.IgdbGameId); // <-- ZMIANA
+            bool alreadyExists = await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameInLibrary.IgdbGameId);
             if (!alreadyExists)
             {
                 _context.Add(gameInLibrary);
-                await _context.SaveChangesAsync(); // Ten błąd już nie wystąpi
-                return RedirectToAction(nameof(Index));
+                await _context.SaveChangesAsync();
+                return RedirectToAction("Index", "Guides", new { gameId = gameInLibrary.IgdbGameId });
             }
 
             ModelState.AddModelError("IgdbGameId", "Ta gra jest już w Twojej bibliotece.");
-            // Przekierowanie do szczegółów gry w nowym kontrolerze 'Games'
-            return RedirectToAction("Details", "Games", new { id = gameInLibrary.IgdbGameId });
+            return RedirectToAction("Index", "Guides", new { gameId = gameInLibrary.IgdbGameId });
         }
 
         // GET: Library/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
-            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == id && g.UserId == currentUserId); // <-- ZMIANA
+            var currentUserId = GetCurrentUserId();
+            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == id && g.UserId == currentUserId);
             if (gameInLibrary == null) return NotFound();
             return View(gameInLibrary);
         }
@@ -185,13 +184,11 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (id != gameInLibrary.Id) return NotFound();
 
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
-            if (gameInLibrary.UserId != currentUserId) return Forbid(); // <-- ZMIANA (Zabezpieczenie)
+            var currentUserId = GetCurrentUserId();
+            if (gameInLibrary.UserId != currentUserId) return Forbid();
 
             _context.Update(gameInLibrary);
             await _context.SaveChangesAsync();
-            // --- POPRAWKA TUTAJ ---
-            // Zamiast wracać do indeksu, wracamy do szczegółów edytowanej gry
             return RedirectToAction(nameof(Details), new { id = id });
         }
 
@@ -199,8 +196,8 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
-            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId); // <-- ZMIANA
+            var currentUserId = GetCurrentUserId();
+            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId);
             if (gameInLibrary == null) return NotFound();
             return View(gameInLibrary);
         }
@@ -209,12 +206,12 @@ namespace praca_dyplomowa_zesp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            var currentUserId = GetCurrentUserId();
             var gameInLibrary = await _context.GamesInLibraries.FindAsync(id);
-            if (gameInLibrary != null && gameInLibrary.UserId == currentUserId) // <-- ZMIANA
+            if (gameInLibrary != null && gameInLibrary.UserId == currentUserId)
             {
                 _context.GamesInLibraries.Remove(gameInLibrary);
-                var achievements = await _context.UserAchievements.Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameInLibrary.IgdbGameId).ToListAsync(); // <-- ZMIANA
+                var achievements = await _context.UserAchievements.Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameInLibrary.IgdbGameId).ToListAsync();
                 _context.UserAchievements.RemoveRange(achievements);
                 await _context.SaveChangesAsync();
             }
@@ -229,16 +226,16 @@ namespace praca_dyplomowa_zesp.Controllers
                 return Json(new { success = false, error = "Brak ID osiągnięcia." });
             }
 
-            var currentUserId = GetCurrentUserId(); // <-- ZMIANA
+            var currentUserId = GetCurrentUserId();
             var achievement = await _context.UserAchievements
-                .FirstOrDefaultAsync(ua => ua.UserId == currentUserId && ua.IgdbGameId == igdbGameId && ua.AchievementExternalId == achievementExternalId); // <-- ZMIANA
+                .FirstOrDefaultAsync(ua => ua.UserId == currentUserId && ua.IgdbGameId == igdbGameId && ua.AchievementExternalId == achievementExternalId);
 
             bool newStatus;
             if (achievement == null)
             {
                 var newAchievement = new UserAchievement
                 {
-                    UserId = currentUserId, // <-- ZMIANA
+                    UserId = currentUserId,
                     IgdbGameId = igdbGameId,
                     AchievementExternalId = achievementExternalId,
                     IsUnlocked = true

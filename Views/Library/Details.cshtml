@@ -4,127 +4,141 @@
     ViewData["Title"] = Model.Name;
 }
 
-<style>
-    .achievement-icon {
-        width: 64px;
-        height: 64px;
-        cursor: pointer;
-        transition: filter .2s ease-in-out;
-        border-radius: 5px;
-    }
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('.achievement-checkbox').change(function () {
+            var gameId = @Model.IgdbGameId;
+            var achievementId = $(this).data('external-id');
+            var isChecked = $(this).is(':checked');
 
-        .achievement-icon.locked {
-            filter: grayscale(100%);
-        }
+            $.ajax({
+                url: '@Url.Action("ToggleAchievement", "Library")',
+                type: 'POST',
+                data: {
+                    igdbGameId: gameId,
+                    achievementExternalId: achievementId
+                },
+                headers: {
+                    // Dla ochrony przed CSRF
+                    RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function (response) {
+                    if (!response.success) {
+                        alert(response.error || 'Wystąpił błąd');
+                        $(this).prop('checked', !isChecked); // Cofnij zmianę
+                    }
+                },
+                error: function () {
+                    alert('Błąd komunikacji z serwerem.');
+                    $(this).prop('checked', !isChecked); // Cofnij zmianę
+                }
+            });
+        });
+    });
+</script>
 
-        .achievement-icon:hover {
-            filter: brightness(1.2);
-        }
-</style>
-
-<h1>@Model.Name</h1>
-<hr />
 
 <div class="row">
     <div class="col-md-4">
-        <img src="@Model.CoverUrl" class="img-fluid rounded" alt="Okładka @Model.Name" />
-        <div class="d-grid gap-2 mt-3">
-            <a asp-action="Edit" asp-route-id="@Model.DbId" class="btn btn-warning">Edytuj postęp</a>
-            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-danger">Usuń z biblioteki</a>
-            <a asp-action="Index" class="btn btn-secondary">Wróć do listy</a>
-        </div>
-    </div>
-    <div class="col-md-8">
-        <h4>Informacje o grze</h4>
-        <dl class="row">
-            <dt class="col-sm-4">Deweloper</dt>
-            <dd class="col-sm-8">@Model.Developer</dd>
+        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded mb-3" alt="Okładka @Model.Name">
 
-            <dt class="col-sm-4">Data wydania</dt>
-            <dd class="col-sm-8">@Model.ReleaseDate</dd>
+        <h4>Postęp Fabularny</h4>
+        <form asp-action="Edit" asp-route-id="@Model.DbId">
 
-            <dt class="col-sm-4">Gatunki</dt>
-            <dd class="col-sm-8">@(Model.Genres != null ? string.Join(", ", Model.Genres) : "Brak")</dd>
-        </dl>
+            <input type="hidden" name="Id" value="@Model.DbId" />
+            <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
+            <input type="hidden" name="UserId" value="@Model.UserId" />
+            <input type="hidden" name="DateAddedToLibrary" value="@Model.DateAddedToLibrary" />
 
-        <h4 class="mt-4">Twój postęp</h4>
-        <dl class="row">
-            <dt class="col-sm-4">Data dodania</dt>
-            <dd class="col-sm-8">@Model.DateAddedToLibrary.ToString("d MMMM yyyy")</dd>
-
-            <dt class="col-sm-4">Aktualna misja</dt>
-            <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.CurrentUserStoryMission) ? "Nie podano" : Model.CurrentUserStoryMission)</dd>
-
-            <dt class="col-sm-4">Ukończenie fabuły</dt>
-            <dd class="col-sm-8">
-                <div class="progress">
+            <div class="mb-3">
+                <label asp-for="CurrentUserStoryMission" class="form-label">Obecna misja:</label>
+                <input asp-for="CurrentUserStoryMission" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="CurrentUserStoryProgressPercent" class="form-label">Postęp (%):</label>
+                <input asp-for="CurrentUserStoryProgressPercent" type="number" min="0" max="100" class="form-control" />
+                <div class="progress mt-2" style="height: 20px;">
                     <div class="progress-bar" role="progressbar" style="width: @Model.CurrentUserStoryProgressPercent%;" aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">@Model.CurrentUserStoryProgressPercent%</div>
                 </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Zapisz postęp</button>
+        </form>
+
+    </div>
+
+    <div class="col-md-8">
+        <h1>@Model.Name</h1>
+        <hr />
+
+        <div class="mb-3">
+            <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info">
+                Przejdź do Poradników i Wskazówek
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.DbId" class="btn btn-secondary">Edytuj Postęp</a>
+            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-danger">Usuń z biblioteki</a>
+        </div>
+
+
+        <dl class="row">
+            <dt class="col-sm-3">Deweloper</dt>
+            <dd class="col-sm-9">@(Model.Developer ?? "Nieznany")</dd>
+
+            <dt class="col-sm-3">Data wydania</dt>
+            <dd class="col-sm-9">@(Model.ReleaseDate ?? "Nieznana")</dd>
+
+            <dt class="col-sm-3">Data dodania</dt>
+            <dd class="col-sm-9">@Model.DateAddedToLibrary.ToString("dd.MM.yyyy")</dd>
+
+            <dt class="col-sm-3">Gatunki</dt>
+            <dd class="col-sm-9">
+                @if (Model.Genres != null && Model.Genres.Any())
+                {
+                    @string.Join(", ", Model.Genres)
+                }
+                else
+                {
+                    <span>Nieznane</span>
+                }
             </dd>
         </dl>
 
-        <h4 class="mt-4">Osiągnięcia</h4>
-        <div class="d-flex flex-wrap gap-2">
-            @foreach (var ach in Model.Achievements)
-            {
-                <img src="@ach.IconUrl"
-                     id="ach-@ach.ExternalId"
-                     class="achievement-icon @(ach.IsUnlocked ? "" : "locked")"
-                     title="@ach.Name: @ach.Description"
-                     data-bs-toggle="tooltip"
-                     data-bs-placement="top"
-                     onclick="toggleAchievement('@Model.IgdbGameId', '@ach.ExternalId')">
-            }
-        </div>
+        <hr />
+
+        <h3>Osiągnięcia</h3>
+        @if (Model.Achievements != null && Model.Achievements.Any())
+        {
+            <form>
+                @Html.AntiForgeryToken() <ul class="list-group">
+                    @foreach (var ach in Model.Achievements)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="@ach.IconUrl" alt="Ikona" style="width: 64px; height: 64px; margin-right: 15px;" class="rounded">
+                                <div>
+                                    <strong>@ach.Name</strong>
+                                    <p class="mb-0 text-muted" style="font-size: 0.9rem;">@ach.Description</p>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input achievement-checkbox"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="ach-@ach.ExternalId"
+                                       data-external-id="@ach.ExternalId"
+                                @(ach.IsUnlocked ? "checked" : "")>
+                                <label class="form-check-label" for="ach-@ach.ExternalId">
+                                    @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
+                                </label>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </form>
+        }
+        else
+        {
+            <p>Brak dostępnych osiągnięć do śledzenia dla tej gry.</p>
+        }
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        // Inicjalizacja tooltipów z Bootstrapa
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-          return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
-
-        async function toggleAchievement(igdbGameId, achievementExternalId) {
-            const icon = document.getElementById(`ach-${achievementExternalId}`);
-            if (!icon) return;
-
-            // Pobieramy token walidacyjny, aby żądanie POST było bezpieczne
-            const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-
-            try {
-                const response = await fetch('/Library/ToggleAchievement', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': antiforgeryToken // Ważne dla bezpieczeństwa!
-                    },
-                    body: `igdbGameId=${igdbGameId}&achievementExternalId=${achievementExternalId}`
-                });
-
-                if (!response.ok) {
-                    throw new Error("Błąd serwera");
-                }
-
-                const result = await response.json();
-
-                if (result.success) {
-                    if (result.isUnlocked) {
-                        icon.classList.remove('locked');
-                    } else {
-                        icon.classList.add('locked');
-                    }
-                } else {
-                    console.error("Błąd:", result.error);
-                    alert("Wystąpił błąd podczas zmiany statusu osiągnięcia.");
-                }
-
-            } catch (error) {
-                console.error("Błąd sieci:", error);
-                alert("Wystąpił błąd komunikacji z serwerem.");
-            }
-        }
-    </script>
-}

@@ -1,0 +1,54 @@
+﻿@model praca_dyplomowa_zesp.Models.Modules.Guides.GuidesViewModel
+@{
+    ViewData["Title"] = $"{Model.GameName} - Poradniki i Wskazówki";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>@Model.GameName - Guides & Tips</h1>
+
+    <div>
+        @if (Model.IsInLibrary)
+        {
+            <span class="text-success">
+                <i class="fas fa-check"></i> Gra dodana do biblioteki
+            </span>
+        }
+        else if (User.Identity != null && User.Identity.IsAuthenticated)
+        {
+            <form asp-controller="Library" asp-action="Create" method="post" style="display: inline;">
+                <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
+                <button type="submit" class="btn btn-outline-primary btn-sm">Dodaj do biblioteki</button>
+            </form>
+        }
+        else
+        {
+            <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path" class="btn btn-outline-primary btn-sm">
+                Dodaj do biblioteki
+            </a>
+        }
+    </div>
+</div>
+
+<hr />
+
+<h2>Poradniki</h2>
+@if (Model.Guides.Any())
+{
+    <div class="list-group">
+        @foreach (var guide in Model.Guides)
+        {
+            <a href="#" class="list-group-item list-group-item-action">
+                <h5 class="mb-1">@guide.Title</h5>
+                <p class="mb-1">@guide.Description</p>
+            </a>
+        }
+    </div>
+}
+else
+{
+    <p>Nie ma jeszcze żadnych poradników dla tej gry. Bądź pierwszy i dodaj własny!</p>
+}
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+}

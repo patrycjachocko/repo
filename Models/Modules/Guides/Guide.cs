@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using praca_dyplomowa_zesp.Models.Users;
+using System.ComponentModel.DataAnnotations;
 
 namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {
@@ -6,26 +7,18 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
     {
         [Key]
         public int Id { get; set; }
+
+        [Required]
+        public long IgdbGameId { get; set; } // <-- DODANE: Powiązanie z grą z API
+
+        [Required]
         public string Title { get; set; }
-        public string Content { get; set; }
+        public string? Description { get; set; }
+
+        public Guid UserId { get; set; } // ZMIANA Z INT NA GUID
+        public virtual User User { get; set; }
+
         public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public string Author { get; set; } //ściągać z usera nazwę czy odnośnik do usera? żeby wejść na profil
-        public string Category { get; set; } //tytuł gry?
-        public string PrimaryImage { get; set; }
-        public string ImageUrl { get; set; } //czy wiele? raczej tak. jak to zrobić? nw
-        public bool IsPublished { get; set; } //nw czy bedzie potrzebne
-        public int Views { get; set; } //nw jak to niby bedziemy liczyc ale slay
-        public int Likes { get; set; }
-        public int CommentsCount { get; set; }
-        //public string Slug { get; set; } //nw co to
-        public string Summary { get; set; } //raczej nie bedzie
-        public string Tags { get; set; }
-        public string Language { get; set; } //?
-        //public string Difficulty { get; set; } //raczej nbd
-        public int EstimatedReadTime { get; set; } //to by bylo cool
-        //public string SourceUrl { get; set; } //?
-        public string? Version { get; set; } //wersja gry //moze nie byc potrzebna
-        public ICollection<Models.Interactions.Comments.Comment> Comments { get; set; } //lista komow?
+        public DateTime? UpdatedAt { get; set; }
     }
 }
