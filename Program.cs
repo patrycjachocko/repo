@@ -1,7 +1,10 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.Users;
+using praca_dyplomowa_zesp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,10 +26,12 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 
     options.User.RequireUniqueEmail = true;
 
-    options.SignIn.RequireConfirmedAccount = false; // ustawic na 'true', jesli chcemy wymagac potwierdzenia e-mail
+    options.SignIn.RequireConfirmedAccount = true; // ustawic na 'true', jesli chcemy wymagac potwierdzenia e-mail
 })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+builder.Services.AddTransient<IEmailSender, ConsoleEmailSender>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

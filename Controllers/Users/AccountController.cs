@@ -1,7 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
-using praca_dyplomowa_zesp.Models.Users; // Upewnij się, że masz modele widoku
+using praca_dyplomowa_zesp.Models.Users;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -9,12 +10,13 @@ namespace praca_dyplomowa_zesp.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
+        private readonly IEmailSender _emailSender;
 
-        // --- POPRAWKA: Wstrzykujemy UserManager i SignInManager ---
-        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager)
+        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager, IEmailSender emailSender)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _emailSender = emailSender;
         }
 
         [HttpGet]
@@ -43,8 +45,16 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (result.Succeeded)
                 {
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return RedirectToAction("Index", "Home");
+                    var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+                    var confirmationLink = Url.Action("MailConfirmation", "Account",
+                        new { userId = user.Id, token = token }, Request.Scheme);
+
+                    await _emailSender.SendEmailAsync(model.Email,
+                        "Potwierdź swoje konto",
+                        $"Potwierdź swoje konto, klikając ten link: <a href='{confirmationLink}'>Link</a>");
+
+                    return RedirectToAction("RegisterConfirmation");
                 }
 
                 foreach (var error in result.Errors)
@@ -53,6 +63,40 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
             return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult RegisterConfirmation()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> MailConfirmation(string userId, string token)
+        {
+            if (userId == null || token == null)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                ViewData["ErrorMessage"] = "Nie znaleziono użytkownika o podanym ID.";
+                return View("Error"); // Upewnij się, że masz widok Error
+            }
+
+            // Sprawdź token i oznacz e-mail jako potwierdzony
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+
+            if (result.Succeeded)
+            {
+                // Pokaż widok "ConfirmEmail.cshtml"
+                return View();
+            }
+
+            ViewData["ErrorMessage"] = "Błąd podczas potwierdzania adresu e-mail.";
+            return View("Error");
         }
 
         [HttpGet]
@@ -73,7 +117,14 @@ namespace praca_dyplomowa_zesp.Controllers
                 {
                     return RedirectToAction("Index", "Home");
                 }
+                if (result.IsNotAllowed)
+                {
+                    ModelState.AddModelError(string.Empty, "Twoje konto nie zostało jeszcze potwierdzone. Sprawdź e-mail.");
+                    return View(model);
+                }
                 ModelState.AddModelError(string.Empty, "Nieprawidłowy login lub hasło.");
+
+
             }
             return View(model);
         }
