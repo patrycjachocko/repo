@@ -1,0 +1,14 @@
+﻿@{
+    ViewData["Title"] = "Błąd";
+}
+
+<h1>Błąd zmiany adresu e-mail</h1>
+
+<div class="alert alert-danger" role="alert">
+    Wystąpił błąd podczas zmiany adresu e-mail. Link mógł być nieprawidłowy lub wygasł.
+</div>
+
+<p>
+    <a asp-controller="Profile" asp-action="Index" class="btn btn-primary">Wróć do profilu</a>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Wróć do strony głównej</a>
+</p>

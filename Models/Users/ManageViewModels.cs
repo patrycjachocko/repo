@@ -1,0 +1,40 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace praca_dyplomowa_zesp.Models.Users
+{
+    // Ten plik zawiera ViewModele używane na stronie profilu i w oknach modalnych
+
+    public class ChangePasswordViewModel
+    {
+        [Required(ErrorMessage = "Obecne hasło jest wymagane.")]
+        [DataType(DataType.Password)]
+        [Display(Name = "Obecne hasło")]
+        public string OldPassword { get; set; }
+
+        [Required(ErrorMessage = "Nowe hasło jest wymagane.")]
+        [StringLength(100, ErrorMessage = "{0} musi mieć co najmniej {2} i maksymalnie {1} znaków.", MinimumLength = 8)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Nowe hasło")]
+        public string NewPassword { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Potwierdź nowe hasło")]
+        [Compare("NewPassword", ErrorMessage = "Hasła nie są zgodne.")]
+        public string ConfirmPassword { get; set; }
+    }
+
+    public class ChangeEmailViewModel
+    {
+        [Required(ErrorMessage = "Nowy e-mail jest wymagany.")]
+        [EmailAddress]
+        [Display(Name = "Nowy e-mail")]
+        public string NewEmail { get; set; }
+    }
+
+    public class UpdateDescriptionViewModel
+    {
+        [StringLength(500, ErrorMessage = "Opis nie może przekraczać 500 znaków.")]
+        [Display(Name = "O mnie")]
+        public string? Description { get; set; }
+    }
+}

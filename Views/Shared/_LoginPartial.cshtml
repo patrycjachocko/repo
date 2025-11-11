@@ -7,12 +7,19 @@
 <ul class="navbar-nav">
     @if (SignInManager.IsSignedIn(User))
     {
-        <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Manage" title="Manage">Cześć @UserManager.GetUserName(User)!</a>
+        var userId = UserManager.GetUserId(User); // Pobieramy ID zalogowanego użytkownika
+
+        <li class="nav-item d-flex align-items-center">
+            @* ZMIANA: Dodano awatar i link do profilu *@
+            <a class="nav-link text-dark d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
+                @* ZMIANA: Źródło obrazu wskazuje na akcję kontrolera, przekazując ID użytkownika *@
+                <img src="@Url.Action("GetAvatar", "Profile", new { id = userId })" alt="Awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" />
+                Cześć @User.Identity?.Name!
+            </a>
         </li>
         <li class="nav-item">
-            <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
-                <button type="submit" class="nav-link btn btn-link text-dark">Wyloguj</button>
+            <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                <button type_="submit" class="nav-link btn btn-link text-dark">Wyloguj</button>
             </form>
         </li>
     }
@@ -22,7 +29,7 @@
             <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Rejestracja</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Logowanie</a>
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Zaloguj</a>
         </li>
     }
 </ul>

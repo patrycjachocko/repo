@@ -25,11 +25,8 @@ namespace praca_dyplomowa_zesp.Models.Users
         public byte[]? Banner { get; set; }
         public string? BannerContentType { get; set; }
 
-        /*public User()
-        {
-            CreatedAt = DateTime.UtcNow;
-            LastActive = DateTime.UtcNow;
-        }*/
+        [StringLength(500)]
+        public string? Description { get; set; }
     }
     public class LoginViewModel
     {

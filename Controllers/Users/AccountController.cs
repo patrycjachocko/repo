@@ -1,8 +1,13 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using praca_dyplomowa_zesp.Models.Users;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using System.Text.Encodings.Web;
+using praca_dyplomowa.Data;
+using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -11,70 +16,156 @@ namespace praca_dyplomowa_zesp.Controllers
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly IEmailSender _emailSender;
+        private readonly ApplicationDbContext _context;
 
-        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager, IEmailSender emailSender)
+        public AccountController(
+            UserManager<User> userManager,
+            SignInManager<User> signInManager,
+            IEmailSender emailSender,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _emailSender = emailSender;
+            _context = context;
         }
 
+        // GET: /Account/Login
         [HttpGet]
-        public IActionResult Register()
+        [AllowAnonymous]
+        public IActionResult Login(string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
+        // POST: /Account/Login
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
+                var user = await _context.Users.SingleOrDefaultAsync(u => u.Login == model.Login);
+
+                if (user == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Nieprawidłowa próba logowania.");
+                    return View(model);
+                }
+
+                var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: false);
+
+                if (result.Succeeded)
+                {
+                    return RedirectToLocal(returnUrl);
+                }
+                if (result.IsLockedOut)
+                {
+                    return View("Lockout");
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Nieprawidłowa próba logowania.");
+                    return View(model);
+                }
+            }
+
+            return View(model);
+        }
+
+        // GET: /Account/Register
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Register(string? returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            return View();
+        }
+
+        // POST: /Account/Register
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            if (ModelState.IsValid)
+            {
+                if (await _context.Users.AnyAsync(u => u.Login == model.Login))
+                {
+                    ModelState.AddModelError(nameof(model.Login), "Ten login jest już zajęty.");
+                    return View(model);
+                }
+
                 var user = new User
                 {
                     UserName = model.UserName,
                     Email = model.Email,
                     Login = model.Login,
-                    CreatedAt = DateTime.UtcNow,
-                    LastActive = DateTime.UtcNow,
-                    Role = "User"
+                    CreatedAt = DateTime.Now
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
-
                 if (result.Succeeded)
                 {
-                    var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    var callbackUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: Request.Scheme);
 
-                    var confirmationLink = Url.Action("MailConfirmation", "Account",
-                        new { userId = user.Id, token = token }, Request.Scheme);
+                    await _emailSender.SendEmailAsync(model.Email, "Potwierdź swoje konto",
+                        $"Potwierdź swoje konto, <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>klikając tutaj</a>.");
 
-                    await _emailSender.SendEmailAsync(model.Email,
-                        "Potwierdź swoje konto",
-                        $"Potwierdź swoje konto, klikając ten link: <a href='{confirmationLink}'>Link</a>");
-
-                    return RedirectToAction("RegisterConfirmation");
+                    return RedirectToAction("RegisterConfirmation", "Account");
                 }
-
-                foreach (var error in result.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
+                AddErrors(result);
             }
+
             return View(model);
         }
 
+        // POST: /Account/Logout
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            return RedirectToAction(nameof(HomeController.Index), "Home");
+        }
+
+        // GET: /Account/RegisterConfirmation
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult RegisterConfirmation()
         {
             return View();
         }
 
+        // GET: /Account/ConfirmEmail
         [HttpGet]
-        public async Task<IActionResult> MailConfirmation(string userId, string token)
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmEmail(string userId, string code)
         {
-            if (userId == null || token == null)
+            if (userId == null || code == null)
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return View("Error");
+            }
+            var result = await _userManager.ConfirmEmailAsync(user, code);
+            return View(result.Succeeded ? "ConfirmEmail" : "Error");
+        }
+
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmEmailChange(string userId, string email, string code)
+        {
+            if (userId == null || email == null || code == null)
             {
                 return RedirectToAction("Index", "Home");
             }
@@ -82,59 +173,59 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                ViewData["ErrorMessage"] = "Nie znaleziono użytkownika o podanym ID.";
-                return View("Error"); // Upewnij się, że masz widok Error
+                return View("ConfirmEmailChangeFailure");
             }
 
-            // Sprawdź token i oznacz e-mail jako potwierdzony
-            var result = await _userManager.ConfirmEmailAsync(user, token);
-
-            if (result.Succeeded)
+            var result = await _userManager.ChangeEmailAsync(user, email, code);
+            if (!result.Succeeded)
             {
-                // Pokaż widok "ConfirmEmail.cshtml"
-                return View();
+                return View("ConfirmEmailChangeFailure");
             }
 
-            ViewData["ErrorMessage"] = "Błąd podczas potwierdzania adresu e-mail.";
-            return View("Error");
+            user.Email = email;
+            await _userManager.UpdateAsync(user);
+
+            // ***** POCZĄTEK POPRAWKI (CS0019) *****
+            // Pobieramy ID zalogowanego użytkownika (jako string)
+            var signedInUserId = _userManager.GetUserId(User);
+
+            // Porównujemy string ze stringiem (konwertując user.Id na string)
+            if (signedInUserId == user.Id.ToString())
+            {
+                await _signInManager.RefreshSignInAsync(user);
+            }
+            // ***** KONIEC POPRAWKI (CS0019) *****
+
+            return View("ConfirmEmailChangeSuccess");
         }
 
+
+        // GET: /Account/MailConfirmation
         [HttpGet]
-        public IActionResult Login()
+        [AllowAnonymous]
+        public IActionResult MailConfirmation()
         {
             return View();
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginViewModel model)
+        private void AddErrors(IdentityResult result)
         {
-            if (ModelState.IsValid)
+            foreach (var error in result.Errors)
             {
-                var result = await _signInManager.PasswordSignInAsync(model.Login, model.Password, false, lockoutOnFailure: true); // w trzecim arg jak dodamy mozliwosc zapamietania zalogowania to mozna od tego uzaleznic
-
-                if (result.Succeeded)
-                {
-                    return RedirectToAction("Index", "Home");
-                }
-                if (result.IsNotAllowed)
-                {
-                    ModelState.AddModelError(string.Empty, "Twoje konto nie zostało jeszcze potwierdzone. Sprawdź e-mail.");
-                    return View(model);
-                }
-                ModelState.AddModelError(string.Empty, "Nieprawidłowy login lub hasło.");
-
-
+                ModelState.AddModelError(string.Empty, error.Description);
             }
-            return View(model);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout()
+        private IActionResult RedirectToLocal(string? returnUrl)
         {
-            await _signInManager.SignOutAsync();
-            return RedirectToAction("Index", "Home");
+            if (Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            else
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
         }
     }
 }

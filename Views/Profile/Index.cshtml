@@ -1,0 +1,221 @@
+﻿@model praca_dyplomowa_zesp.Models.Users.ProfileViewModel
+
+@{
+    ViewData["Title"] = "Mój Profil";
+
+    // Inicjalizujemy modele dla formularzy w modalach i na stronie
+    var changePasswordModel = new praca_dyplomowa_zesp.Models.Users.ChangePasswordViewModel();
+    var changeEmailModel = new praca_dyplomowa_zesp.Models.Users.ChangeEmailViewModel();
+    var updateDescriptionModel = new praca_dyplomowa_zesp.Models.Users.UpdateDescriptionViewModel { Description = Model.Description };
+}
+
+<style>
+    .profile-banner {
+        width: 100%;
+        height: 250px;
+        /* ***** POCZĄTEK ZMIANY (Baner) ***** */
+        /* 'fill' rozciągnie obraz, aby wypełnił pole, nawet jeśli zniekształci proporcje */
+        object-fit: fill;
+        /* ***** KONIEC ZMIANY (Baner) ***** */
+
+        background-color: #eee;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        object-fit: cover; /* 'cover' dla awatara jest lepsze (zachowuje proporcje) */
+        border-radius: 50%;
+        border: 4px solid white;
+    }
+
+    .profile-actions {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+    }
+
+    .avatar-container {
+        position: absolute;
+        bottom: -75px;
+        width: 100%;
+        text-align: center;
+        z-index: 5;
+    }
+
+    label.upload-trigger {
+        cursor: pointer;
+        display: inline-block;
+        transition: transform 0.2s ease;
+    }
+
+        label.upload-trigger:hover {
+            transform: scale(1.05);
+        }
+
+</style>
+
+<form asp-action="ChangeAvatar" method="post" enctype="multipart/form-data" id="avatarForm" style="display: none;">
+    @Html.AntiForgeryToken()
+    <input type="file" name="avatarFile" id="avatarUploadInput" accept="image/jpeg,image/png" />
+</form>
+
+<form asp-action="ChangeBanner" method="post" enctype="multipart/form-data" id="bannerForm" style="display: none;">
+    @Html.AntiForgeryToken()
+    <input type="file" name="bannerFile" id="bannerUploadInput" accept="image/jpeg,image/png" />
+</form>
+
+
+<div class="row">
+    <div class="col-12">
+
+        @if (ViewData["StatusMessage"] != null)
+        {
+            <div class="alert alert-success" role="alert">
+                @ViewData["StatusMessage"]
+            </div>
+        }
+        @if (ViewData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger" role="alert">
+                @ViewData["ErrorMessage"]
+            </div>
+        }
+
+        <div class="card">
+
+            <div class="card-header p-0" style="position: relative; border-bottom: none;">
+
+                <label for="bannerUploadInput" class="upload-trigger" title="Zmień baner">
+                    <img src="@Url.Action("GetBanner", "Profile", new { id = Model.UserId })?v=@DateTime.UtcNow.Ticks" class="profile-banner" alt="Baner profilu" />
+                </label>
+
+                <div class="profile-actions">
+                    <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Zmień hasło</button>
+                    <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#changeEmailModal">Zmień e-mail</button>
+                </div>
+
+                <div class="avatar-container">
+                    <label for="avatarUploadInput" class="upload-trigger" title="Zmień awatar">
+                        <img src="@Url.Action("GetAvatar", "Profile", new { id = Model.UserId })?v=@DateTime.UtcNow.Ticks" class="profile-avatar" alt="Awatar" />
+                    </label>
+                </div>
+            </div>
+
+            <div class="card-body text-center" style="padding-top: 90px;">
+                <h3 class="mt-3">@Model.Username</h3>
+                <p class="text-muted">@Model.Email</p>
+
+                <hr />
+
+                <h5>O mnie</h5>
+
+                <form asp-action="UpdateDescription" method="post" class="col-md-8 mx-auto">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="mb-3">
+                        <textarea asp-for="@updateDescriptionModel.Description" class="form-control" rows="3" placeholder="Napisz coś o sobie..."></textarea>
+                        <span asp-validation-for="@updateDescriptionModel.Description" class="text-danger"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Zapisz opis</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="ChangePassword" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalLabel">Zmień hasło</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="mb-3">
+                        <label asp-for="@changePasswordModel.OldPassword" class="form-label"></label>
+                        <input asp-for="@changePasswordModel.OldPassword" class="form-control" />
+                        <span asp-validation-for="@changePasswordModel.OldPassword" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="@changePasswordModel.NewPassword" class="form-label"></label>
+                        <input asp-for="@changePasswordModel.NewPassword" class="form-control" />
+                        <span asp-validation-for="@changePasswordModel.NewPassword" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="@changePasswordModel.ConfirmPassword" class="form-label"></label>
+                        <input asp-for="@changePasswordModel.ConfirmPassword" class="form-control" />
+                        <span asp-validation-for="@changePasswordModel.ConfirmPassword" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="ChangeEmail" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changeEmailModalLabel">Zmień adres e-mail</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <p>Twój obecny adres e-mail: <strong>@Model.Email</strong></p>
+                    <div class="mb-3">
+                        <label asp-for="@changeEmailModel.NewEmail" class="form-label"></label>
+                        <input asp-for="@changeEmailModel.NewEmail" class="form-control" />
+                        <span asp-validation-for="@changeEmailModel.NewEmail" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary">Wyślij link</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Skrypt do automatycznego przesyłania plików po ich wybraniu
+        (function () {
+            var avatarInput = document.getElementById('avatarUploadInput');
+            var bannerInput = document.getElementById('bannerUploadInput');
+
+            if (avatarInput) {
+                avatarInput.onchange = function () {
+                    if (avatarInput.files.length > 0) {
+                        document.getElementById('avatarForm').submit();
+                    }
+                };
+            }
+
+            if (bannerInput) {
+                bannerInput.onchange = function () {
+                    if (bannerInput.files.length > 0) {
+                        document.getElementById('bannerForm').submit();
+                    }
+                };
+            }
+        })();
+    </script>
+}
