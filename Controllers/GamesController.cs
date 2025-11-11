@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// Plik: /Controllers/GamesController.cs
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data;
 using System;
@@ -12,7 +13,6 @@ using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
 
 // Definiujemy ViewModele dla tego kontrolera
-// Można je też przenieść do osobnych plików w Models/Modules/Games/
 namespace praca_dyplomowa_zesp.Models.Modules.Games
 {
     public class GameBrowserViewModel
@@ -20,15 +20,26 @@ namespace praca_dyplomowa_zesp.Models.Modules.Games
         public List<ApiGame> Games { get; set; } = new List<ApiGame>();
         public int CurrentPage { get; set; } = 1;
         public string? SearchString { get; set; }
+
+        // NOWE: Przechowuje tryb, w jakim jest przeglądarka ("browse" lub "guides")
+        public string Mode { get; set; } = "browse";
     }
 
-    // --- USUNIĘTO KLASĘ GameDetailViewModel ---
+    // NOWE: Dodajemy z powrotem GameDetailViewModel dla widoku szczegółów gier spoza biblioteki
+    public class GameDetailViewModel
+    {
+        public long IgdbGameId { get; set; }
+        public string Name { get; set; }
+        public string? CoverUrl { get; set; }
+        public List<string> Genres { get; set; } = new List<string>();
+        public string? Developer { get; set; }
+        public string? ReleaseDate { get; set; }
+    }
 }
 
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    // Ten kontroler jest dostępny dla wszystkich (również niezalogowanych)
     [AllowAnonymous]
     public class GamesController : Controller
     {
@@ -45,9 +56,6 @@ namespace praca_dyplomowa_zesp.Controllers
             _userManager = userManager;
         }
 
-        /// <summary>
-        /// Metoda pomocnicza do pobierania ID (Guid) aktualnie zalogowanego użytkownika
-        /// </summary>
         private Guid GetCurrentUserId()
         {
             var userIdString = _userManager.GetUserId(User);
@@ -59,21 +67,21 @@ namespace praca_dyplomowa_zesp.Controllers
         }
 
         // GET: Games
-        // Obsługuje wyszukiwanie i paginację
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        // ZMIANA: Dodano parametr "mode"
+        public async Task<IActionResult> Index(string? searchString, int page = 1, string mode = "browse")
         {
             if (page < 1) page = 1;
             int offset = (page - 1) * PageSize;
             string query;
 
-            if (!string.IsNullOrEmpty(searchString))
+            if (!string.IsNullOrEmpty(searchString) && mode == "browse")
             {
                 // Wyszukiwanie gier
                 query = $"fields name, cover.url; search \"{searchString}\"; where cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
             }
             else
             {
-                // Domyślny widok - popularne gry
+                // Domyślny widok - popularne gry (dla "guides" i domyślnego "browse")
                 query = $"fields name, cover.url, rating; sort rating desc; where rating != null & cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
             }
 
@@ -82,6 +90,16 @@ namespace praca_dyplomowa_zesp.Controllers
             var gamesFromApi = string.IsNullOrEmpty(jsonResponse)
                 ? new List<ApiGame>()
                 : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
+
+            // ZMIANA: Ustawienie tytułu na podstawie trybu
+            if (mode == "guides")
+            {
+                ViewData["Title"] = "Guides & Tips - Wybierz grę";
+            }
+            else
+            {
+                ViewData["Title"] = "Przeglądaj Gry";
+            }
 
             var viewModel = new Models.Modules.Games.GameBrowserViewModel
             {
@@ -92,12 +110,56 @@ namespace praca_dyplomowa_zesp.Controllers
                     Cover = apiGame.Cover != null ? new ApiCover { Url = apiGame.Cover.Url.Replace("t_thumb", "t_cover_big") } : null
                 }).ToList(),
                 CurrentPage = page,
-                SearchString = searchString
+                SearchString = searchString,
+                Mode = mode // ZMIANA: Przekazanie trybu do widoku
             };
 
             return View(viewModel);
         }
 
-        // --- USUNIĘTO AKCJĘ Details(long? id) ---
+        // NOWE: Dodana akcja Details
+        // GET: Games/Details/5 (gdzie 5 to ID gry z IGDB)
+        [HttpGet]
+        public async Task<IActionResult> Details(long id)
+        {
+            var currentUserId = GetCurrentUserId();
+
+            // Krok 1: Sprawdź, czy użytkownik jest zalogowany i ma tę grę w bibliotece
+            if (currentUserId != Guid.Empty)
+            {
+                var gameInLibrary = await _context.GamesInLibraries
+                    .FirstOrDefaultAsync(g => g.UserId == currentUserId && g.IgdbGameId == id);
+
+                if (gameInLibrary != null)
+                {
+                    // Użytkownik ma grę - przekieruj do widoku szczegółów w bibliotece
+                    return RedirectToAction("Details", "Library", new { id = gameInLibrary.Id });
+                }
+            }
+
+            // Krok 2: Użytkownik nie ma gry lub nie jest zalogowany. Pokaż widok publiczny.
+            // Używamy zapytania podobnego do tego z LibraryController.Details
+            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human; where id = {id}; limit 1;";
+            var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
+
+            if (string.IsNullOrEmpty(gameJsonResponse)) return NotFound();
+
+            var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
+
+            if (gameDetailsFromApi == null) return NotFound();
+
+            // Krok 3: Stwórz ViewModel
+            var viewModel = new Models.Modules.Games.GameDetailViewModel
+            {
+                IgdbGameId = gameDetailsFromApi.Id,
+                Name = gameDetailsFromApi.Name,
+                CoverUrl = gameDetailsFromApi.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
+                Genres = gameDetailsFromApi.Genres?.Select(g => g.Name).ToList() ?? new List<string>(),
+                Developer = gameDetailsFromApi.Involved_companies?.FirstOrDefault(ic => ic.developer)?.Company?.Name,
+                ReleaseDate = gameDetailsFromApi.Release_dates?.FirstOrDefault()?.Human
+            };
+
+            return View(viewModel);
+        }
     }
 }

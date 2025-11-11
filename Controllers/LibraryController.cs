@@ -26,7 +26,7 @@ namespace praca_dyplomowa_zesp.Models.API
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    [Authorize] // Wymusza logowanie dla wszystkich akcji w tym kontrolerze
+    [Authorize]
     public class LibraryController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -40,9 +40,6 @@ namespace praca_dyplomowa_zesp.Controllers
             _userManager = userManager;
         }
 
-        /// <summary>
-        /// Metoda pomocnicza do pobierania ID (Guid) aktualnie zalogowanego użytkownika
-        /// </summary>
         private Guid GetCurrentUserId()
         {
             var userIdString = _userManager.GetUserId(User);
@@ -50,7 +47,7 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 return userId;
             }
-            return Guid.Empty; // Sytuacja awaryjna, nie powinna wystąpić przy [Authorize]
+            return Guid.Empty;
         }
 
         // GET: Library
@@ -128,7 +125,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 DateAddedToLibrary = gameFromDb.DateAddedToLibrary,
                 CurrentUserStoryMission = gameFromDb.CurrentUserStoryMission,
                 CurrentUserStoryProgressPercent = gameFromDb.CurrentUserStoryProgressPercent,
-                Notes = gameFromDb.Notes, // <-- DODANE PRZYPISANIE Notatek
+                Notes = gameFromDb.Notes,
                 Achievements = achievementsFromApi.Select(apiAch => new AchievementViewModel
                 {
                     Name = apiAch.Name,
@@ -150,7 +147,10 @@ namespace praca_dyplomowa_zesp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("IgdbGameId")] GameInLibrary gameInLibrary)
+        // ***** POCZĄTEK ZMIANY *****
+        // Dodajemy parametr 'string returnUrl'
+        public async Task<IActionResult> Create([Bind("IgdbGameId")] GameInLibrary gameInLibrary, string returnUrl)
+        // ***** KONIEC ZMIANY *****
         {
             var currentUserId = GetCurrentUserId();
             gameInLibrary.UserId = currentUserId;
@@ -161,11 +161,38 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 _context.Add(gameInLibrary);
                 await _context.SaveChangesAsync();
-                return RedirectToAction("Index", "Guides", new { gameId = gameInLibrary.IgdbGameId });
+
+                // ***** POCZĄTEK ZMIANY *****
+                // Sprawdzamy, czy returnUrl został podany i jest bezpieczny (lokalny)
+                if (Url.IsLocalUrl(returnUrl))
+                {
+                    return Redirect(returnUrl); // Wracamy na stronę, z której przyszliśmy (np. Guides/Index)
+                }
+
+                // Domyślne przekierowanie (używane przez Games/Details)
+                return RedirectToAction(nameof(Details), "Library", new { id = gameInLibrary.Id });
+                // ***** KONIEC ZMIANY *****
             }
 
             ModelState.AddModelError("IgdbGameId", "Ta gra jest już w Twojej bibliotece.");
-            return RedirectToAction("Index", "Guides", new { gameId = gameInLibrary.IgdbGameId });
+
+            // ***** POCZĄTEK ZMIANY *****
+            // Jeśli gra już istnieje, również obsłuż returnUrl
+            if (Url.IsLocalUrl(returnUrl))
+            {
+                // Użytkownik jest np. na Guides/Index, niech tam zostanie
+                return Redirect(returnUrl);
+            }
+
+            // Domyślne przekierowanie dla błędu (gdy nie ma returnUrl)
+            var existingGame = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameInLibrary.IgdbGameId);
+            if (existingGame != null)
+            {
+                return RedirectToAction(nameof(Details), "Library", new { id = existingGame.Id });
+            }
+            // ***** KONIEC ZMIANY *****
+
+            return RedirectToAction("Index", "Games", new { mode = "browse" });
         }
 
         // GET: Library/Edit/5
@@ -180,7 +207,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        // <-- ZAKTUALIZOWANY BIND -->
         public async Task<IActionResult> Edit(int id, [Bind("Id,IgdbGameId,UserId,DateAddedToLibrary,CurrentUserStoryMission,CurrentUserStoryProgressPercent,Notes")] GameInLibrary gameInLibrary)
         {
             if (id != gameInLibrary.Id) return NotFound();

@@ -1,24 +1,30 @@
 ﻿@model praca_dyplomowa_zesp.Models.Modules.Games.GameBrowserViewModel
 @{
-    ViewData["Title"] = "Przeglądaj Gry";
+    ViewData["Title"] = ViewData["Title"] ?? "Przeglądaj Gry"; // Użyj tytułu z kontrolera
 }
 
 <h1>@ViewData["Title"]</h1>
 
-<div class="row mb-3">
-    <div class="col-md-6">
-        <form asp-action="Index" method="get">
-            <div class="input-group">
-                <input type="text" name="searchString" class="form-control" placeholder="Wyszukaj grę po nazwie..." value="@Model.SearchString" />
-                <button type="submit" class="btn btn-primary">Szukaj</button>
-                @if (!string.IsNullOrEmpty(Model.SearchString))
-                {
-                    <a asp-action="Index" class="btn btn-secondary">Wyczyść</a>
-                }
-            </div>
-        </form>
+@* ZMIANA: Pasek wyszukiwania widoczny tylko w trybie "browse" *@
+@if (Model.Mode == "browse")
+{
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <form asp-action="Index" method="get">
+                @* ZMIANA: Musimy dodać ukryte pole dla trybu, aby wyszukiwanie go zachowało *@
+                <input type="hidden" name="mode" value="browse" />
+                <div class="input-group">
+                    <input type="text" name="searchString" class="form-control" placeholder="Wyszukaj grę po nazwie..." value="@Model.SearchString" />
+                    <button type="submit" class="btn btn-primary">Szukaj</button>
+                    @if (!string.IsNullOrEmpty(Model.SearchString))
+                    {
+                        <a asp-action="Index" asp-route-mode="browse" class="btn btn-secondary">Wyczyść</a>
+                    }
+                </div>
+            </form>
+        </div>
     </div>
-</div>
+}
 
 <div class="row">
     @if (Model.Games.Any())
@@ -27,12 +33,33 @@
         {
             <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-4">
                 <div class="card h-100">
-                    <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@game.Id">
-                        <img src="@(game.Cover?.Url ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="card-img-top" alt="@game.Name">
-                    </a>
+                    @* ZMIANA: Warunkowe linkowanie
+            - Jeśli tryb "guides", linkuj do Poradników
+            - Jeśli tryb "browse", linkuj do nowych Szczegółów Gry
+            *@
+                    @if (Model.Mode == "guides")
+                    {
+                        <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@game.Id">
+                            <img src="@(game.Cover?.Url ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="card-img-top" alt="@game.Name">
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Games" asp-action="Details" asp-route-id="@game.Id">
+                            <img src="@(game.Cover?.Url ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="card-img-top" alt="@game.Name">
+                        </a>
+                    }
                     <div class="card-body p-2">
                         <h6 class="card-title" style="font-size: 0.9rem;">
-                            <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@game.Id" class="text-decoration-none text-dark">@game.Name</a>
+                            @* ZMIANA: Link tekstowy również jest warunkowy *@
+                            @if (Model.Mode == "guides")
+                            {
+                                <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@game.Id" class="text-decoration-none text-dark">@game.Name</a>
+                            }
+                            else
+                            {
+                                <a asp-controller="Games" asp-action="Details" asp-route-id="@game.Id" class="text-decoration-none text-dark">@game.Name</a>
+                            }
                         </h6>
                     </div>
                 </div>
@@ -52,7 +79,8 @@
         @if (Model.CurrentPage > 1)
         {
             <li class="page-item">
-                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-searchString="@Model.SearchString">Poprzednia</a>
+                @* ZMIANA: Dodano asp-route-mode *@
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-searchString="@Model.SearchString" asp-route-mode="@Model.Mode">Poprzednia</a>
             </li>
         }
         else
@@ -66,10 +94,11 @@
             <span class="page-link">@Model.CurrentPage</span>
         </li>
 
-        @if (Model.Games.Count == 50) // Proste sprawdzenie - jeśli API zwróciło pełną stronę, zakładamy że jest następna
+        @if (Model.Games.Count == 50)
         {
             <li class="page-item">
-                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-searchString="@Model.SearchString">Następna</a>
+                @* ZMIANA: Dodano asp-route-mode *@
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-searchString="@Model.SearchString" asp-route-mode="@Model.Mode">Następna</a>
             </li>
         }
         else

@@ -1,0 +1,61 @@
+﻿@model praca_dyplomowa_zesp.Models.Modules.Games.GameDetailViewModel
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<h1>@Model.Name</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid" alt="@Model.Name">
+    </div>
+    <div class="col-md-8">
+        <h3>Szczegóły Gry</h3>
+        <dl class="row">
+            <dt class="col-sm-3">Deweloper</dt>
+            <dd class="col-sm-9">@(Model.Developer ?? "Brak informacji")</dd>
+
+            <dt class="col-sm-3">Data wydania</dt>
+            <dd class="col-sm-9">@(Model.ReleaseDate ?? "Brak informacji")</dd>
+
+            <dt class="col-sm-3">Gatunki</dt>
+            <dd class="col-sm-9">
+                @if (Model.Genres != null && Model.Genres.Any())
+                {
+                    @string.Join(", ", Model.Genres)
+                }
+                else
+                {
+                    <text>Brak informacji</text>
+                }
+            </dd>
+        </dl>
+
+        <hr />
+
+        <h4>Akcje</h4>
+        <div class="d-flex">
+            @* Przycisk 1: Przejdź do poradników *@
+            <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-primary me-2">
+                Przejdź do poradników i wskazówek
+            </a>
+
+            @* Przycisk 2: Dodaj do biblioteki (tylko dla zalogowanych) *@
+            @* Zakładamy, że akcja Create w LibraryController jest chroniona [Authorize] *@
+            @if (User.Identity.IsAuthenticated)
+            {
+                <form asp-controller="Library" asp-action="Create" method="post">
+                    @* Używamy formularza, aby wysłać POST z ID gry *@
+                    <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
+                    <button type="submit" class="btn btn-success">Dodaj do biblioteki</button>
+                </form>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path" class="btn btn-success">
+                    Zaloguj się, aby dodać do biblioteki
+                </a>
+            }
+        </div>
+    </div>
+</div>

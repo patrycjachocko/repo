@@ -17,6 +17,12 @@
         {
             <form asp-controller="Library" asp-action="Create" method="post" style="display: inline;">
                 <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
+
+                @* ***** POCZĄTEK POPRAWKI ***** *@
+                @* Dodajemy ukryte pole z aktualnym adresem URL, aby kontroler wiedział, dokąd wrócić *@
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                @* ***** KONIEC POPRAWKI ***** *@
+
                 <button type="submit" class="btn btn-outline-primary btn-sm">Dodaj do biblioteki</button>
             </form>
         }
