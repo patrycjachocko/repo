@@ -12,7 +12,6 @@ using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 
-// Definiujemy ViewModel dla widoku Poradników
 namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {
     public class GuidesViewModel
