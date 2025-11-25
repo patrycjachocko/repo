@@ -4,8 +4,11 @@
     ViewData["Title"] = "Biblioteka Steam";
 }
 
-<div class="container">
-    <h2>Twoja Biblioteka Steam (@Model.Count gier)</h2>
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Twoja Biblioteka Steam <span class="text-muted" style="font-size: 0.6em;">(@Model.Count gier)</span></h2>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Powrót do profilu</a>
+    </div>
     <hr />
 
     @if (!Model.Any())
@@ -18,25 +21,44 @@
     <div class="row">
         @foreach (var game in Model)
         {
-            <div class="col-md-3 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <img src="@($"http://media.steampowered.com/steamcommunity/public/images/apps/{game.AppId}/{game.ImgIconUrl}.jpg")"
-                         class="card-img-top p-2"
-                         alt="@game.Name"
-                         onerror="this.src='https://via.placeholder.com/150?text=No+Icon'">
+            <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+                <a asp-controller="Games" asp-action="SteamRedirect" asp-route-query="@game.Name" class="text-decoration-none text-dark">
 
-                    <div class="card-body">
-                        <h6 class="card-title text-truncate" title="@game.Name">@game.Name</h6>
-                        <p class="card-text text-muted small">
-                            Czas gry: <strong>@Math.Round(game.PlaytimeForever / 60.0, 1) h</strong>
-                        </p>
+                    <div class="card h-100 shadow-sm grow-on-hover" style="transition: transform 0.2s; border: none;">
+
+                        <div style="position: relative; padding-top: 150%; overflow: hidden; background-color: #1b2838; border-radius: 5px;">
+                            <img src="@($"https://steamcdn-a.akamaihd.net/steam/apps/{game.AppId}/library_600x900.jpg")"
+                                 class="card-img-top"
+                                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                                 alt="@game.Name"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/600x900?text=Brak+Okładki';">
+                        </div>
+
+                        <div class="card-body p-2">
+                            <h6 class="card-title text-truncate font-weight-bold mt-2" title="@game.Name" style="margin-bottom: 0.2rem; font-size: 0.9rem;">
+                                @game.Name
+                            </h6>
+                            <p class="card-text text-muted small">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
+                                    <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
+                                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z" />
+                                </svg>
+                                @Math.Round(game.PlaytimeForever / 60.0, 1) h
+                            </p>
+                        </div>
                     </div>
-                </div>
+
+                </a>
             </div>
         }
     </div>
-
-    <div class="mt-3 mb-5">
-        <a asp-action="Index" class="btn btn-secondary">Powrót do profilu</a>
-    </div>
 </div>
+
+<style>
+    .grow-on-hover:hover {
+        transform: scale(1.05);
+        cursor: pointer;
+        z-index: 10;
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.2) !important;
+    }
+</style>

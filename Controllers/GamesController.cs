@@ -117,7 +117,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(viewModel);
         }
 
-        // NOWE: Dodana akcja Details
         // GET: Games/Details/5 (gdzie 5 to ID gry z IGDB)
         [HttpGet]
         public async Task<IActionResult> Details(long id)
@@ -160,6 +159,49 @@ namespace praca_dyplomowa_zesp.Controllers
             };
 
             return View(viewModel);
+        }
+
+        // --- NOWA METODA: Przekierowanie ze Steam ---
+        [HttpGet]
+        public async Task<IActionResult> SteamRedirect(string query)
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                return RedirectToAction("Index");
+            }
+
+            // Zabezpieczenie przed cudzysłowami w nazwie gry, które mogłyby zepsuć zapytanie IGDB
+            var safeQuery = query.Replace("\"", "");
+
+            // Szukamy gry w IGDB po nazwie otrzymanej ze Steam
+            // fields id, name; -> potrzebujemy tylko ID, by zrobić przekierowanie
+            var igdbQuery = $"fields id, name; search \"{safeQuery}\"; limit 1;";
+
+            try
+            {
+                var jsonResponse = await _igdbClient.ApiRequestAsync("games", igdbQuery);
+
+                var games = string.IsNullOrEmpty(jsonResponse)
+                    ? new List<ApiGame>()
+                    : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
+
+                var foundGame = games.FirstOrDefault();
+
+                if (foundGame != null)
+                {
+                    // Sukces! Mamy ID gry w naszym systemie (IGDB), przekierowujemy do Details
+                    return RedirectToAction("Details", new { id = foundGame.Id });
+                }
+            }
+            catch (Exception ex)
+            {
+                // Logowanie błędu można dodać tutaj
+                Console.WriteLine($"Błąd podczas wyszukiwania gry ze Steam: {ex.Message}");
+            }
+
+            // Fallback: Jeśli nie znaleziono gry automatycznie, przekieruj do wyszukiwarki z wpisaną nazwą
+            TempData["ErrorMessage"] = $"Nie udało się automatycznie dopasować gry '{query}'. Spróbuj znaleźć ją na liście poniżej.";
+            return RedirectToAction("Index", new { searchString = query });
         }
     }
 }
