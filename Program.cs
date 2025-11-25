@@ -1,10 +1,10 @@
 using System.Globalization;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.Users;
 using praca_dyplomowa_zesp;
+using praca_dyplomowa_zesp.Models.API;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,14 +24,12 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
 
-    options.User.RequireUniqueEmail = true;
-
-    options.SignIn.RequireConfirmedAccount = true; // ustawic na 'true', jesli chcemy wymagac potwierdzenia e-mail
+    // Wy³¹czamy wymóg potwierdzenia konta
+    options.SignIn.RequireConfirmedAccount = false;
 })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddTransient<IEmailSender, ConsoleEmailSender>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -42,6 +40,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddControllersWithViews();
 
+// --- KONFIGURACJA ZEWNÊTRZNYCH API ---
+
+// 1. IGDB
 builder.Services.AddSingleton<IGDBClient>(provider =>
 {
     var clientId = builder.Configuration["IGDB:ClientId"];
@@ -54,6 +55,19 @@ builder.Services.AddSingleton<IGDBClient>(provider =>
 
     return new IGDBClient(clientId, clientSecret);
 });
+
+// 2. STEAM - Rejestracja serwisu API
+builder.Services.AddHttpClient<SteamApiService>();
+
+// 3. STEAM - Konfiguracja logowania (OpenID)
+builder.Services.AddAuthentication()
+    .AddSteam(options =>
+    {
+        options.CorrelationCookie.SameSite = SameSiteMode.None;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+    });
+
+// -------------------------------------
 
 builder.Services.AddMemoryCache();
 

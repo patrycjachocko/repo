@@ -1,0 +1,42 @@
+﻿@model List<praca_dyplomowa_zesp.Models.API.SteamGameDto>
+
+@{
+    ViewData["Title"] = "Biblioteka Steam";
+}
+
+<div class="container">
+    <h2>Twoja Biblioteka Steam (@Model.Count gier)</h2>
+    <hr />
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-warning">
+            Nie znaleziono gier. Upewnij się, że Twój profil Steam i biblioteka gier są ustawione jako <strong>Publiczne</strong> w ustawieniach prywatności Steam.
+        </div>
+    }
+
+    <div class="row">
+        @foreach (var game in Model)
+        {
+            <div class="col-md-3 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <img src="@($"http://media.steampowered.com/steamcommunity/public/images/apps/{game.AppId}/{game.ImgIconUrl}.jpg")"
+                         class="card-img-top p-2"
+                         alt="@game.Name"
+                         onerror="this.src='https://via.placeholder.com/150?text=No+Icon'">
+
+                    <div class="card-body">
+                        <h6 class="card-title text-truncate" title="@game.Name">@game.Name</h6>
+                        <p class="card-text text-muted small">
+                            Czas gry: <strong>@Math.Round(game.PlaytimeForever / 60.0, 1) h</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="mt-3 mb-5">
+        <a asp-action="Index" class="btn btn-secondary">Powrót do profilu</a>
+    </div>
+</div>

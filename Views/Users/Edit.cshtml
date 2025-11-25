@@ -4,9 +4,9 @@
     ViewData["Title"] = "Edytuj użytkownika";
 }
 
-<h1>Edycja</h1>
+<h1>Edytuj</h1>
 
-<h4>Użytkownik: @Model.UserName</h4>
+<h4>Użytkownik</h4>
 <hr />
 <div class="row">
     <div class="col-md-4">
@@ -15,20 +15,17 @@
             <input type="hidden" asp-for="Id" />
 
             <div class="form-group">
-                <label asp-for="UserName" class="control-label"></label>
+                <label asp-for="Login" class="control-label"></label>
+                <input asp-for="Login" class="form-control" readonly />
+                <span asp-validation-for="Login" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="UserName" class="control-label">Nazwa użytkownika</label>
                 <input asp-for="UserName" class="form-control" />
                 <span asp-validation-for="UserName" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Email" class="control-label"></label>
-                <input asp-for="Email" class="form-control" />
-                <span asp-validation-for="Email" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Login" class="control-label"></label>
-                <input asp-for="Login" class="form-control" />
-                <span asp-validation-for="Login" class="text-danger"></span>
-            </div>
+
             <div class="form-group form-check">
                 <label class="form-check-label">
                     <input class="form-check-input" asp-for="isBanned" /> @Html.DisplayNameFor(model => model.isBanned)

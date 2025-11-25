@@ -8,8 +8,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Authentication; // Do obsługi logowania zewnętrznego
+using System.Security.Claims; // Do wyciągania ID z ciasteczek
+using praca_dyplomowa_zesp.Models.API;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -19,17 +21,17 @@ namespace praca_dyplomowa_zesp.Controllers
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly IEmailSender _emailSender;
+        private readonly SteamApiService _steamService; // Serwis Steam
 
         public ProfileController(UserManager<User> userManager,
                                  SignInManager<User> signInManager,
                                  IWebHostEnvironment webHostEnvironment,
-                                 IEmailSender emailSender)
+                                 SteamApiService steamService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _webHostEnvironment = webHostEnvironment;
-            _emailSender = emailSender;
+            _steamService = steamService;
         }
 
         private Task<User> GetCurrentUserAsync() => _userManager.GetUserAsync(User);
@@ -48,8 +50,8 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 UserId = user.Id,
                 Username = user.UserName,
-                Email = user.Email,
-                Description = user.Description
+                Description = user.Description,
+                SteamId = user.SteamId // Przekazujemy SteamId do widoku
             };
 
             ViewData["StatusMessage"] = TempData["StatusMessage"];
@@ -57,6 +59,86 @@ namespace praca_dyplomowa_zesp.Controllers
 
             return View(viewModel);
         }
+
+        // --- SEKCJA STEAM ---
+
+        [HttpPost]
+        public IActionResult LinkSteam()
+        {
+            // Przekierowanie do logowania Steam
+            var redirectUrl = Url.Action("LinkSteamCallback", "Profile");
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties("Steam", redirectUrl);
+            return new ChallengeResult("Steam", properties);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LinkSteamCallback()
+        {
+            var user = await GetCurrentUserAsync();
+            if (user == null) return RedirectToAction("Index");
+
+            // Pobieramy dane logowania zewnętrznego
+            var info = await _signInManager.GetExternalLoginInfoAsync(user.Id.ToString());
+
+            // Jeśli standardowa metoda zawiedzie (częste przy łączeniu kont już zalogowanych), próbujemy manualnie
+            if (info == null)
+            {
+                var result = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
+                if (result?.Succeeded == true)
+                {
+                    var steamIdClaim = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (steamIdClaim != null)
+                    {
+                        var steamId = steamIdClaim.Split('/').Last(); // Wyciągamy ID z URL
+                        user.SteamId = steamId;
+                        await _userManager.UpdateAsync(user);
+                        TempData["StatusMessage"] = "Konto Steam zostało połączone!";
+                    }
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Błąd podczas łączenia ze Steam.";
+                }
+            }
+            else
+            {
+                var steamIdClaim = info.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var steamId = steamIdClaim.Split('/').Last();
+                user.SteamId = steamId;
+                await _userManager.UpdateAsync(user);
+                TempData["StatusMessage"] = "Konto Steam zostało połączone!";
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UnlinkSteam()
+        {
+            var user = await GetCurrentUserAsync();
+            if (user != null)
+            {
+                user.SteamId = null;
+                await _userManager.UpdateAsync(user);
+                TempData["StatusMessage"] = "Odłączono konto Steam.";
+            }
+            return RedirectToAction("Index");
+        }
+
+        public async Task<IActionResult> SteamLibrary()
+        {
+            var user = await GetCurrentUserAsync();
+            if (user == null || string.IsNullOrEmpty(user.SteamId))
+            {
+                return RedirectToAction("Index");
+            }
+
+            var games = await _steamService.GetUserGamesAsync(user.SteamId);
+            // Sortujemy gry malejąco wg czasu gry
+            return View(games.OrderByDescending(g => g.PlaytimeForever).ToList());
+        }
+
+        // --- KONIEC SEKCJI STEAM ---
 
         // GET: Profile/GetAvatar/GUID
         [AllowAnonymous]
@@ -236,43 +318,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
             await _signInManager.RefreshSignInAsync(user);
             TempData["StatusMessage"] = "Hasło zostało zmienione.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // POST: /Profile/ChangeEmail
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangeEmail([Bind(Prefix = "changeEmailModel")] ChangeEmailViewModel model)
-        {
-            if (!ModelState.IsValid)
-            {
-                TempData["ErrorMessage"] = "Nowy adres e-mail jest nieprawidłowy.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var user = await GetCurrentUserAsync();
-            if (user == null) return NotFound();
-
-            if (model.NewEmail == user.Email)
-            {
-                TempData["ErrorMessage"] = "To jest już Twój obecny adres e-mail.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var token = await _userManager.GenerateChangeEmailTokenAsync(user, model.NewEmail);
-            var callbackUrl = Url.Action("ConfirmEmailChange", "Account",
-                new { userId = user.Id, email = model.NewEmail, code = token },
-                protocol: Request.Scheme);
-
-            // ***** POCZĄTEK ZMIANY (E-mail) *****
-            // Wysyłamy e-mail na STARY (user.Email), a nie na nowy (model.NewEmail)
-            await _emailSender.SendEmailAsync(user.Email, "Potwierdź zmianę adresu e-mail",
-                $"Jeżeli chcesz zmienić mail konta na: {model.NewEmail} to kliknij poniższy link: <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>link</a>.");
-
-            // Poprawiono komunikat TempData
-            TempData["StatusMessage"] = "Link potwierdzający zmianę adresu e-mail został wysłany na Twój *obecny* adres e-mail.";
-            // ***** KONIEC ZMIANY (E-mail) *****
-
             return RedirectToAction(nameof(Index));
         }
     }

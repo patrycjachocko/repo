@@ -55,7 +55,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 if (user == null) return NotFound();
 
                 user.UserName = model.UserName;
-                user.Email = model.Email;
+                // USUNIĘTO: user.Email = model.Email;
                 user.isBanned = model.isBanned;
 
                 var result = await _userManager.UpdateAsync(user);

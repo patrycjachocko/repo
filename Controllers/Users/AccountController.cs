@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using praca_dyplomowa_zesp.Models.Users;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using System.Text.Encodings.Web;
 using praca_dyplomowa.Data;
 using Microsoft.EntityFrameworkCore;
@@ -15,18 +14,18 @@ namespace praca_dyplomowa_zesp.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
-        private readonly IEmailSender _emailSender;
+        // USUNIĘTO: private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
 
         public AccountController(
             UserManager<User> userManager,
             SignInManager<User> signInManager,
-            IEmailSender emailSender,
+            // IEmailSender emailSender, <- USUNIĘTO
             ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            _emailSender = emailSender;
+            // _emailSender = emailSender; <- USUNIĘTO
             _context = context;
         }
 
@@ -103,7 +102,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 var user = new User
                 {
                     UserName = model.UserName,
-                    Email = model.Email,
+                    // Email = model.Email, <- USUNIĘTO
                     Login = model.Login,
                     CreatedAt = DateTime.Now
                 };
@@ -111,13 +110,11 @@ namespace praca_dyplomowa_zesp.Controllers
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
-                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    var callbackUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: Request.Scheme);
+                    // USUNIĘTO: Generowanie tokenu i wysyłanie e-maila
 
-                    await _emailSender.SendEmailAsync(model.Email, "Potwierdź swoje konto",
-                        $"Potwierdź swoje konto, <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>klikając tutaj</a>.");
-
-                    return RedirectToAction("RegisterConfirmation", "Account");
+                    // ZMIANA: Automatyczne logowanie po rejestracji (skoro nie ma potwierdzenia email)
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    return RedirectToLocal(returnUrl);
                 }
                 AddErrors(result);
             }
@@ -134,79 +131,10 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction(nameof(HomeController.Index), "Home");
         }
 
-        // GET: /Account/RegisterConfirmation
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult RegisterConfirmation()
-        {
-            return View();
-        }
-
-        // GET: /Account/ConfirmEmail
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> ConfirmEmail(string userId, string code)
-        {
-            if (userId == null || code == null)
-            {
-                return RedirectToAction(nameof(HomeController.Index), "Home");
-            }
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return View("Error");
-            }
-            var result = await _userManager.ConfirmEmailAsync(user, code);
-            return View(result.Succeeded ? "ConfirmEmail" : "Error");
-        }
-
-
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> ConfirmEmailChange(string userId, string email, string code)
-        {
-            if (userId == null || email == null || code == null)
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return View("ConfirmEmailChangeFailure");
-            }
-
-            var result = await _userManager.ChangeEmailAsync(user, email, code);
-            if (!result.Succeeded)
-            {
-                return View("ConfirmEmailChangeFailure");
-            }
-
-            user.Email = email;
-            await _userManager.UpdateAsync(user);
-
-            // ***** POCZĄTEK POPRAWKI (CS0019) *****
-            // Pobieramy ID zalogowanego użytkownika (jako string)
-            var signedInUserId = _userManager.GetUserId(User);
-
-            // Porównujemy string ze stringiem (konwertując user.Id na string)
-            if (signedInUserId == user.Id.ToString())
-            {
-                await _signInManager.RefreshSignInAsync(user);
-            }
-            // ***** KONIEC POPRAWKI (CS0019) *****
-
-            return View("ConfirmEmailChangeSuccess");
-        }
-
-
-        // GET: /Account/MailConfirmation
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult MailConfirmation()
-        {
-            return View();
-        }
+        // USUNIĘTO: RegisterConfirmation
+        // USUNIĘTO: ConfirmEmail
+        // USUNIĘTO: ConfirmEmailChange
+        // USUNIĘTO: MailConfirmation
 
         private void AddErrors(IdentityResult result)
         {

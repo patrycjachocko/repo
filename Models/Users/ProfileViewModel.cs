@@ -7,7 +7,9 @@ namespace praca_dyplomowa_zesp.Models.Users
     {
         public Guid UserId { get; set; }
         public string Username { get; set; }
-        public string Email { get; set; }
         public string? Description { get; set; }
+
+        // Pole do przechowywania ID Steam w widoku
+        public string? SteamId { get; set; }
     }
 }

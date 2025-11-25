@@ -23,14 +23,6 @@ namespace praca_dyplomowa_zesp.Models.Users
         public string ConfirmPassword { get; set; }
     }
 
-    public class ChangeEmailViewModel
-    {
-        [Required(ErrorMessage = "Nowy e-mail jest wymagany.")]
-        [EmailAddress]
-        [Display(Name = "Nowy e-mail")]
-        public string NewEmail { get; set; }
-    }
-
     public class UpdateDescriptionViewModel
     {
         [StringLength(500, ErrorMessage = "Opis nie może przekraczać 500 znaków.")]

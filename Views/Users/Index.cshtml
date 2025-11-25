@@ -4,19 +4,23 @@
     ViewData["Title"] = "Użytkownicy";
 }
 
-<h1>Lista Użytkowników</h1>
+<h1>Użytkownicy</h1>
 
-<p>
-    @* Link do tworzenia użytkownika można usunąć, jeśli rejestracja jest jedyną drogą *@
-    <a asp-action="Create">Stwórz nowego użytkownika</a>
-</p>
 <table class="table">
     <thead>
         <tr>
-            <th>@Html.DisplayNameFor(model => model.UserName)</th>
-            <th>@Html.DisplayNameFor(model => model.Email)</th>
-            <th>@Html.DisplayNameFor(model => model.Login)</th>
-            <th>Zbanowany</th>
+            <th>
+                @Html.DisplayNameFor(model => model.Login)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.UserName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Role)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.isBanned)
+            </th>
             <th></th>
         </tr>
     </thead>
@@ -24,10 +28,18 @@
         @foreach (var item in Model)
         {
             <tr>
-                <td>@Html.DisplayFor(modelItem => item.UserName)</td>
-                <td>@Html.DisplayFor(modelItem => item.Email)</td>
-                <td>@Html.DisplayFor(modelItem => item.Login)</td>
-                <td>@Html.DisplayFor(modelItem => item.isBanned)</td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Login)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.UserName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Role)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.isBanned)
+                </td>
                 <td>
                     <a asp-action="Edit" asp-route-id="@item.Id">Edytuj</a> |
                     <a asp-action="Details" asp-route-id="@item.Id">Szczegóły</a> |

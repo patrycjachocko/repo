@@ -27,6 +27,7 @@ namespace praca_dyplomowa_zesp.Models.Users
 
         [StringLength(500)]
         public string? Description { get; set; }
+        public string? SteamId { get; set; }
     }
     public class LoginViewModel
     {
@@ -52,9 +53,7 @@ namespace praca_dyplomowa_zesp.Models.Users
         [Display(Name = "Nazwa użytkownika")]
         public string UserName { get; set; }
 
-        [Required(ErrorMessage = "Adres e-mail jest wymagany.")]
-        [EmailAddress(ErrorMessage = "Nieprawidłowy format adresu e-mail.")]
-        public string Email { get; set; }
+        // USUNIĘTO: Pole Email
 
         [Required(ErrorMessage = "Hasło jest wymagane.")]
         [DataType(DataType.Password)]
@@ -66,12 +65,5 @@ namespace praca_dyplomowa_zesp.Models.Users
         [Display(Name = "Potwierdź hasło")]
         [Compare("Password", ErrorMessage = "Hasła nie są zgodne.")]
         public string ConfirmPassword { get; set; }
-    }
-
-    public class ForgotPasswordViewModel
-    {
-        [Required(ErrorMessage = "Adres e-mail jest wymagany.")]
-        [EmailAddress]
-        public string Email { get; set; }
     }
 }

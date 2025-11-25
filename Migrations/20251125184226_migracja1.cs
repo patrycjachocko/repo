@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace praca_dyplomowa_zesp.Migrations
 {
     /// <inheritdoc />
-    public partial class user : Migration
+    public partial class migracja1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
