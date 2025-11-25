@@ -4,33 +4,67 @@
     ViewData["Title"] = "Moja Biblioteka Gier";
 }
 
-<h1>@ViewData["Title"]</h1>
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>@ViewData["Title"]</h1>
+        <a asp-controller="Games" asp-action="Index" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Dodaj nową grę
+        </a>
+    </div>
+    <hr />
 
-<p>
-    <a asp-controller="Games" asp-action="Index" class="btn btn-primary">Dodaj nową grę</a>
-</p>
-
-<div class="row">
-    @if (Model.Any())
-    {
-        @foreach (var game in Model)
+    <div class="row">
+        @if (Model.Any())
         {
-            <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-4">
-                <div class="card h-100">
-                    <a asp-action="Details" asp-route-id="@game.DbId">
-                        <img src="@(game.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="card-img-top" alt="@game.Name">
+            @foreach (var game in Model)
+            {
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+                    <a asp-action="Details" asp-route-id="@game.DbId" class="text-decoration-none text-dark card-link-wrapper">
+
+                        <div class="card h-100 shadow-sm grow-on-hover" style="transition: transform 0.2s; border: none;">
+
+                            <div style="position: relative; padding-top: 150%; overflow: hidden; background-color: #1b2838; border-radius: 5px;">
+                                <img src="@(game.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")"
+                                     class="card-img-top"
+                                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                                     alt="@game.Name">
+                            </div>
+
+                            <div class="card-body p-2">
+                                <h6 class="card-title text-truncate font-weight-bold mt-2" title="@game.Name" style="margin-bottom: 0.2rem; font-size: 0.9rem;">
+                                    @game.Name
+                                </h6>
+                            </div>
+                        </div>
                     </a>
-                    <div class="card-body p-2">
-                        <h6 class="card-title" style="font-size: 0.9rem;">
-                            <a asp-action="Details" asp-route-id="@game.DbId" class="text-decoration-none text-dark">@game.Name</a>
-                        </h6>
-                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <h4>Twoja biblioteka jest pusta.</h4>
+                    <p>Zacznij budować swoją kolekcję już teraz!</p>
+                    <a asp-controller="Games" asp-action="Index" class="btn btn-outline-primary mt-2">Przeglądaj gry</a>
                 </div>
             </div>
         }
-    }
-    else
-    {
-        <p>Twoja biblioteka jest pusta. Zacznij dodawać gry!</p>
-    }
+    </div>
 </div>
+
+<style>
+    /* Styl animacji podnoszenia kafelka */
+    .grow-on-hover:hover {
+        transform: scale(1.05);
+        cursor: pointer;
+        z-index: 10;
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.2) !important;
+    }
+
+    /* Fix dla linków wewnątrz karty, aby nie zmieniały koloru tekstu */
+    .card-link-wrapper:hover {
+        text-decoration: none;
+        color: inherit;
+    }
+</style>

@@ -7,21 +7,45 @@
 <ul class="navbar-nav">
     @if (SignInManager.IsSignedIn(User))
     {
-        var userId = UserManager.GetUserId(User); // Pobieramy ID zalogowanego użytkownika
+        // ZMIANA: Pobieramy pełny obiekt użytkownika, aby mieć dostęp do SteamId
+        var user = await UserManager.GetUserAsync(User);
 
-        <li class="nav-item d-flex align-items-center">
-            @* ZMIANA: Dodano awatar i link do profilu *@
-            <a class="nav-link text-dark d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
-                @* ZMIANA: Źródło obrazu wskazuje na akcję kontrolera, przekazując ID użytkownika *@
-                <img src="@Url.Action("GetAvatar", "Profile", new { id = userId })" alt="Awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" />
-                Cześć @User.Identity?.Name!
-            </a>
-        </li>
-        <li class="nav-item">
-            <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-                <button type_="submit" class="nav-link btn btn-link text-dark">Wyloguj</button>
-            </form>
-        </li>
+        if (user != null)
+        {
+            // --- 1. SEKCJA STEAM (NOWA) ---
+            <li class="nav-item d-flex align-items-center me-3">
+                @if (string.IsNullOrEmpty(user.SteamId))
+                {
+                    // Jeśli brak SteamId -> Pokaż guzik łączenia
+                    <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Połącz konto Steam">
+                        <i class="bi bi-steam"></i> Połącz Steam
+                    </a>
+                }
+                else
+                {
+                    // Jeśli jest SteamId -> Pokaż guzik do biblioteki
+                    <a asp-controller="Profile" asp-action="SteamLibrary" class="btn btn-sm btn-outline-success" title="Twoja Biblioteka Steam">
+                        <i class="bi bi-controller"></i> Biblioteka Steam
+                    </a>
+                }
+            </li>
+
+            // --- 2. SEKCJA AWATARA I PROFILU (TWOJA) ---
+            <li class="nav-item d-flex align-items-center">
+                <a class="nav-link text-dark d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
+                    @* Używamy user.Id zamiast userId, bo mamy już pobrany obiekt user *@
+                    <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" />
+                    Cześć @User.Identity?.Name!
+                </a>
+            </li>
+
+            // --- 3. WYLOGOWANIE ---
+            <li class="nav-item">
+                <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                    <button type="submit" class="nav-link btn btn-link text-dark">Wyloguj</button>
+                </form>
+            </li>
+        }
     }
     else
     {
