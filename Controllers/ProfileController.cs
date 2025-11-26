@@ -56,12 +56,15 @@ namespace praca_dyplomowa_zesp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
+            bool isSteamAccount = user.Login.StartsWith("Steam_");
+
             var viewModel = new ProfileViewModel
             {
                 UserId = user.Id,
                 Username = user.UserName,
                 Description = user.Description,
-                SteamId = user.SteamId
+                SteamId = user.SteamId,
+                IsCreatedBySteam = isSteamAccount
             };
 
             ViewData["StatusMessage"] = TempData["StatusMessage"];
@@ -73,50 +76,45 @@ namespace praca_dyplomowa_zesp.Controllers
         // --- SEKCJA STEAM ---
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult LinkSteam()
         {
+            // Tutaj wywołujemy Challenge tak samo jak przy logowaniu, 
+            // ale RedirectUrl musi prowadzić do specjalnej akcji "LinkSteamCallback"
             var redirectUrl = Url.Action("LinkSteamCallback", "Profile");
             var properties = _signInManager.ConfigureExternalAuthenticationProperties("Steam", redirectUrl);
-            return new ChallengeResult("Steam", properties);
+            return Challenge(properties, "Steam");
         }
 
         [HttpGet]
-        public async Task<IActionResult> LinkSteamCallback()
+        public async Task<IActionResult> LinkSteamCallback(string remoteError = null)
         {
-            var user = await GetCurrentUserAsync();
-            if (user == null) return RedirectToAction("Index");
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
 
-            var info = await _signInManager.GetExternalLoginInfoAsync(user.Id.ToString());
-
+            var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
-                var result = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
-                if (result?.Succeeded == true)
-                {
-                    var steamIdClaim = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                    if (steamIdClaim != null)
-                    {
-                        var steamId = steamIdClaim.Split('/').Last();
-                        user.SteamId = steamId;
-                        await _userManager.UpdateAsync(user);
-                        TempData["StatusMessage"] = "Konto Steam zostało połączone!";
-                    }
-                }
-                else
-                {
-                    TempData["ErrorMessage"] = "Błąd podczas łączenia ze Steam.";
-                }
-            }
-            else
-            {
-                var steamIdClaim = info.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var steamId = steamIdClaim.Split('/').Last();
-                user.SteamId = steamId;
-                await _userManager.UpdateAsync(user);
-                TempData["StatusMessage"] = "Konto Steam zostało połączone!";
+                TempData["ErrorMessage"] = "Błąd autoryzacji Steam.";
+                return RedirectToAction(nameof(Index));
             }
 
-            return RedirectToAction("Index");
+            var steamIdClaim = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var steamId = steamIdClaim?.Split('/').LastOrDefault();
+
+            // 1. UNIKALNOŚĆ: Sprawdź czy ten SteamID jest już zajęty przez INNEGO użytkownika
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.SteamId == steamId);
+            if (existingUser != null && existingUser.Id != user.Id)
+            {
+                TempData["ErrorMessage"] = "To konto Steam jest już połączone z innym użytkownikiem!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            user.SteamId = steamId;
+            await _userManager.UpdateAsync(user);
+
+            TempData["StatusMessage"] = "Pomyślnie połączono konto Steam!";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
@@ -565,6 +563,24 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             return Json(new { url = coverUrl });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            // Usuń powiązane dane (Gry, Osiągnięcia itp.)
+            // Uwaga: EF Core z konfiguracją Cascade Delete powinien to obsłużyć, 
+            // ale dla pewności można wyczyścić ręcznie w LibraryController logic lub tutaj.
+            // Zakładamy, że baza ma CascadeDelete.
+
+            await _signInManager.SignOutAsync();
+            await _userManager.DeleteAsync(user);
+
+            return RedirectToAction("Index", "Home");
         }
     }
 }

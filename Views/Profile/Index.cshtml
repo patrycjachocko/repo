@@ -61,6 +61,7 @@
         </div>
 
         <div class="col-md-8">
+
             <div class="card mb-3">
                 <div class="card-header">O mnie</div>
                 <div class="card-body">
@@ -82,7 +83,7 @@
                         <p>Nie połączono z kontem Steam.</p>
                         <form asp-action="LinkSteam" method="post">
                             <button type="submit" class="btn btn-dark" style="background-color: #171a21; border-color: #171a21;">
-                                <span style="color:white; font-weight:bold;">Zaloguj przez STEAM</span>
+                                <i class="bi bi-steam"></i> <span style="color:white; font-weight:bold;">Połącz konto STEAM</span>
                             </button>
                         </form>
                     }
@@ -94,32 +95,80 @@
 
                         <a asp-action="SteamLibrary" class="btn btn-success mb-2">Zobacz moją bibliotekę Steam</a>
 
-                        <form asp-action="UnlinkSteam" method="post" class="mt-2">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Odłącz konto Steam</button>
-                        </form>
+                        @* ZMIANA: Ukrywamy odłączanie, jeśli konto stworzone przez Steam *@
+                        @if (!Model.IsCreatedBySteam)
+                        {
+                            <form asp-action="UnlinkSteam" method="post" class="mt-2">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Odłącz konto Steam</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="text-muted mt-2 border-top pt-2">
+                                <small><i class="bi bi-info-circle"></i> To konto zostało utworzone za pomocą Steam i nie można go odłączyć.</small>
+                            </div>
+                        }
                     }
                 </div>
             </div>
 
-            <div class="card mb-3">
-                <div class="card-header">Zmiana Hasła</div>
-                <div class="card-body">
-                    <form asp-action="ChangePassword" method="post">
-                        <div class="form-group">
-                            <label for="changePasswordModel_OldPassword">Obecne hasło</label>
-                            <input type="password" id="changePasswordModel_OldPassword" name="changePasswordModel.OldPassword" class="form-control" />
-                        </div>
-                        <div class="form-group">
-                            <label for="changePasswordModel_NewPassword">Nowe hasło</label>
-                            <input type="password" id="changePasswordModel_NewPassword" name="changePasswordModel.NewPassword" class="form-control" />
-                        </div>
-                        <div class="form-group">
-                            <label for="changePasswordModel_ConfirmPassword">Potwierdź nowe hasło</label>
-                            <input type="password" id="changePasswordModel_ConfirmPassword" name="changePasswordModel.ConfirmPassword" class="form-control" />
-                        </div>
-                        <button type="submit" class="btn btn-warning mt-2">Zmień hasło</button>
-                    </form>
+            @if (!Model.IsCreatedBySteam)
+            {
+                <div class="card mb-3">
+                    <div class="card-header">Zmiana Hasła</div>
+                    <div class="card-body">
+                        <form asp-action="ChangePassword" method="post">
+                            <div class="form-group">
+                                <label for="changePasswordModel_OldPassword">Obecne hasło</label>
+                                <input type="password" id="changePasswordModel_OldPassword" name="changePasswordModel.OldPassword" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="changePasswordModel_NewPassword">Nowe hasło</label>
+                                <input type="password" id="changePasswordModel_NewPassword" name="changePasswordModel.NewPassword" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="changePasswordModel_ConfirmPassword">Potwierdź nowe hasło</label>
+                                <input type="password" id="changePasswordModel_ConfirmPassword" name="changePasswordModel.ConfirmPassword" class="form-control" />
+                            </div>
+                            <button type="submit" class="btn btn-warning mt-2">Zmień hasło</button>
+                        </form>
+                    </div>
                 </div>
+            }
+
+            <div class="card mb-3 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Strefa Niebezpieczna
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Usunięcie konta jest nieodwracalne. Utracisz dostęp do swojej biblioteki i wszystkich postępów.</p>
+
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        Usuń konto
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Potwierdź usunięcie konta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Czy na pewno chcesz usunąć swoje konto?</p>
+                <p class="text-danger fw-bold">Tej operacji nie można cofnąć!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <form asp-action="DeleteAccount" method="post">
+                    <button type="submit" class="btn btn-danger">Tak, usuń trwale</button>
+                </form>
             </div>
         </div>
     </div>

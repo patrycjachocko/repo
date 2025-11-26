@@ -12,11 +12,11 @@
 
         if (user != null)
         {
-            // --- 1. SEKCJA STEAM (NOWA) ---
+            // --- 1. SEKCJA STEAM (ZALOGOWANY) ---
             <li class="nav-item d-flex align-items-center me-3">
                 @if (string.IsNullOrEmpty(user.SteamId))
                 {
-                    // Jeśli brak SteamId -> Pokaż guzik łączenia
+                    // Jeśli brak SteamId -> Pokaż guzik łączenia (skrót do profilu)
                     <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Połącz konto Steam">
                         <i class="bi bi-steam"></i> Połącz Steam
                     </a>
@@ -30,10 +30,9 @@
                 }
             </li>
 
-            // --- 2. SEKCJA AWATARA I PROFILU (TWOJA) ---
+                    // --- 2. SEKCJA AWATARA I PROFILU ---
             <li class="nav-item d-flex align-items-center">
                 <a class="nav-link text-dark d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
-                    @* Używamy user.Id zamiast userId, bo mamy już pobrany obiekt user *@
                     <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" />
                     Cześć @User.Identity?.Name!
                 </a>
@@ -49,6 +48,15 @@
     }
     else
     {
+        // --- 4. SEKCJA DLA NIEZALOGOWANYCH (NOWA: GUZIK STEAM) ---
+        <li class="nav-item d-flex align-items-center me-2">
+            <form asp-controller="Account" asp-action="LoginWithSteam" method="post">
+                <button type="submit" class="btn btn-sm btn-dark d-flex align-items-center" style="background-color: #171a21; border-color: #171a21;">
+                    <i class="bi bi-steam me-2"></i> Zaloguj przez Steam
+                </button>
+            </form>
+        </li>
+
         <li class="nav-item">
             <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Rejestracja</a>
         </li>

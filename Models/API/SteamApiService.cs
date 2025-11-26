@@ -50,6 +50,38 @@ namespace praca_dyplomowa_zesp.Models.API // <--- ZMIANA TUTAJ (było .Services)
                 return new List<SteamAchievementDto>();
             }
         }
+        public async Task<SteamPlayerSummaryDto?> GetPlayerSummaryAsync(string steamId)
+        {
+            var url = $"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={_apiKey}&steamids={steamId}";
+
+            try
+            {
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode) return null;
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<SteamPlayerSummaryResponse>(content);
+
+                return result?.Response?.Players?.FirstOrDefault();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // NOWA METODA: Pobiera obrazek z URL jako tablicę bajtów (do zapisu w bazie)
+        public async Task<byte[]> DownloadAvatarAsync(string url)
+        {
+            try
+            {
+                return await _httpClient.GetByteArrayAsync(url);
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 
     // Klasy pomocnicze (DTO)
@@ -106,5 +138,29 @@ namespace praca_dyplomowa_zesp.Models.API // <--- ZMIANA TUTAJ (było .Services)
 
         [JsonPropertyName("description")]
         public string Description { get; set; }
+    }
+    // --- DTO dla PlayerSummary ---
+    public class SteamPlayerSummaryResponse
+    {
+        [JsonPropertyName("response")]
+        public SteamPlayerSummaryList Response { get; set; }
+    }
+
+    public class SteamPlayerSummaryList
+    {
+        [JsonPropertyName("players")]
+        public List<SteamPlayerSummaryDto> Players { get; set; }
+    }
+
+    public class SteamPlayerSummaryDto
+    {
+        [JsonPropertyName("steamid")]
+        public string SteamId { get; set; }
+
+        [JsonPropertyName("personaname")]
+        public string PersonaName { get; set; }
+
+        [JsonPropertyName("avatarfull")]
+        public string AvatarFullUrl { get; set; }
     }
 }

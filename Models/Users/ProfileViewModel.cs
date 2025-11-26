@@ -11,5 +11,6 @@ namespace praca_dyplomowa_zesp.Models.Users
 
         // Pole do przechowywania ID Steam w widoku
         public string? SteamId { get; set; }
+        public bool IsCreatedBySteam { get; set; }
     }
 }
