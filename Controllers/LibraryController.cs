@@ -51,11 +51,15 @@ namespace praca_dyplomowa_zesp.Controllers
         }
 
         // GET: Library
+        // Zastąp starą metodę Index tą poniżej:
         public async Task<IActionResult> Index()
         {
             var currentUserId = GetCurrentUserId();
+
+            // 1. Pobieramy gry użytkownika z lokalnej bazy
             var userGamesFromDb = await _context.GamesInLibraries
                 .Where(g => g.UserId == currentUserId)
+                .OrderByDescending(g => g.DateAddedToLibrary) // Opcjonalnie: sortowanie od najnowszych
                 .ToListAsync();
 
             if (!userGamesFromDb.Any())
@@ -63,22 +67,52 @@ namespace praca_dyplomowa_zesp.Controllers
                 return View(new List<MainLibraryViewModel>());
             }
 
-            var igdbGameIds = userGamesFromDb.Select(g => g.IgdbGameId).ToArray();
-            var query = $"fields name, cover.url; where id = ({string.Join(",", igdbGameIds)});";
-            var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
+            // 2. Przygotowujemy listę na dane z API
+            var allApiGames = new List<ApiGame>();
 
-            var gamesFromApi = string.IsNullOrEmpty(jsonResponse)
-                ? new List<ApiGame>()
-                : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
+            // Pobieramy same ID
+            var allIgdbIds = userGamesFromDb.Select(g => g.IgdbGameId).Distinct().ToList();
 
+            // 3. Pobieramy dane z IGDB partiami (np. po 50 sztuk), aby ominąć limity
+            int batchSize = 50;
+            for (int i = 0; i < allIgdbIds.Count; i += batchSize)
+            {
+                var batchIds = allIgdbIds.Skip(i).Take(batchSize).ToList();
+                var idsString = string.Join(",", batchIds);
+
+                // WAŻNE: Dodajemy "limit {batchSize}", bo domyślnie IGDB zwraca tylko 10 wyników!
+                var query = $"fields name, cover.url; where id = ({idsString}); limit {batchSize};";
+
+                try
+                {
+                    var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
+                    if (!string.IsNullOrEmpty(jsonResponse))
+                    {
+                        var chunkGames = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
+                        if (chunkGames != null)
+                        {
+                            allApiGames.AddRange(chunkGames);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Błąd pobierania partii gier w bibliotece: {ex.Message}");
+                }
+            }
+
+            // 4. Mapujemy wyniki (łączymy dane z Bazy z danymi z API)
             var viewModels = userGamesFromDb.Select(dbGame =>
             {
-                var apiGame = gamesFromApi.FirstOrDefault(apiG => apiG.Id == dbGame.IgdbGameId);
+                // Szukamy odpowiednika w pobranych danych z API
+                var apiGame = allApiGames.FirstOrDefault(apiG => apiG.Id == dbGame.IgdbGameId);
+
                 return new MainLibraryViewModel
                 {
                     DbId = dbGame.Id,
                     IgdbGameId = dbGame.IgdbGameId,
-                    Name = apiGame?.Name ?? "Nieznana gra",
+                    // Jeśli apiGame jest null (co nie powinno się zdarzyć), dajemy fallback
+                    Name = apiGame?.Name ?? "Wczytywanie...",
                     CoverUrl = apiGame?.Cover?.Url?.Replace("t_thumb", "t_cover_big") ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki"
                 };
             }).ToList();
@@ -278,6 +312,41 @@ namespace praca_dyplomowa_zesp.Controllers
 
             await _context.SaveChangesAsync();
             return Json(new { success = true, isUnlocked = newStatus });
+        }
+        // Plik: Controllers/LibraryController.cs
+
+        // --- NOWA METODA: Wyczyść całą bibliotekę ---
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ClearLibrary()
+        {
+            var currentUserId = GetCurrentUserId();
+
+            // 1. Pobierz wszystkie gry użytkownika
+            var userGames = await _context.GamesInLibraries
+                .Where(g => g.UserId == currentUserId)
+                .ToListAsync();
+
+            if (!userGames.Any())
+            {
+                TempData["ErrorMessage"] = "Twój biblioteka jest już pusta.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // 2. Pobierz wszystkie osiągnięcia użytkownika (aby nie zostawiać "sierot" w bazie)
+            // Zakładamy, że jeśli usuwasz gry, chcesz też usunąć postęp w nich.
+            var userAchievements = await _context.UserAchievements
+                .Where(ua => ua.UserId == currentUserId)
+                .ToListAsync();
+
+            // 3. Usuń dane masowo
+            _context.UserAchievements.RemoveRange(userAchievements);
+            _context.GamesInLibraries.RemoveRange(userGames);
+
+            await _context.SaveChangesAsync();
+
+            TempData["StatusMessage"] = "Wyczyszczono bibliotekę. Wszystkie gry zostały usunięte.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

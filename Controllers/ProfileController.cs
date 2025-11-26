@@ -3,15 +3,19 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore; // Dodano dla EF Core
 using praca_dyplomowa_zesp.Models.Users;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Text.Encodings.Web;
-using Microsoft.AspNetCore.Authentication; // Do obsługi logowania zewnętrznego
-using System.Security.Claims; // Do wyciągania ID z ciasteczek
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
 using praca_dyplomowa_zesp.Models.API;
+using praca_dyplomowa.Data; // Dodano dla ApplicationDbContext
+using Newtonsoft.Json; // Dodano dla deserializacji
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -21,17 +25,23 @@ namespace praca_dyplomowa_zesp.Controllers
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly SteamApiService _steamService; // Serwis Steam
+        private readonly SteamApiService _steamService;
+        private readonly ApplicationDbContext _context; // Nowe pole
+        private readonly IGDBClient _igdbClient;      // Nowe pole
 
         public ProfileController(UserManager<User> userManager,
                                  SignInManager<User> signInManager,
                                  IWebHostEnvironment webHostEnvironment,
-                                 SteamApiService steamService)
+                                 SteamApiService steamService,
+                                 ApplicationDbContext context,  // Wstrzykujemy kontekst bazy
+                                 IGDBClient igdbClient)         // Wstrzykujemy klienta IGDB
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _webHostEnvironment = webHostEnvironment;
             _steamService = steamService;
+            _context = context;
+            _igdbClient = igdbClient;
         }
 
         private Task<User> GetCurrentUserAsync() => _userManager.GetUserAsync(User);
@@ -51,7 +61,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 UserId = user.Id,
                 Username = user.UserName,
                 Description = user.Description,
-                SteamId = user.SteamId // Przekazujemy SteamId do widoku
+                SteamId = user.SteamId
             };
 
             ViewData["StatusMessage"] = TempData["StatusMessage"];
@@ -65,7 +75,6 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         public IActionResult LinkSteam()
         {
-            // Przekierowanie do logowania Steam
             var redirectUrl = Url.Action("LinkSteamCallback", "Profile");
             var properties = _signInManager.ConfigureExternalAuthenticationProperties("Steam", redirectUrl);
             return new ChallengeResult("Steam", properties);
@@ -77,10 +86,8 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await GetCurrentUserAsync();
             if (user == null) return RedirectToAction("Index");
 
-            // Pobieramy dane logowania zewnętrznego
             var info = await _signInManager.GetExternalLoginInfoAsync(user.Id.ToString());
 
-            // Jeśli standardowa metoda zawiedzie (częste przy łączeniu kont już zalogowanych), próbujemy manualnie
             if (info == null)
             {
                 var result = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
@@ -89,7 +96,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     var steamIdClaim = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                     if (steamIdClaim != null)
                     {
-                        var steamId = steamIdClaim.Split('/').Last(); // Wyciągamy ID z URL
+                        var steamId = steamIdClaim.Split('/').Last();
                         user.SteamId = steamId;
                         await _userManager.UpdateAsync(user);
                         TempData["StatusMessage"] = "Konto Steam zostało połączone!";
@@ -134,11 +141,181 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             var games = await _steamService.GetUserGamesAsync(user.SteamId);
-            // Sortujemy gry malejąco wg czasu gry
             return View(games.OrderByDescending(g => g.PlaytimeForever).ToList());
         }
 
-        // --- KONIEC SEKCJI STEAM ---
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportSteamGames()
+        {
+            var user = await GetCurrentUserAsync();
+            if (user == null || string.IsNullOrEmpty(user.SteamId))
+            {
+                TempData["ErrorMessage"] = "Musisz połączyć konto Steam, aby zaimportować gry.";
+                return RedirectToAction("SteamLibrary");
+            }
+
+            // 1. Pobierz gry ze Steam
+            var steamGames = await _steamService.GetUserGamesAsync(user.SteamId);
+            if (!steamGames.Any())
+            {
+                TempData["ErrorMessage"] = "Nie znaleziono gier na Twoim koncie Steam.";
+                return RedirectToAction("SteamLibrary");
+            }
+
+            // 2. Pobierz listę ID gier, które użytkownik już ma w bibliotece
+            var ownedIgdbIds = await _context.GamesInLibraries
+                .Where(g => g.UserId == user.Id)
+                .Select(g => g.IgdbGameId)
+                .ToListAsync();
+
+            // Słownik do przechowywania znalezionych ID gier (klucz: Steam AppId, wartość: IGDB Game Id)
+            // Używamy słownika, żeby nie dublować wyników
+            var foundGameIds = new HashSet<long>();
+
+            // --- ETAP 1: Szybkie wyszukiwanie po ID (External Games) ---
+            // To jest najdokładniejsza metoda, ale czasem brakuje powiązań w bazie IGDB.
+
+            var steamAppIds = steamGames.Select(g => g.AppId.ToString()).Distinct().ToList();
+            var mappedSteamIds = new HashSet<string>(); // Tutaj zapiszemy ID steam, które udało się znaleźć w etapie 1
+
+            int batchSize = 50;
+            for (int i = 0; i < steamAppIds.Count; i += batchSize)
+            {
+                var batch = steamAppIds.Skip(i).Take(batchSize).ToList();
+                var idsString = string.Join(",", batch.Select(id => $"\"{id}\""));
+
+                // Pobieramy też pole 'uid' żeby wiedzieć, które ID ze Steam zostały znalezione
+                var query = $"fields game, uid; where category = 1 & uid = ({idsString}); limit {batchSize};";
+
+                try
+                {
+                    var responseJson = await _igdbClient.ApiRequestAsync("external_games", query);
+                    if (!string.IsNullOrEmpty(responseJson))
+                    {
+                        var externalGames = JsonConvert.DeserializeObject<List<IgdbExternalGameDto>>(responseJson);
+                        if (externalGames != null)
+                        {
+                            foreach (var item in externalGames)
+                            {
+                                foundGameIds.Add(item.Game);
+                                mappedSteamIds.Add(item.Uid); // Zapamiętujemy, że to Steam ID już mamy
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Błąd podczas importu ID: {ex.Message}");
+                }
+            }
+
+            // --- ETAP 2: Fallback - Wyszukiwanie po nazwie ---
+            // Dla gier, których NIE znaleźliśmy w Etapie 1, robimy wyszukiwanie po nazwie.
+            // Jest to wolniejsze (jedno zapytanie na grę), ale rozwiązuje problem brakujących linków.
+
+            var notFoundSteamGames = steamGames
+                .Where(g => !mappedSteamIds.Contains(g.AppId.ToString()))
+                .ToList();
+
+            // Ograniczamy liczbę wyszukiwań dla bezpieczeństwa (np. max 20-30 na raz, żeby nie zablokować serwera)
+            // lub po prostu robimy to z małym opóźnieniem.
+
+            foreach (var game in notFoundSteamGames)
+            {
+                // Pomijamy gry z bardzo krótkimi nazwami lub dziwnymi znakami, które mogą psuć zapytania
+                if (string.IsNullOrWhiteSpace(game.Name) || game.Name.Length < 2) continue;
+
+                var cleanName = CleanSteamGameName(game.Name);
+
+                // Szukamy po nazwie, bierzemy pierwszy najlepszy wynik
+                var query = $"fields id; search \"{cleanName}\"; limit 1;";
+
+                try
+                {
+                    // Małe opóźnienie, aby nie przekroczyć limitów API (np. 4 zapytania na sekundę dla free tier)
+                    await Task.Delay(250);
+
+                    var responseJson = await _igdbClient.ApiRequestAsync("games", query);
+                    if (!string.IsNullOrEmpty(responseJson))
+                    {
+                        // Używamy tej samej klasy ApiGame co w innych miejscach, ale potrzebujemy tylko ID
+                        var searchResults = JsonConvert.DeserializeObject<List<ApiGame>>(responseJson);
+                        var bestMatch = searchResults?.FirstOrDefault();
+
+                        if (bestMatch != null)
+                        {
+                            foundGameIds.Add(bestMatch.Id);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Błąd podczas wyszukiwania gry '{game.Name}': {ex.Message}");
+                }
+            }
+
+            // --- ETAP 3: Zapis do bazy ---
+
+            // Filtrujemy tylko te ID, których użytkownik jeszcze nie ma
+            var newIdsToAdd = foundGameIds.Where(id => !ownedIgdbIds.Contains(id)).ToList();
+
+            if (!newIdsToAdd.Any())
+            {
+                TempData["StatusMessage"] = "Nie znaleziono nowych gier do dodania (wszystkie zidentyfikowane już posiadasz).";
+                return RedirectToAction("SteamLibrary");
+            }
+
+            var newLibraryEntries = newIdsToAdd.Select(igdbId => new GameInLibrary
+            {
+                UserId = user.Id,
+                IgdbGameId = igdbId,
+                DateAddedToLibrary = DateTime.Now,
+                CurrentUserStoryProgressPercent = 0
+            }).ToList();
+
+            await _context.GamesInLibraries.AddRangeAsync(newLibraryEntries);
+            await _context.SaveChangesAsync();
+
+            TempData["StatusMessage"] = $"Sukces! Dodano {newLibraryEntries.Count} nowych gier do Twojej biblioteki.";
+
+            // Jeśli dużo gier nie zostało znalezionych, możemy o tym poinformować (opcjonalne)
+            if (foundGameIds.Count < steamGames.Count)
+            {
+                int missingCount = steamGames.Count - foundGameIds.Count;
+                // Możesz odkomentować poniższą linię, jeśli chcesz szczegółowy komunikat:
+                // TempData["StatusMessage"] += $" Nie udało się dopasować automacznie {missingCount} gier.";
+            }
+
+            return RedirectToAction("SteamLibrary");
+        }
+
+        // Metoda pomocnicza do czyszczenia nazwy gry przed wyszukiwaniem
+        private string CleanSteamGameName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+
+            // Usuwamy znaki specjalne, które mogą mylić wyszukiwarkę IGDB lub psuć składnię
+            // np. "Half-Life 2" -> "Half Life 2" jest bezpieczniejsze w search
+            // oraz usuwamy znaki TM, R, itp.
+            var clean = name.Replace("™", "")
+                            .Replace("®", "")
+                            .Replace("©", "")
+                            .Replace("\"", "") // Usuwamy cudzysłowy, bo psują zapytanie
+                            .Trim();
+
+            return clean;
+        }
+
+        // Klasa DTO potrzebna do odczytu external_games (musi być wewnątrz klasy lub namespace)
+        private class IgdbExternalGameDto
+        {
+            [JsonProperty("game")]
+            public long Game { get; set; }
+
+            [JsonProperty("uid")]
+            public string Uid { get; set; }
+        }
 
         // GET: Profile/GetAvatar/GUID
         [AllowAnonymous]
@@ -187,7 +364,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await GetCurrentUserAsync();
             if (user == null) return NotFound();
 
-            if (avatarFile.Length > 2 * 1024 * 1024) // 2 MB
+            if (avatarFile.Length > 2 * 1024 * 1024)
             {
                 TempData["ErrorMessage"] = "Plik jest za duży (maksymalnie 2MB).";
                 return RedirectToAction(nameof(Index));
@@ -233,7 +410,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await GetCurrentUserAsync();
             if (user == null) return NotFound();
 
-            if (bannerFile.Length > 5 * 1024 * 1024) // 5 MB
+            if (bannerFile.Length > 5 * 1024 * 1024)
             {
                 TempData["ErrorMessage"] = "Plik jest za duży (maksymalnie 5MB).";
                 return RedirectToAction(nameof(Index));
@@ -319,6 +496,75 @@ namespace praca_dyplomowa_zesp.Controllers
             await _signInManager.RefreshSignInAsync(user);
             TempData["StatusMessage"] = "Hasło zostało zmienione.";
             return RedirectToAction(nameof(Index));
+        }
+        // --- NOWA METODA: Pobieranie okładki z IGDB na żądanie (AJAX) ---
+        [HttpGet]
+        public async Task<IActionResult> GetIgdbCover(string steamId, string gameName)
+        {
+            if (string.IsNullOrEmpty(steamId)) return Json(new { url = "" });
+
+            string coverUrl = null;
+
+            // 1. Próba znalezienia po Steam ID (external_games)
+            try
+            {
+                // Pytamy o pole game.cover.url
+                var query = $"fields game.cover.url; where category = 1 & uid = \"{steamId}\"; limit 1;";
+                var json = await _igdbClient.ApiRequestAsync("external_games", query);
+
+                if (!string.IsNullOrEmpty(json))
+                {
+                    // Używamy dynamicznej deserializacji dla prostoty struktury zagnieżdżonej
+                    var result = JsonConvert.DeserializeObject<List<dynamic>>(json);
+                    if (result != null && result.Count > 0)
+                    {
+                        string url = result[0]?.game?.cover?.url;
+                        if (!string.IsNullOrEmpty(url))
+                        {
+                            coverUrl = url;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd pobierania okładki po ID: {ex.Message}");
+            }
+
+            // 2. Fallback: Jeśli po ID się nie udało, szukamy po nazwie
+            if (string.IsNullOrEmpty(coverUrl) && !string.IsNullOrEmpty(gameName))
+            {
+                try
+                {
+                    var cleanName = CleanSteamGameName(gameName); // Używamy Twojej metody pomocniczej
+                    var query = $"fields cover.url; search \"{cleanName}\"; limit 1;";
+
+                    var json = await _igdbClient.ApiRequestAsync("games", query);
+                    if (!string.IsNullOrEmpty(json))
+                    {
+                        var result = JsonConvert.DeserializeObject<List<dynamic>>(json);
+                        string url = result?.FirstOrDefault()?.cover?.url;
+                        if (!string.IsNullOrEmpty(url))
+                        {
+                            coverUrl = url;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Błąd pobierania okładki po nazwie: {ex.Message}");
+                }
+            }
+
+            // Jeśli znaleźliśmy URL, zamieniamy miniaturkę na dużą okładkę
+            if (!string.IsNullOrEmpty(coverUrl))
+            {
+                coverUrl = coverUrl.Replace("t_thumb", "t_cover_big");
+                // Dodajemy 'https:' jeśli brakuje (IGDB zwraca linki zaczynające się od //)
+                if (coverUrl.StartsWith("//")) coverUrl = "https:" + coverUrl;
+            }
+
+            return Json(new { url = coverUrl });
         }
     }
 }
