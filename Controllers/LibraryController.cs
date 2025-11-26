@@ -190,6 +190,37 @@ namespace praca_dyplomowa_zesp.Controllers
             gameInLibrary.UserId = currentUserId;
             gameInLibrary.DateAddedToLibrary = DateTime.Now;
 
+            try
+            {
+                var query = $"fields cover.url; where id = {gameInLibrary.IgdbGameId};";
+                var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
+
+                // Deserializujemy odpowiedź
+                var gamesInfo = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
+                var gameInfo = gamesInfo?.FirstOrDefault();
+
+                // 2. Sprawdzamy warunek: Czy gra istnieje ORAZ czy ma okładkę
+                bool hasCover = gameInfo?.Cover != null && !string.IsNullOrEmpty(gameInfo.Cover.Url);
+
+                if (!hasCover)
+                {
+                    // WARUNEK SPEŁNIONY: Gra nie ma okładki.
+                    // "Ciche usunięcie" - czyli po prostu nie zapisujemy jej w bazie i wracamy.
+
+                    if (Url.IsLocalUrl(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
+                    // Domyślny powrót jeśli brak returnUrl
+                    return RedirectToAction("Index", "Games", new { mode = "browse" });
+                }
+            }
+            catch (Exception ex)
+            {
+                // Opcjonalnie: logowanie błędu, ale zgodnie z prośbą "bez komunikatów" dla usera
+                Console.WriteLine($"Błąd podczas sprawdzania okładki: {ex.Message}");
+            }
+
             bool alreadyExists = await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameInLibrary.IgdbGameId);
             if (!alreadyExists)
             {
