@@ -10,16 +10,32 @@ using praca_dyplomowa_zesp.Models.API;
 using Microsoft.AspNetCore.Identity;
 using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
+using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
+using praca_dyplomowa_zesp.Models.Modules.Libraries;
+using System.Text.RegularExpressions;
 
-// Definicje klas API (bez zmian)
+// --- Definicje klas API (ZAKTUALIZOWANE) ---
 namespace praca_dyplomowa_zesp.Models.API
 {
-    public class ApiGame { public long Id { get; set; } public string Name { get; set; } public ApiCover Cover { get; set; } public List<ApiGenre> Genres { get; set; } public List<ApiInvolvedCompany> Involved_companies { get; set; } public List<ApiReleaseDate> Release_dates { get; set; } }
-    public class ApiCover { public string Url { get; set; } }
-    public class ApiGenre { public string Name { get; set; } }
-    public class ApiInvolvedCompany { public ApiCompany Company { get; set; } public bool developer { get; set; } }
-    public class ApiCompany { public string Name { get; set; } }
-    public class ApiReleaseDate { public string Human { get; set; } }
+    public class ApiGame
+    {
+        [JsonProperty("id")] public long Id { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("cover")] public ApiCover Cover { get; set; }
+        [JsonProperty("genres")] public List<ApiGenre> Genres { get; set; }
+        [JsonProperty("involved_companies")] public List<ApiInvolvedCompany> Involved_companies { get; set; }
+        [JsonProperty("release_dates")] public List<ApiReleaseDate> Release_dates { get; set; }
+        [JsonProperty("websites")] public List<ApiWebsite> Websites { get; set; }
+        [JsonProperty("external_games")] public List<ApiExternalGame> External_games { get; set; }
+    }
+
+    public class ApiCover { [JsonProperty("url")] public string Url { get; set; } }
+    public class ApiGenre { [JsonProperty("name")] public string Name { get; set; } }
+    public class ApiInvolvedCompany { [JsonProperty("company")] public ApiCompany Company { get; set; } [JsonProperty("developer")] public bool developer { get; set; } }
+    public class ApiCompany { [JsonProperty("name")] public string Name { get; set; } }
+    public class ApiReleaseDate { [JsonProperty("human")] public string Human { get; set; } }
+    public class ApiWebsite { [JsonProperty("category")] public int Category { get; set; } [JsonProperty("url")] public string Url { get; set; } }
+    public class ApiExternalGame { [JsonProperty("category")] public int Category { get; set; } [JsonProperty("uid")] public string Uid { get; set; } }
     public class ApiAchievement { public long Id { get; set; } public string Name { get; set; } public string Description { get; set; } public ApiAchievementIcon Achievement_icon { get; set; } }
     public class ApiAchievementIcon { public string Url { get; set; } }
 }
@@ -32,55 +48,42 @@ namespace praca_dyplomowa_zesp.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IGDBClient _igdbClient;
         private readonly UserManager<User> _userManager;
+        private readonly SteamApiService _steamService;
 
-        public LibraryController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager)
+        public LibraryController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager, SteamApiService steamService)
         {
             _context = context;
             _igdbClient = igdbClient;
             _userManager = userManager;
+            _steamService = steamService;
         }
 
         private Guid GetCurrentUserId()
         {
             var userIdString = _userManager.GetUserId(User);
-            if (Guid.TryParse(userIdString, out Guid userId))
-            {
-                return userId;
-            }
+            if (Guid.TryParse(userIdString, out Guid userId)) return userId;
             return Guid.Empty;
         }
 
         // GET: Library
-        // Zastąp starą metodę Index tą poniżej:
         public async Task<IActionResult> Index()
         {
             var currentUserId = GetCurrentUserId();
-
-            // 1. Pobieramy gry użytkownika z lokalnej bazy
             var userGamesFromDb = await _context.GamesInLibraries
                 .Where(g => g.UserId == currentUserId)
-                .OrderByDescending(g => g.DateAddedToLibrary) // Opcjonalnie: sortowanie od najnowszych
+                .OrderByDescending(g => g.DateAddedToLibrary)
                 .ToListAsync();
 
-            if (!userGamesFromDb.Any())
-            {
-                return View(new List<MainLibraryViewModel>());
-            }
+            if (!userGamesFromDb.Any()) return View(new List<MainLibraryViewModel>());
 
-            // 2. Przygotowujemy listę na dane z API
             var allApiGames = new List<ApiGame>();
-
-            // Pobieramy same ID
             var allIgdbIds = userGamesFromDb.Select(g => g.IgdbGameId).Distinct().ToList();
 
-            // 3. Pobieramy dane z IGDB partiami (np. po 50 sztuk), aby ominąć limity
             int batchSize = 50;
             for (int i = 0; i < allIgdbIds.Count; i += batchSize)
             {
                 var batchIds = allIgdbIds.Skip(i).Take(batchSize).ToList();
                 var idsString = string.Join(",", batchIds);
-
-                // WAŻNE: Dodajemy "limit {batchSize}", bo domyślnie IGDB zwraca tylko 10 wyników!
                 var query = $"fields name, cover.url; where id = ({idsString}); limit {batchSize};";
 
                 try
@@ -89,29 +92,19 @@ namespace praca_dyplomowa_zesp.Controllers
                     if (!string.IsNullOrEmpty(jsonResponse))
                     {
                         var chunkGames = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
-                        if (chunkGames != null)
-                        {
-                            allApiGames.AddRange(chunkGames);
-                        }
+                        if (chunkGames != null) allApiGames.AddRange(chunkGames);
                     }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Błąd pobierania partii gier w bibliotece: {ex.Message}");
-                }
+                catch (Exception ex) { Console.WriteLine($"Błąd index: {ex.Message}"); }
             }
 
-            // 4. Mapujemy wyniki (łączymy dane z Bazy z danymi z API)
             var viewModels = userGamesFromDb.Select(dbGame =>
             {
-                // Szukamy odpowiednika w pobranych danych z API
                 var apiGame = allApiGames.FirstOrDefault(apiG => apiG.Id == dbGame.IgdbGameId);
-
                 return new MainLibraryViewModel
                 {
                     DbId = dbGame.Id,
                     IgdbGameId = dbGame.IgdbGameId,
-                    // Jeśli apiGame jest null (co nie powinno się zdarzyć), dajemy fallback
                     Name = apiGame?.Name ?? "Wczytywanie...",
                     CoverUrl = apiGame?.Cover?.Url?.Replace("t_thumb", "t_cover_big") ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki"
                 };
@@ -126,25 +119,96 @@ namespace praca_dyplomowa_zesp.Controllers
             if (id == null) return NotFound();
 
             var currentUserId = GetCurrentUserId();
+            var user = await _userManager.GetUserAsync(User);
+
             var gameFromDb = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId);
             if (gameFromDb == null) return NotFound();
 
-            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human; where id = {gameFromDb.IgdbGameId}; limit 1;";
+            // 1. Pobierz dane gry z IGDB
+            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human, websites.url, websites.category, external_games.category, external_games.uid; where id = {gameFromDb.IgdbGameId}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
-            var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
 
-            var achievementQuery = $"fields name, description, achievement_icon.url; where game = {gameFromDb.IgdbGameId}; limit 50;";
-            var achievementJsonResponse = await _igdbClient.ApiRequestAsync("achievements", achievementQuery);
-
-            var achievementsFromApi = new List<ApiAchievement>();
-            if (!string.IsNullOrEmpty(achievementJsonResponse))
+            ApiGame gameDetailsFromApi = null;
+            if (!string.IsNullOrEmpty(gameJsonResponse))
             {
-                achievementsFromApi = JsonConvert.DeserializeObject<List<ApiAchievement>>(achievementJsonResponse) ?? new List<ApiAchievement>();
+                gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
             }
 
-            var userAchievementsFromDb = await _context.UserAchievements
-                .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId)
-                .ToListAsync();
+            // 2. Znajdź Steam AppID
+            string steamAppId = null;
+
+            if (gameDetailsFromApi != null)
+            {
+                // A: External Games
+                if (gameDetailsFromApi.External_games != null)
+                {
+                    var steamExternal = gameDetailsFromApi.External_games.FirstOrDefault(e => e.Category == 1);
+                    if (steamExternal != null) steamAppId = steamExternal.Uid;
+                }
+
+                // B: Websites
+                if (string.IsNullOrEmpty(steamAppId) && gameDetailsFromApi.Websites != null)
+                {
+                    var steamWebsite = gameDetailsFromApi.Websites.FirstOrDefault(w => w.Category == 13);
+                    if (steamWebsite != null)
+                    {
+                        var match = Regex.Match(steamWebsite.Url, @"app/(\d+)");
+                        if (match.Success) steamAppId = match.Groups[1].Value;
+                    }
+                }
+            }
+
+            // --- PLAN B: FALLBACK "NA SIŁĘ" (Wyszukiwanie po nazwie) ---
+            if (string.IsNullOrEmpty(steamAppId) && gameDetailsFromApi != null)
+            {
+                Console.WriteLine($"[Library] Brak SteamID w IGDB. Uruchamiam wyszukiwanie po nazwie: {gameDetailsFromApi.Name}");
+                steamAppId = await _steamService.SearchAppIdAsync(gameDetailsFromApi.Name);
+            }
+
+            List<AchievementViewModel> finalAchievements = new List<AchievementViewModel>();
+            bool isSteamConnected = !string.IsNullOrEmpty(user?.SteamId);
+            bool isSteamGame = !string.IsNullOrEmpty(steamAppId);
+
+            if (isSteamGame)
+            {
+                Console.WriteLine($"[Library] Pobieranie schematu osiągnięć ze Steam dla ID: {steamAppId}");
+                var steamSchema = await _steamService.GetSchemaForGameAsync(steamAppId);
+
+                if (steamSchema != null && steamSchema.Any())
+                {
+                    if (isSteamConnected)
+                    {
+                        var playerAchievements = await _steamService.GetGameAchievementsAsync(user.SteamId, steamAppId);
+                        finalAchievements = steamSchema.Select(schema => new AchievementViewModel
+                        {
+                            Name = schema.DisplayName,
+                            Description = schema.Description,
+                            IconUrl = schema.Icon,
+                            ExternalId = schema.ApiName,
+                            IsUnlocked = playerAchievements.Any(pa => pa.ApiName == schema.ApiName && pa.Achieved == 1)
+                        }).ToList();
+                    }
+                    else
+                    {
+                        var localAchievements = await _context.UserAchievements
+                            .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId)
+                            .ToListAsync();
+
+                        finalAchievements = steamSchema.Select(schema => new AchievementViewModel
+                        {
+                            Name = schema.DisplayName,
+                            Description = schema.Description,
+                            IconUrl = schema.Icon,
+                            ExternalId = schema.ApiName,
+                            IsUnlocked = localAchievements.Any(la => la.AchievementExternalId == schema.ApiName && la.IsUnlocked)
+                        }).ToList();
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("[Library] Nie udało się znaleźć gry na Steam nawet po nazwie.");
+            }
 
             var viewModel = new GameInLibraryViewModel
             {
@@ -160,31 +224,20 @@ namespace praca_dyplomowa_zesp.Controllers
                 CurrentUserStoryMission = gameFromDb.CurrentUserStoryMission,
                 CurrentUserStoryProgressPercent = gameFromDb.CurrentUserStoryProgressPercent,
                 Notes = gameFromDb.Notes,
-                Achievements = achievementsFromApi.Select(apiAch => new AchievementViewModel
-                {
-                    Name = apiAch.Name,
-                    Description = apiAch.Description,
-                    IconUrl = apiAch.Achievement_icon?.Url?.Replace("t_thumb", "t_screenshot_med") ?? "https://via.placeholder.com/64.png?text=Icon",
-                    ExternalId = apiAch.Id.ToString(),
-                    IsUnlocked = userAchievementsFromDb.Any(dbAch => dbAch.AchievementExternalId == apiAch.Id.ToString() && dbAch.IsUnlocked)
-                }).ToList()
+                Achievements = finalAchievements,
+                IsSteamConnected = isSteamConnected,
+                IsSteamGame = isSteamGame
             };
 
             return View(viewModel);
         }
 
         // GET: Library/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
+        public IActionResult Create() { return View(); }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        // ***** POCZĄTEK ZMIANY *****
-        // Dodajemy parametr 'string returnUrl'
         public async Task<IActionResult> Create([Bind("IgdbGameId")] GameInLibrary gameInLibrary, string returnUrl)
-        // ***** KONIEC ZMIANY *****
         {
             var currentUserId = GetCurrentUserId();
             gameInLibrary.UserId = currentUserId;
@@ -194,73 +247,36 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 var query = $"fields cover.url; where id = {gameInLibrary.IgdbGameId};";
                 var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
+                List<ApiGame> gamesInfo = null;
+                if (!string.IsNullOrEmpty(jsonResponse)) gamesInfo = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
 
-                // Deserializujemy odpowiedź
-                var gamesInfo = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
                 var gameInfo = gamesInfo?.FirstOrDefault();
-
-                // 2. Sprawdzamy warunek: Czy gra istnieje ORAZ czy ma okładkę
                 bool hasCover = gameInfo?.Cover != null && !string.IsNullOrEmpty(gameInfo.Cover.Url);
 
                 if (!hasCover)
                 {
-                    // WARUNEK SPEŁNIONY: Gra nie ma okładki.
-                    // "Ciche usunięcie" - czyli po prostu nie zapisujemy jej w bazie i wracamy.
-
-                    if (Url.IsLocalUrl(returnUrl))
-                    {
-                        return Redirect(returnUrl);
-                    }
-                    // Domyślny powrót jeśli brak returnUrl
+                    if (Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
                     return RedirectToAction("Index", "Games", new { mode = "browse" });
                 }
             }
-            catch (Exception ex)
-            {
-                // Opcjonalnie: logowanie błędu, ale zgodnie z prośbą "bez komunikatów" dla usera
-                Console.WriteLine($"Błąd podczas sprawdzania okładki: {ex.Message}");
-            }
+            catch (Exception ex) { Console.WriteLine($"Błąd Create: {ex.Message}"); }
 
             bool alreadyExists = await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameInLibrary.IgdbGameId);
             if (!alreadyExists)
             {
                 _context.Add(gameInLibrary);
                 await _context.SaveChangesAsync();
-
-                // ***** POCZĄTEK ZMIANY *****
-                // Sprawdzamy, czy returnUrl został podany i jest bezpieczny (lokalny)
-                if (Url.IsLocalUrl(returnUrl))
-                {
-                    return Redirect(returnUrl); // Wracamy na stronę, z której przyszliśmy (np. Guides/Index)
-                }
-
-                // Domyślne przekierowanie (używane przez Games/Details)
+                if (Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
                 return RedirectToAction(nameof(Details), "Library", new { id = gameInLibrary.Id });
-                // ***** KONIEC ZMIANY *****
             }
 
-            ModelState.AddModelError("IgdbGameId", "Ta gra jest już w Twojej bibliotece.");
-
-            // ***** POCZĄTEK ZMIANY *****
-            // Jeśli gra już istnieje, również obsłuż returnUrl
-            if (Url.IsLocalUrl(returnUrl))
-            {
-                // Użytkownik jest np. na Guides/Index, niech tam zostanie
-                return Redirect(returnUrl);
-            }
-
-            // Domyślne przekierowanie dla błędu (gdy nie ma returnUrl)
+            if (Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
             var existingGame = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameInLibrary.IgdbGameId);
-            if (existingGame != null)
-            {
-                return RedirectToAction(nameof(Details), "Library", new { id = existingGame.Id });
-            }
-            // ***** KONIEC ZMIANY *****
+            if (existingGame != null) return RedirectToAction(nameof(Details), "Library", new { id = existingGame.Id });
 
             return RedirectToAction("Index", "Games", new { mode = "browse" });
         }
 
-        // GET: Library/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -275,16 +291,13 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> Edit(int id, [Bind("Id,IgdbGameId,UserId,DateAddedToLibrary,CurrentUserStoryMission,CurrentUserStoryProgressPercent,Notes")] GameInLibrary gameInLibrary)
         {
             if (id != gameInLibrary.Id) return NotFound();
-
             var currentUserId = GetCurrentUserId();
             if (gameInLibrary.UserId != currentUserId) return Forbid();
-
             _context.Update(gameInLibrary);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Details), new { id = id });
         }
 
-        // GET: Library/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -313,25 +326,15 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         public async Task<IActionResult> ToggleAchievement(long igdbGameId, string achievementExternalId)
         {
-            if (string.IsNullOrEmpty(achievementExternalId))
-            {
-                return Json(new { success = false, error = "Brak ID osiągnięcia." });
-            }
+            if (string.IsNullOrEmpty(achievementExternalId)) return Json(new { success = false, error = "Brak ID." });
 
             var currentUserId = GetCurrentUserId();
-            var achievement = await _context.UserAchievements
-                .FirstOrDefaultAsync(ua => ua.UserId == currentUserId && ua.IgdbGameId == igdbGameId && ua.AchievementExternalId == achievementExternalId);
+            var achievement = await _context.UserAchievements.FirstOrDefaultAsync(ua => ua.UserId == currentUserId && ua.IgdbGameId == igdbGameId && ua.AchievementExternalId == achievementExternalId);
 
             bool newStatus;
             if (achievement == null)
             {
-                var newAchievement = new UserAchievement
-                {
-                    UserId = currentUserId,
-                    IgdbGameId = igdbGameId,
-                    AchievementExternalId = achievementExternalId,
-                    IsUnlocked = true
-                };
+                var newAchievement = new UserAchievement { UserId = currentUserId, IgdbGameId = igdbGameId, AchievementExternalId = achievementExternalId, IsUnlocked = true };
                 _context.UserAchievements.Add(newAchievement);
                 newStatus = true;
             }
@@ -340,43 +343,22 @@ namespace praca_dyplomowa_zesp.Controllers
                 achievement.IsUnlocked = !achievement.IsUnlocked;
                 newStatus = achievement.IsUnlocked;
             }
-
             await _context.SaveChangesAsync();
             return Json(new { success = true, isUnlocked = newStatus });
         }
-        // Plik: Controllers/LibraryController.cs
 
-        // --- NOWA METODA: Wyczyść całą bibliotekę ---
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ClearLibrary()
         {
             var currentUserId = GetCurrentUserId();
-
-            // 1. Pobierz wszystkie gry użytkownika
-            var userGames = await _context.GamesInLibraries
-                .Where(g => g.UserId == currentUserId)
-                .ToListAsync();
-
-            if (!userGames.Any())
-            {
-                TempData["ErrorMessage"] = "Twój biblioteka jest już pusta.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // 2. Pobierz wszystkie osiągnięcia użytkownika (aby nie zostawiać "sierot" w bazie)
-            // Zakładamy, że jeśli usuwasz gry, chcesz też usunąć postęp w nich.
-            var userAchievements = await _context.UserAchievements
-                .Where(ua => ua.UserId == currentUserId)
-                .ToListAsync();
-
-            // 3. Usuń dane masowo
+            var userGames = await _context.GamesInLibraries.Where(g => g.UserId == currentUserId).ToListAsync();
+            if (!userGames.Any()) { TempData["ErrorMessage"] = "Biblioteka pusta."; return RedirectToAction(nameof(Index)); }
+            var userAchievements = await _context.UserAchievements.Where(ua => ua.UserId == currentUserId).ToListAsync();
             _context.UserAchievements.RemoveRange(userAchievements);
             _context.GamesInLibraries.RemoveRange(userGames);
-
             await _context.SaveChangesAsync();
-
-            TempData["StatusMessage"] = "Wyczyszczono bibliotekę. Wszystkie gry zostały usunięte.";
+            TempData["StatusMessage"] = "Wyczyszczono bibliotekę.";
             return RedirectToAction(nameof(Index));
         }
     }

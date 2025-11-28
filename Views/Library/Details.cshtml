@@ -1,8 +1,27 @@
-﻿@model GameInLibraryViewModel
+﻿@using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary
+@model GameInLibraryViewModel
 
 @{
     ViewData["Title"] = Model.Name;
 }
+
+<style>
+    /* Klasa do wyszarzania niezdobytych osiągnięć */
+    .achievement-icon {
+        width: 64px;
+        height: 64px;
+        margin-right: 15px;
+        transition: filter 0.3s ease;
+    }
+
+        .achievement-icon.locked {
+            filter: grayscale(100%) opacity(0.6);
+        }
+
+        .achievement-icon.unlocked {
+            filter: grayscale(0%);
+        }
+</style>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
@@ -11,6 +30,7 @@
             var gameId = @Model.IgdbGameId;
             var achievementId = $(this).data('external-id');
             var isChecked = $(this).is(':checked');
+            var imgElement = $('#img-' + achievementId.replace(/[^a-zA-Z0-9]/g, '_'));
 
             $.ajax({
                 url: '@Url.Action("ToggleAchievement", "Library")',
@@ -20,24 +40,29 @@
                     achievementExternalId: achievementId
                 },
                 headers: {
-                    // Dla ochrony przed CSRF
                     RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                 },
                 success: function (response) {
-                    if (!response.success) {
+                    if (response.success) {
+                        // Aktualizuj wizualnie obrazek
+                        if (response.isUnlocked) {
+                            imgElement.removeClass('locked').addClass('unlocked');
+                        } else {
+                            imgElement.removeClass('unlocked').addClass('locked');
+                        }
+                    } else {
                         alert(response.error || 'Wystąpił błąd');
-                        $(this).prop('checked', !isChecked); // Cofnij zmianę
+                        $(this).prop('checked', !isChecked);
                     }
                 },
                 error: function () {
                     alert('Błąd komunikacji z serwerem.');
-                    $(this).prop('checked', !isChecked); // Cofnij zmianę
+                    $(this).prop('checked', !isChecked);
                 }
             });
         });
     });
 </script>
-
 
 <div class="row">
     <div class="col-md-4">
@@ -55,7 +80,10 @@
             <strong>Postęp (%):</strong>
         </p>
         <div class="progress mb-3" style="height: 20px;">
-            <div class="progress-bar" role="progressbar" style="width: @Model.CurrentUserStoryProgressPercent%;" aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">@Model.CurrentUserStoryProgressPercent%</div>
+            <div class="progress-bar" role="progressbar" style="width: @Model.CurrentUserStoryProgressPercent%;"
+                 aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">
+                @Model.CurrentUserStoryProgressPercent%
+            </div>
         </div>
 
         <h4>Notatki</h4>
@@ -104,31 +132,66 @@
         <hr />
 
         <h3>Osiągnięcia</h3>
+
+        @if (Model.IsSteamGame && !Model.IsSteamConnected)
+        {
+            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                <i class="bi bi-steam me-2" style="font-size: 1.5rem;"></i>
+                <div>
+                    <strong>Chcesz automatycznie śledzić osiągnięcia?</strong><br />
+                    Ta gra obsługuje osiągnięcia Steam. Połącz swoje konto, aby zaimportować postępy.
+                    <br />
+                    <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-dark mt-2">
+                        Połącz konto Steam w Profilu
+                    </a>
+                </div>
+            </div>
+        }
+
         @if (Model.Achievements != null && Model.Achievements.Any())
         {
             <form>
-                @Html.AntiForgeryToken() <ul class="list-group">
+                @Html.AntiForgeryToken()
+                <ul class="list-group">
                     @foreach (var ach in Model.Achievements)
                     {
+                        // Bezpieczne ID dla elementu HTML (usuwamy znaki specjalne z ApiName)
+                        var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
+
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <img src="@ach.IconUrl" alt="Ikona" style="width: 64px; height: 64px; margin-right: 15px;" class="rounded">
+                                <img src="@ach.IconUrl"
+                                     alt="Ikona"
+                                     id="img-@safeId"
+                                     class="achievement-icon rounded @(ach.IsUnlocked ? "unlocked" : "locked")">
                                 <div>
                                     <strong>@ach.Name</strong>
                                     <p class="mb-0 text-muted" style="font-size: 0.9rem;">@ach.Description</p>
                                 </div>
                             </div>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input achievement-checkbox"
-                                       type="checkbox"
-                                       role="switch"
-                                       id="ach-@ach.ExternalId"
-                                       data-external-id="@ach.ExternalId"
-                                @(ach.IsUnlocked ? "checked" : "")>
-                                <label class="form-check-label" for="ach-@ach.ExternalId">
-                                    @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
-                                </label>
-                            </div>
+
+                            @if (!Model.IsSteamConnected)
+                            {
+                                @* Pozwalamy klikać tylko jeśli NIE ma Steam (manualny tryb) *@
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input achievement-checkbox"
+                                           type="checkbox"
+                                           role="switch"
+                                           id="ach-@ach.ExternalId"
+                                           data-external-id="@ach.ExternalId"
+                                    @(ach.IsUnlocked ? "checked" : "")>
+                                    <label class="form-check-label" for="ach-@ach.ExternalId">
+                                        @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
+                                    </label>
+                                </div>
+                            }
+                            else
+                            {
+                                @* Jeśli Steam podłączony, tylko wyświetlamy status *@
+                                <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">
+                                    @(ach.IsUnlocked ? "Zdobyte (Steam)" : "Zablokowane")
+                                </span>
+                            }
                         </li>
                     }
                 </ul>
