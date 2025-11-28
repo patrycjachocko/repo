@@ -21,6 +21,11 @@
         .achievement-icon.unlocked {
             filter: grayscale(0%);
         }
+
+    /* Dodatkowy styl dla badge wewnątrz labela, aby wyglądał klikalnie */
+    .form-check-label .badge {
+        cursor: pointer;
+    }
 </style>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -30,9 +35,11 @@
             var gameId = @Model.IgdbGameId;
             var achievementId = $(this).data('external-id');
             var isChecked = $(this).is(':checked');
+
+            // Znajdź obrazek osiągnięcia
             var imgElement = $('#img-' + achievementId.replace(/[^a-zA-Z0-9]/g, '_'));
 
-            // Zapisujemy referencję do klikniętego checkboxa, aby użyć jej w funkcji success
+            // Zachowaj referencję do checkboxa
             var checkbox = $(this);
 
             $.ajax({
@@ -47,16 +54,24 @@
                 },
                 success: function (response) {
                     if (response.success) {
-                        // Znajdź etykietę (napis) powiązaną z tym checkboxem
+                        // Znajdź element badge wewnątrz labela powiązanego z checkboxem
                         var label = $('label[for="' + checkbox.attr('id') + '"]');
+                        var badge = label.find('.badge');
 
-                        // Aktualizuj wizualnie obrazek oraz tekst etykiety
                         if (response.isUnlocked) {
+                            // Zmień obrazek na kolorowy
                             imgElement.removeClass('locked').addClass('unlocked');
-                            label.text("Odblokowane"); // <--- ZMIANA TEKSTU NATYCHMIAST
+
+                            // Zmień badge na zielony i zmień tekst
+                            badge.removeClass('bg-secondary').addClass('bg-success');
+                            badge.text("Odblokowane");
                         } else {
+                            // Zmień obrazek na szary
                             imgElement.removeClass('unlocked').addClass('locked');
-                            label.text("Zablokowane"); // <--- ZMIANA TEKSTU NATYCHMIAST
+
+                            // Zmień badge na szary i zmień tekst
+                            badge.removeClass('bg-success').addClass('bg-secondary');
+                            badge.text("Zablokowane");
                         }
                     } else {
                         alert(response.error || 'Wystąpił błąd');
@@ -163,10 +178,11 @@
                 <ul class="list-group">
                     @foreach (var ach in Model.Achievements)
                     {
-                        // Bezpieczne ID dla elementu HTML
                         var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
-                        // ID dla checkboxa, żeby label wiedział co klikać
                         var checkboxId = "ach-" + safeId;
+
+                        // Sprawdzamy, czy to konkretne osiągnięcie pochodzi ze Steam
+                        bool isSteamUnlocked = Model.SteamUnlockedAchievementIds != null && Model.SteamUnlockedAchievementIds.Contains(ach.ExternalId);
 
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
@@ -180,9 +196,14 @@
                                 </div>
                             </div>
 
-                            @if (!Model.IsSteamConnected)
+                            @if (isSteamUnlocked)
                             {
-                                @* Tryb manualny *@
+                                @* Jeśli zdobyte na Steam -> Pokaż tylko info *@
+                                <span class="badge bg-success">Zdobyte (Steam)</span>
+                            }
+                            else
+                            {
+                                @* Jeśli NIE zdobyte na Steam -> Pozwól użytkownikowi przełączać *@
                                 <div class="form-check form-switch">
                                     <input class="form-check-input achievement-checkbox"
                                            type="checkbox"
@@ -191,16 +212,12 @@
                                            data-external-id="@ach.ExternalId"
                                     @(ach.IsUnlocked ? "checked" : "")>
                                     <label class="form-check-label" for="@checkboxId">
-                                        @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
+                                        @* Tutaj dodajemy badge, który będzie aktualizowany przez JS *@
+                                        <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">
+                                            @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
+                                        </span>
                                     </label>
                                 </div>
-                            }
-                            else
-                            {
-                                @* Tryb Steam (tylko podgląd) *@
-                                <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">
-                                    @(ach.IsUnlocked ? "Zdobyte (Steam)" : "Zablokowane")
-                                </span>
                             }
                         </li>
                     }

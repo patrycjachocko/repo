@@ -14,7 +14,7 @@ using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
 using praca_dyplomowa_zesp.Models.Modules.Libraries;
 using System.Text.RegularExpressions;
 
-// --- Definicje klas API (ZAKTUALIZOWANE) ---
+// --- Definicje klas API (BEZ ZMIAN) ---
 namespace praca_dyplomowa_zesp.Models.API
 {
     public class ApiGame
@@ -158,56 +158,54 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
 
-            // --- PLAN B: FALLBACK "NA SIŁĘ" (Wyszukiwanie po nazwie) ---
+            // C: Fallback - Wyszukiwanie po nazwie
             if (string.IsNullOrEmpty(steamAppId) && gameDetailsFromApi != null)
             {
-                Console.WriteLine($"[Library] Brak SteamID w IGDB. Uruchamiam wyszukiwanie po nazwie: {gameDetailsFromApi.Name}");
+                Console.WriteLine($"[Library] Brak SteamID w IGDB. Szukam po nazwie: {gameDetailsFromApi.Name}");
                 steamAppId = await _steamService.SearchAppIdAsync(gameDetailsFromApi.Name);
             }
 
             List<AchievementViewModel> finalAchievements = new List<AchievementViewModel>();
+            List<string> steamUnlockedIds = new List<string>(); // Lista ID osiągnięć zdobytych na Steam
+
             bool isSteamConnected = !string.IsNullOrEmpty(user?.SteamId);
             bool isSteamGame = !string.IsNullOrEmpty(steamAppId);
 
             if (isSteamGame)
             {
-                Console.WriteLine($"[Library] Pobieranie schematu osiągnięć ze Steam dla ID: {steamAppId}");
                 var steamSchema = await _steamService.GetSchemaForGameAsync(steamAppId);
 
                 if (steamSchema != null && steamSchema.Any())
                 {
+                    // ZAWSZE pobieramy postęp lokalny (dla hybrydy)
+                    var localAchievements = await _context.UserAchievements
+                        .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId)
+                        .ToListAsync();
+
                     if (isSteamConnected)
                     {
+                        // Jeśli Steam połączony, pobieramy też postęp ze Steam
                         var playerAchievements = await _steamService.GetGameAchievementsAsync(user.SteamId, steamAppId);
-                        finalAchievements = steamSchema.Select(schema => new AchievementViewModel
-                        {
-                            Name = schema.DisplayName,
-                            Description = schema.Description,
-                            IconUrl = schema.Icon,
-                            ExternalId = schema.ApiName,
-                            IsUnlocked = playerAchievements.Any(pa => pa.ApiName == schema.ApiName && pa.Achieved == 1)
-                        }).ToList();
-                    }
-                    else
-                    {
-                        var localAchievements = await _context.UserAchievements
-                            .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId)
-                            .ToListAsync();
 
-                        finalAchievements = steamSchema.Select(schema => new AchievementViewModel
-                        {
-                            Name = schema.DisplayName,
-                            Description = schema.Description,
-                            IconUrl = schema.Icon,
-                            ExternalId = schema.ApiName,
-                            IsUnlocked = localAchievements.Any(la => la.AchievementExternalId == schema.ApiName && la.IsUnlocked)
-                        }).ToList();
+                        // Zapisujemy ID osiągnięć, które są zdobyte na Steamie (status achieved == 1)
+                        steamUnlockedIds = playerAchievements
+                            .Where(pa => pa.Achieved == 1)
+                            .Select(pa => pa.ApiName)
+                            .ToList();
                     }
+
+                    // Budujemy listę finałową - SUMA ZBIORÓW
+                    finalAchievements = steamSchema.Select(schema => new AchievementViewModel
+                    {
+                        Name = schema.DisplayName,
+                        Description = schema.Description,
+                        IconUrl = schema.Icon,
+                        ExternalId = schema.ApiName,
+                        // Odblokowane jeśli: (Jest na liście Steam) LUB (Jest odblokowane w lokalnej bazie)
+                        IsUnlocked = steamUnlockedIds.Contains(schema.ApiName) ||
+                                     localAchievements.Any(la => la.AchievementExternalId == schema.ApiName && la.IsUnlocked)
+                    }).ToList();
                 }
-            }
-            else
-            {
-                Console.WriteLine("[Library] Nie udało się znaleźć gry na Steam nawet po nazwie.");
             }
 
             var viewModel = new GameInLibraryViewModel
@@ -226,7 +224,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 Notes = gameFromDb.Notes,
                 Achievements = finalAchievements,
                 IsSteamConnected = isSteamConnected,
-                IsSteamGame = isSteamGame
+                IsSteamGame = isSteamGame,
+                SteamUnlockedAchievementIds = steamUnlockedIds // Przekazujemy listę do widoku
             };
 
             return View(viewModel);
