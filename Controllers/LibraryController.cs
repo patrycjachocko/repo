@@ -166,7 +166,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             List<AchievementViewModel> finalAchievements = new List<AchievementViewModel>();
-            List<string> steamUnlockedIds = new List<string>(); // Lista ID osiągnięć zdobytych na Steam
+            List<string> steamUnlockedIds = new List<string>();
 
             bool isSteamConnected = !string.IsNullOrEmpty(user?.SteamId);
             bool isSteamGame = !string.IsNullOrEmpty(steamAppId);
@@ -177,7 +177,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (steamSchema != null && steamSchema.Any())
                 {
-                    // ZAWSZE pobieramy postęp lokalny (dla hybrydy)
+                    // ZAWSZE pobieramy postęp lokalny
                     var localAchievements = await _context.UserAchievements
                         .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId)
                         .ToListAsync();
@@ -186,26 +186,40 @@ namespace praca_dyplomowa_zesp.Controllers
                     {
                         // Jeśli Steam połączony, pobieramy też postęp ze Steam
                         var playerAchievements = await _steamService.GetGameAchievementsAsync(user.SteamId, steamAppId);
-
-                        // Zapisujemy ID osiągnięć, które są zdobyte na Steamie (status achieved == 1)
                         steamUnlockedIds = playerAchievements
                             .Where(pa => pa.Achieved == 1)
                             .Select(pa => pa.ApiName)
                             .ToList();
                     }
 
-                    // Budujemy listę finałową - SUMA ZBIORÓW
+                    // Łączymy wyniki
                     finalAchievements = steamSchema.Select(schema => new AchievementViewModel
                     {
                         Name = schema.DisplayName,
                         Description = schema.Description,
                         IconUrl = schema.Icon,
                         ExternalId = schema.ApiName,
-                        // Odblokowane jeśli: (Jest na liście Steam) LUB (Jest odblokowane w lokalnej bazie)
                         IsUnlocked = steamUnlockedIds.Contains(schema.ApiName) ||
                                      localAchievements.Any(la => la.AchievementExternalId == schema.ApiName && la.IsUnlocked)
                     }).ToList();
                 }
+            }
+
+            // --- AUTOMATYCZNE OBLICZANIE POSTĘPU % ---
+            int progressPercent = 0;
+            if (finalAchievements.Any())
+            {
+                int unlockedCount = finalAchievements.Count(a => a.IsUnlocked);
+                // Obliczamy procent i zaokrąglamy
+                progressPercent = (int)Math.Round((double)unlockedCount / finalAchievements.Count * 100);
+            }
+
+            // Aktualizujemy rekord w bazie, jeśli procent się zmienił
+            if (gameFromDb.CurrentUserStoryProgressPercent != progressPercent)
+            {
+                gameFromDb.CurrentUserStoryProgressPercent = progressPercent;
+                _context.Update(gameFromDb);
+                await _context.SaveChangesAsync();
             }
 
             var viewModel = new GameInLibraryViewModel
@@ -220,18 +234,17 @@ namespace praca_dyplomowa_zesp.Controllers
                 ReleaseDate = gameDetailsFromApi?.Release_dates?.FirstOrDefault()?.Human,
                 DateAddedToLibrary = gameFromDb.DateAddedToLibrary,
                 CurrentUserStoryMission = gameFromDb.CurrentUserStoryMission,
-                CurrentUserStoryProgressPercent = gameFromDb.CurrentUserStoryProgressPercent,
+                CurrentUserStoryProgressPercent = progressPercent, // Używamy obliczonej wartości
                 Notes = gameFromDb.Notes,
                 Achievements = finalAchievements,
                 IsSteamConnected = isSteamConnected,
                 IsSteamGame = isSteamGame,
-                SteamUnlockedAchievementIds = steamUnlockedIds // Przekazujemy listę do widoku
+                SteamUnlockedAchievementIds = steamUnlockedIds
             };
 
             return View(viewModel);
         }
 
-        // GET: Library/Create
         public IActionResult Create() { return View(); }
 
         [HttpPost]
@@ -276,25 +289,23 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction("Index", "Games", new { mode = "browse" });
         }
 
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null) return NotFound();
-            var currentUserId = GetCurrentUserId();
-            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == id && g.UserId == currentUserId);
-            if (gameInLibrary == null) return NotFound();
-            return View(gameInLibrary);
-        }
+        // --- USUNIĘTO METODY EDIT ---
 
+        // --- NOWA METODA: Aktualizacja notatek (AJAX) ---
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,IgdbGameId,UserId,DateAddedToLibrary,CurrentUserStoryMission,CurrentUserStoryProgressPercent,Notes")] GameInLibrary gameInLibrary)
+        public async Task<IActionResult> UpdateNotes(int id, string notes)
         {
-            if (id != gameInLibrary.Id) return NotFound();
             var currentUserId = GetCurrentUserId();
-            if (gameInLibrary.UserId != currentUserId) return Forbid();
+            var gameInLibrary = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == id && g.UserId == currentUserId);
+
+            if (gameInLibrary == null) return Json(new { success = false, error = "Nie znaleziono gry." });
+
+            gameInLibrary.Notes = notes;
             _context.Update(gameInLibrary);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Details), new { id = id });
+
+            return Json(new { success = true });
         }
 
         public async Task<IActionResult> Delete(int? id)
@@ -343,6 +354,9 @@ namespace praca_dyplomowa_zesp.Controllers
                 newStatus = achievement.IsUnlocked;
             }
             await _context.SaveChangesAsync();
+
+            // Postęp procentowy przeliczymy w widoku przez JS, a w bazie zaktualizuje się przy następnym odświeżeniu Details/Index
+
             return Json(new { success = true, isUnlocked = newStatus });
         }
 

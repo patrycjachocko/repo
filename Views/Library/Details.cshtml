@@ -6,7 +6,7 @@
 }
 
 <style>
-    /* Klasa do wyszarzania niezdobytych osiągnięć */
+    /* Styl dla ikony osiągnięć */
     .achievement-icon {
         width: 64px;
         height: 64px;
@@ -22,24 +22,62 @@
             filter: grayscale(0%);
         }
 
-    /* Dodatkowy styl dla badge wewnątrz labela, aby wyglądał klikalnie */
+    /* Kursor rączki dla badge w labelu */
     .form-check-label .badge {
         cursor: pointer;
+    }
+
+    /* Styl dla pola notatek */
+    #notes-area {
+        resize: vertical;
+        border: 1px solid #ced4da;
+        background-color: #f8f9fa;
+        transition: background-color 0.3s, border-color 0.3s;
+    }
+
+        #notes-area:focus {
+            background-color: #fff;
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+
+    /* Status zapisu */
+    #save-status {
+        font-size: 0.85rem;
+        transition: opacity 0.5s;
+        opacity: 0;
     }
 </style>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
     $(document).ready(function () {
+
+        // --- Funkcja do przeliczania paska postępu w czasie rzeczywistym ---
+        function recalculateProgress() {
+            var total = $('.list-group-item').length; // Wszystkie osiągnięcia na liście
+            if (total === 0) return;
+
+            // Zliczamy, ile obrazków ma klasę 'unlocked'
+            var unlocked = $('.achievement-icon.unlocked').length;
+
+            var percent = Math.round((unlocked / total) * 100);
+
+            var progressBar = $('#game-progress-bar');
+            progressBar.css('width', percent + '%');
+            progressBar.text(percent + '%');
+            progressBar.attr('aria-valuenow', percent);
+        }
+
+        // --- Obsługa przełączania osiągnięć ---
         $('.achievement-checkbox').change(function () {
             var gameId = @Model.IgdbGameId;
             var achievementId = $(this).data('external-id');
             var isChecked = $(this).is(':checked');
 
-            // Znajdź obrazek osiągnięcia
+            // Znajdź elementy powiązane z tym osiągnięciem
             var imgElement = $('#img-' + achievementId.replace(/[^a-zA-Z0-9]/g, '_'));
-
-            // Zachowaj referencję do checkboxa
             var checkbox = $(this);
 
             $.ajax({
@@ -54,33 +92,67 @@
                 },
                 success: function (response) {
                     if (response.success) {
-                        // Znajdź element badge wewnątrz labela powiązanego z checkboxem
+                        // Znajdź label i badge wewnątrz niego
                         var label = $('label[for="' + checkbox.attr('id') + '"]');
                         var badge = label.find('.badge');
 
                         if (response.isUnlocked) {
-                            // Zmień obrazek na kolorowy
+                            // Wizualizacja: Odblokowane
                             imgElement.removeClass('locked').addClass('unlocked');
-
-                            // Zmień badge na zielony i zmień tekst
                             badge.removeClass('bg-secondary').addClass('bg-success');
                             badge.text("Odblokowane");
                         } else {
-                            // Zmień obrazek na szary
+                            // Wizualizacja: Zablokowane
                             imgElement.removeClass('unlocked').addClass('locked');
-
-                            // Zmień badge na szary i zmień tekst
                             badge.removeClass('bg-success').addClass('bg-secondary');
                             badge.text("Zablokowane");
                         }
+
+                        // Przelicz pasek postępu natychmiast
+                        recalculateProgress();
+
                     } else {
                         alert(response.error || 'Wystąpił błąd');
-                        checkbox.prop('checked', !isChecked); // Cofnij zmianę switcha
+                        checkbox.prop('checked', !isChecked); // Cofnij zmianę
                     }
                 },
                 error: function () {
                     alert('Błąd komunikacji z serwerem.');
-                    checkbox.prop('checked', !isChecked); // Cofnij zmianę switcha
+                    checkbox.prop('checked', !isChecked); // Cofnij zmianę
+                }
+            });
+        });
+
+        // --- Obsługa Notatek (Auto-zapis) ---
+        // Zapisuje przy wyjściu z pola (blur)
+        $('#notes-area').on('blur', function () {
+            var notesContent = $(this).val();
+            var gameId = @Model.DbId; // ID z tabeli GamesInLibraries
+            var statusSpan = $('#save-status');
+
+            statusSpan.text("Zapisywanie...").css('color', 'gray').css('opacity', 1);
+
+            $.ajax({
+                url: '@Url.Action("UpdateNotes", "Library")',
+                type: 'POST',
+                data: {
+                    id: gameId,
+                    notes: notesContent
+                },
+                headers: {
+                    RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function (response) {
+                    if (response.success) {
+                        statusSpan.text("Zapisano pomyślnie!").css('color', 'green');
+                        // Ukryj komunikat po 2 sekundach
+                        setTimeout(function () { statusSpan.css('opacity', 0); }, 2000);
+                    } else {
+                        statusSpan.text("Błąd zapisu.").css('color', 'red');
+                    }
+                },
+                error: function () {
+                    statusSpan.text("Błąd połączenia.").css('color', 'red');
                 }
             });
         });
@@ -91,27 +163,23 @@
     <div class="col-md-4">
         <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded mb-3" alt="Okładka @Model.Name">
 
-        <h4>Postęp Fabularny</h4>
-        <p class="mb-1">
-            <strong>Obecna misja:</strong>
-        </p>
-        <p class="text-muted">
-            @(Model.CurrentUserStoryMission ?? "Nie ustawiono")
-        </p>
-
         <p class="mb-1">
             <strong>Postęp (%):</strong>
         </p>
         <div class="progress mb-3" style="height: 20px;">
-            <div class="progress-bar" role="progressbar" style="width: @Model.CurrentUserStoryProgressPercent%;"
+            <div id="game-progress-bar" class="progress-bar bg-info" role="progressbar"
+                 style="width: @Model.CurrentUserStoryProgressPercent%;"
                  aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">
                 @Model.CurrentUserStoryProgressPercent%
             </div>
         </div>
 
         <h4>Notatki</h4>
-        <div class="notes-display bg-light p-3 rounded" style="min-height: 100px; white-space: pre-wrap; border: 1px solid #ddd;">
-            @(Model.Notes ?? "Brak notatek.")
+        <div class="form-group">
+            <textarea id="notes-area" class="form-control" rows="10" placeholder="Wpisz swoje notatki tutaj...">@(Model.Notes)</textarea>
+            <div class="mt-1" style="min-height: 20px;">
+                <span id="save-status"></span>
+            </div>
         </div>
 
     </div>
@@ -124,7 +192,6 @@
             <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info">
                 Przejdź do Poradników i Wskazówek
             </a>
-            <a asp-action="Edit" asp-route-id="@Model.DbId" class="btn btn-secondary">Edytuj Postęp i Notatki</a>
             <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-danger">Usuń z biblioteki</a>
         </div>
 
@@ -181,7 +248,7 @@
                         var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
                         var checkboxId = "ach-" + safeId;
 
-                        // Sprawdzamy, czy to konkretne osiągnięcie pochodzi ze Steam
+                        // Sprawdzamy, czy to konkretne osiągnięcie pochodzi ze Steam (jest na liście zdobytych na Steamie)
                         bool isSteamUnlocked = Model.SteamUnlockedAchievementIds != null && Model.SteamUnlockedAchievementIds.Contains(ach.ExternalId);
 
                         <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -198,7 +265,7 @@
 
                             @if (isSteamUnlocked)
                             {
-                                @* Jeśli zdobyte na Steam -> Pokaż tylko info *@
+                                @* Jeśli zdobyte na Steam -> Pokaż tylko info, brak możliwości zmiany *@
                                 <span class="badge bg-success">Zdobyte (Steam)</span>
                             }
                             else
@@ -212,7 +279,7 @@
                                            data-external-id="@ach.ExternalId"
                                     @(ach.IsUnlocked ? "checked" : "")>
                                     <label class="form-check-label" for="@checkboxId">
-                                        @* Tutaj dodajemy badge, który będzie aktualizowany przez JS *@
+                                        @* Badge, który wygląda jak ten ze Steam, ale jest klikalny (przez label) i zmienia się dynamicznie *@
                                         <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">
                                             @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
                                         </span>
