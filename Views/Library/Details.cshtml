@@ -32,6 +32,9 @@
             var isChecked = $(this).is(':checked');
             var imgElement = $('#img-' + achievementId.replace(/[^a-zA-Z0-9]/g, '_'));
 
+            // Zapisujemy referencję do klikniętego checkboxa, aby użyć jej w funkcji success
+            var checkbox = $(this);
+
             $.ajax({
                 url: '@Url.Action("ToggleAchievement", "Library")',
                 type: 'POST',
@@ -44,20 +47,25 @@
                 },
                 success: function (response) {
                     if (response.success) {
-                        // Aktualizuj wizualnie obrazek
+                        // Znajdź etykietę (napis) powiązaną z tym checkboxem
+                        var label = $('label[for="' + checkbox.attr('id') + '"]');
+
+                        // Aktualizuj wizualnie obrazek oraz tekst etykiety
                         if (response.isUnlocked) {
                             imgElement.removeClass('locked').addClass('unlocked');
+                            label.text("Odblokowane"); // <--- ZMIANA TEKSTU NATYCHMIAST
                         } else {
                             imgElement.removeClass('unlocked').addClass('locked');
+                            label.text("Zablokowane"); // <--- ZMIANA TEKSTU NATYCHMIAST
                         }
                     } else {
                         alert(response.error || 'Wystąpił błąd');
-                        $(this).prop('checked', !isChecked);
+                        checkbox.prop('checked', !isChecked); // Cofnij zmianę switcha
                     }
                 },
                 error: function () {
                     alert('Błąd komunikacji z serwerem.');
-                    $(this).prop('checked', !isChecked);
+                    checkbox.prop('checked', !isChecked); // Cofnij zmianę switcha
                 }
             });
         });
@@ -155,8 +163,10 @@
                 <ul class="list-group">
                     @foreach (var ach in Model.Achievements)
                     {
-                        // Bezpieczne ID dla elementu HTML (usuwamy znaki specjalne z ApiName)
+                        // Bezpieczne ID dla elementu HTML
                         var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
+                        // ID dla checkboxa, żeby label wiedział co klikać
+                        var checkboxId = "ach-" + safeId;
 
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
@@ -172,22 +182,22 @@
 
                             @if (!Model.IsSteamConnected)
                             {
-                                @* Pozwalamy klikać tylko jeśli NIE ma Steam (manualny tryb) *@
+                                @* Tryb manualny *@
                                 <div class="form-check form-switch">
                                     <input class="form-check-input achievement-checkbox"
                                            type="checkbox"
                                            role="switch"
-                                           id="ach-@ach.ExternalId"
+                                           id="@checkboxId"
                                            data-external-id="@ach.ExternalId"
                                     @(ach.IsUnlocked ? "checked" : "")>
-                                    <label class="form-check-label" for="ach-@ach.ExternalId">
+                                    <label class="form-check-label" for="@checkboxId">
                                         @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
                                     </label>
                                 </div>
                             }
                             else
                             {
-                                @* Jeśli Steam podłączony, tylko wyświetlamy status *@
+                                @* Tryb Steam (tylko podgląd) *@
                                 <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">
                                     @(ach.IsUnlocked ? "Zdobyte (Steam)" : "Zablokowane")
                                 </span>
