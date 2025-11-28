@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251125184226_migracja1")]
+    [Migration("20251128220852_migracja1")]
     partial class migracja1
     {
         /// <inheritdoc />
@@ -457,6 +457,9 @@ namespace praca_dyplomowa_zesp.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SecurityStamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SteamId")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("TwoFactorEnabled")

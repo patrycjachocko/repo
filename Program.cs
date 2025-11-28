@@ -12,6 +12,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 
+// Konfiguracja Identity z obs³ug¹ Ról
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 {
     options.Password.RequireDigit = true;
@@ -24,7 +25,6 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
 
-    // Wy³¹czamy wymóg potwierdzenia konta
     options.SignIn.RequireConfirmedAccount = false;
 })
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -72,6 +72,55 @@ builder.Services.AddAuthentication()
 builder.Services.AddMemoryCache();
 
 var app = builder.Build();
+
+// --- SEEDOWANIE RÓL I ADMINA ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+        var userManager = services.GetRequiredService<UserManager<User>>();
+
+        // 1. Tworzenie ról (ZMIANA: Dodano "Verified")
+        string[] roleNames = { "Admin", "Moderator", "User", "Verified" };
+
+        foreach (var roleName in roleNames)
+        {
+            if (!await roleManager.RoleExistsAsync(roleName))
+            {
+                await roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
+            }
+        }
+
+        // 2. Tworzenie Admina, jeœli nie istnieje
+        var adminUser = await userManager.FindByNameAsync("Admin");
+        if (adminUser == null)
+        {
+            var newAdmin = new User
+            {
+                UserName = "Admin",
+                Login = "admin",
+                Role = "Admin",
+                CreatedAt = DateTime.Now,
+                EmailConfirmed = true
+            };
+
+            var result = await userManager.CreateAsync(newAdmin, "Admin890");
+
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(newAdmin, "Admin");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Wyst¹pi³ b³¹d podczas tworzenia ról lub konta administratora.");
+    }
+}
+// ----------------------------------------
 
 if (!app.Environment.IsDevelopment())
 {

@@ -42,6 +42,7 @@ namespace praca_dyplomowa_zesp.Migrations
                     Banner = table.Column<byte[]>(type: "BLOB", nullable: true),
                     BannerContentType = table.Column<string>(type: "TEXT", nullable: true),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    SteamId = table.Column<string>(type: "TEXT", nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),

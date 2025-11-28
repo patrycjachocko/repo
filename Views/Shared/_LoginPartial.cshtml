@@ -7,7 +7,7 @@
 <ul class="navbar-nav">
     @if (SignInManager.IsSignedIn(User))
     {
-        // ZMIANA: Pobieramy pełny obiekt użytkownika, aby mieć dostęp do SteamId
+        // Pobieramy pełny obiekt użytkownika, aby mieć dostęp do SteamId
         var user = await UserManager.GetUserAsync(User);
 
         if (user != null)
@@ -30,6 +30,16 @@
                 }
             </li>
 
+            // --- 1.5. SEKCJA ADMINA (DODANE) ---
+            @if (User.IsInRole("Admin"))
+            {
+                <li class="nav-item d-flex align-items-center me-3">
+                    <a class="btn btn-sm btn-danger fw-bold" asp-controller="Admin" asp-action="Index" title="Panel Administratora">
+                        PANEL ADMINA
+                    </a>
+                </li>
+            }
+
                     // --- 2. SEKCJA AWATARA I PROFILU ---
             <li class="nav-item d-flex align-items-center">
                 <a class="nav-link text-dark d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
@@ -48,7 +58,7 @@
     }
     else
     {
-        // --- 4. SEKCJA DLA NIEZALOGOWANYCH (NOWA: GUZIK STEAM) ---
+        // --- 4. SEKCJA DLA NIEZALOGOWANYCH ---
         <li class="nav-item d-flex align-items-center me-2">
             <form asp-controller="Account" asp-action="LoginWithSteam" method="post">
                 <button type="submit" class="btn btn-sm btn-dark d-flex align-items-center" style="background-color: #171a21; border-color: #171a21;">
