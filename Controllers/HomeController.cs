@@ -77,8 +77,10 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             // 2. Pobierz popularne gry z IGDB
-            // ZMIANA: Zwiêkszono limit z 20 na 50, ¿eby by³o wiêcej kart
-            var queryPopular = "fields name, cover.url, rating; sort rating desc; where rating != null & cover.url != null & parent_game = null & rating_count > 50; limit 50;";
+            // ZMIANA: Pobieramy wiêcej danych (category, version_parent) i wiêcej wyników (limit 100),
+            // aby mieæ zapas po odrzuceniu bundli i DLC.
+            var queryPopular = "fields name, cover.url, rating, category, version_parent; sort rating desc; where rating != null & cover.url != null & parent_game = null & rating_count > 50; limit 100;";
+
             var jsonPopular = await _igdbClient.ApiRequestAsync("games", queryPopular);
 
             if (!string.IsNullOrEmpty(jsonPopular))
@@ -86,10 +88,23 @@ namespace praca_dyplomowa_zesp.Controllers
                 var popularGamesApi = JsonConvert.DeserializeObject<List<ApiGame>>(jsonPopular);
                 if (popularGamesApi != null)
                 {
-                    foreach (var game in popularGamesApi)
+                    // FILTROWANIE (usuwanie bundli i DLC)
+                    var filteredPopularGames = popularGamesApi
+                        .Where(g =>
+                            g.Category == 0 && // Tylko gry g³ówne
+                            g.Version_parent == null && // Bez Legacy Edition
+                            !string.IsNullOrEmpty(g.Name) &&
+                            !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
+                            !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
+                            !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
+                            !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
+                        );
+
+                    foreach (var game in filteredPopularGames)
                     {
                         // Dodaj tylko jeœli nie ma jej jeszcze na liœcie (nie jest w bibliotece u góry)
-                        if (!addedIgdbIds.Contains(game.Id))
+                        // Ograniczamy liczbê popularnych gier do np. 20, ¿eby karuzela nie by³a nieskoñczona
+                        if (!addedIgdbIds.Contains(game.Id) && finalGamesList.Count < 30)
                         {
                             finalGamesList.Add(new HomeGameDisplay
                             {
@@ -98,6 +113,7 @@ namespace praca_dyplomowa_zesp.Controllers
                                 CoverUrl = game.Cover?.Url?.Replace("t_thumb", "t_720p"),
                                 IsInLibrary = false
                             });
+                            addedIgdbIds.Add(game.Id);
                         }
                     }
                 }

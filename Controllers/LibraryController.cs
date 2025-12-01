@@ -14,32 +14,6 @@ using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
 using praca_dyplomowa_zesp.Models.Modules.Libraries;
 using System.Text.RegularExpressions;
 
-// --- Definicje klas API (BEZ ZMIAN) ---
-namespace praca_dyplomowa_zesp.Models.API
-{
-    public class ApiGame
-    {
-        [JsonProperty("id")] public long Id { get; set; }
-        [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("cover")] public ApiCover Cover { get; set; }
-        [JsonProperty("genres")] public List<ApiGenre> Genres { get; set; }
-        [JsonProperty("involved_companies")] public List<ApiInvolvedCompany> Involved_companies { get; set; }
-        [JsonProperty("release_dates")] public List<ApiReleaseDate> Release_dates { get; set; }
-        [JsonProperty("websites")] public List<ApiWebsite> Websites { get; set; }
-        [JsonProperty("external_games")] public List<ApiExternalGame> External_games { get; set; }
-    }
-
-    public class ApiCover { [JsonProperty("url")] public string Url { get; set; } }
-    public class ApiGenre { [JsonProperty("name")] public string Name { get; set; } }
-    public class ApiInvolvedCompany { [JsonProperty("company")] public ApiCompany Company { get; set; } [JsonProperty("developer")] public bool developer { get; set; } }
-    public class ApiCompany { [JsonProperty("name")] public string Name { get; set; } }
-    public class ApiReleaseDate { [JsonProperty("human")] public string Human { get; set; } }
-    public class ApiWebsite { [JsonProperty("category")] public int Category { get; set; } [JsonProperty("url")] public string Url { get; set; } }
-    public class ApiExternalGame { [JsonProperty("category")] public int Category { get; set; } [JsonProperty("uid")] public string Uid { get; set; } }
-    public class ApiAchievement { public long Id { get; set; } public string Name { get; set; } public string Description { get; set; } public ApiAchievementIcon Achievement_icon { get; set; } }
-    public class ApiAchievementIcon { public string Url { get; set; } }
-}
-
 namespace praca_dyplomowa_zesp.Controllers
 {
     [Authorize]

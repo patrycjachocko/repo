@@ -12,21 +12,9 @@ using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 
-namespace praca_dyplomowa_zesp.Models.Modules.Guides
-{
-    public class GuidesViewModel
-    {
-        public long IgdbGameId { get; set; }
-        public string GameName { get; set; } = "Nieznana gra";
-        public bool IsInLibrary { get; set; } = false;
-        public List<Guide> Guides { get; set; } = new List<Guide>();
-    }
-}
-
-
 namespace praca_dyplomowa_zesp.Controllers
 {
-    [AllowAnonymous] // Każdy może przeglądać poradniki
+    [AllowAnonymous]
     public class GuidesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -40,9 +28,6 @@ namespace praca_dyplomowa_zesp.Controllers
             _userManager = userManager;
         }
 
-        /// <summary>
-        /// Metoda pomocnicza do pobierania ID (Guid) aktualnie zalogowanego użytkownika
-        /// </summary>
         private Guid GetCurrentUserId()
         {
             var userIdString = _userManager.GetUserId(User);
@@ -53,20 +38,66 @@ namespace praca_dyplomowa_zesp.Controllers
             return Guid.Empty;
         }
 
-        // GET: Guides/Index/123 (gdzie 123 to IgdbGameId)
+        // GET: Guides/Index/123
         public async Task<IActionResult> Index(long gameId)
         {
             if (gameId <= 0) return NotFound();
 
-            // 1. Pobierz nazwę gry z API
-            var gameQuery = $"fields name; where id = {gameId}; limit 1;";
+            // 1. Zapytanie do API: pobieramy też kategorię i kolekcje
+            var gameQuery = $"fields name, parent_game, version_parent, category, collections.id; where id = {gameId}; limit 1;";
+
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
             var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
 
             if (gameDetailsFromApi == null) return NotFound();
 
+            // 2. PRZEKIEROWANIE (DLC / Wersja / Bundle -> Gra Główna)
+
+            // A: Standardowy rodzic (DLC)
+            if (gameDetailsFromApi.Parent_game.HasValue)
+            {
+                return RedirectToAction("Index", new { gameId = gameDetailsFromApi.Parent_game.Value });
+            }
+
+            // B: Rodzic wersji (np. Legacy Edition)
+            if (gameDetailsFromApi.Version_parent.HasValue)
+            {
+                return RedirectToAction("Index", new { gameId = gameDetailsFromApi.Version_parent.Value });
+            }
+
+            // C: FALLBACK DLA BUNDLI (np. The Sims 4 Halloween Bundle)
+            // Jeśli to nie jest gra główna (Category != 0) i nie ma rodzica, szukamy w kolekcji
+            if (gameDetailsFromApi.Category != 0 && gameDetailsFromApi.Collections != null && gameDetailsFromApi.Collections.Any())
+            {
+                // Bierzemy pierwszą kolekcję (zazwyczaj to seria, np. "The Sims")
+                var collectionId = gameDetailsFromApi.Collections.First().Id;
+
+                // Pobieramy TYLKO główne gry (Category = 0) z tej kolekcji
+                var collectionQuery = $"fields id, name; where collections = ({collectionId}) & category = 0; limit 50;";
+                var collectionJson = await _igdbClient.ApiRequestAsync("games", collectionQuery);
+
+                if (!string.IsNullOrEmpty(collectionJson))
+                {
+                    var mainGamesInCollection = JsonConvert.DeserializeObject<List<ApiGame>>(collectionJson);
+                    if (mainGamesInCollection != null)
+                    {
+                        // Szukamy gry głównej, której nazwa zawiera się w nazwie naszego pakietu
+                        // Np. "The Sims 4 Halloween Bundle" zawiera "The Sims 4"
+                        var matchedMainGame = mainGamesInCollection
+                            .OrderByDescending(g => g.Name.Length) // Najpierw najdłuższe nazwy, żeby "The Sims 4" wygrało z "The Sims"
+                            .FirstOrDefault(g => gameDetailsFromApi.Name.Contains(g.Name));
+
+                        if (matchedMainGame != null && matchedMainGame.Id != gameId)
+                        {
+                            return RedirectToAction("Index", new { gameId = matchedMainGame.Id });
+                        }
+                    }
+                }
+            }
+
+            // --- Kod dla gry głównej (lub gdy nie znaleziono rodzica) ---
+
             bool isInLibrary = false;
-            // 2. Sprawdź, czy gra jest w bibliotece (tylko jeśli user jest zalogowany)
             if (User.Identity != null && User.Identity.IsAuthenticated)
             {
                 var currentUserId = GetCurrentUserId();
@@ -77,11 +108,10 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
 
-            // 3. Pobierz poradniki dla tej gry z bazy danych
-            // (Na razie lista będzie pusta, dopóki ich nie dodamy)
             var guidesFromDb = await _context.Guides
                 .Where(g => g.IgdbGameId == gameId)
-                .ToListAsync(); // W przyszłości można dodać .Include(g => g.Tips)
+                .OrderByDescending(g => g.CreatedAt)
+                .ToListAsync();
 
             var viewModel = new GuidesViewModel
             {

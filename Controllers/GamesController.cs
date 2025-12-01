@@ -1,5 +1,4 @@
-﻿// Plik: /Controllers/GamesController.cs
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data;
 using System;
@@ -7,12 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using praca_dyplomowa_zesp.Models.API; // Używamy tych samych modeli API co w LibraryController
+using praca_dyplomowa_zesp.Models.API;
 using Microsoft.AspNetCore.Identity;
 using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
 
-// Definiujemy ViewModele dla tego kontrolera
 namespace praca_dyplomowa_zesp.Models.Modules.Games
 {
     public class GameBrowserViewModel
@@ -20,12 +18,9 @@ namespace praca_dyplomowa_zesp.Models.Modules.Games
         public List<ApiGame> Games { get; set; } = new List<ApiGame>();
         public int CurrentPage { get; set; } = 1;
         public string? SearchString { get; set; }
-
-        // NOWE: Przechowuje tryb, w jakim jest przeglądarka ("browse" lub "guides")
         public string Mode { get; set; } = "browse";
     }
 
-    // NOWE: Dodajemy z powrotem GameDetailViewModel dla widoku szczegółów gier spoza biblioteki
     public class GameDetailViewModel
     {
         public long IgdbGameId { get; set; }
@@ -36,7 +31,6 @@ namespace praca_dyplomowa_zesp.Models.Modules.Games
         public string? ReleaseDate { get; set; }
     }
 }
-
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -67,22 +61,29 @@ namespace praca_dyplomowa_zesp.Controllers
         }
 
         // GET: Games
-        // ZMIANA: Dodano parametr "mode"
         public async Task<IActionResult> Index(string? searchString, int page = 1, string mode = "browse")
         {
             if (page < 1) page = 1;
             int offset = (page - 1) * PageSize;
+
+            string safeSearch = searchString?.Replace("\"", "").Trim();
             string query;
 
-            if (!string.IsNullOrEmpty(searchString) && mode == "browse")
+            // KROK 1: Pobieranie danych z API
+            // Prosimy o category i version_parent
+            string fields = "fields name, cover.url, rating, category, version_parent";
+            // parent_game = null (odrzuca DLC)
+            string baseFilter = "where parent_game = null";
+
+            if (!string.IsNullOrEmpty(safeSearch) && mode == "browse")
             {
-                // Wyszukiwanie gier
-                query = $"fields name, cover.url; search \"{searchString}\"; where cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
+                // Wyszukiwanie: Limit zwiększony do 100, aby mieć zapas po odfiltrowaniu
+                query = $"{fields}; search \"{safeSearch}\"; {baseFilter} & cover.url != null; limit 100; offset {offset};";
             }
             else
             {
-                // Domyślny widok - popularne gry (dla "guides" i domyślnego "browse")
-                query = $"fields name, cover.url, rating; sort rating desc; where rating != null & cover.url != null & parent_game = null; limit {PageSize}; offset {offset};";
+                // Domyślny widok
+                query = $"{fields}; sort rating desc; {baseFilter} & rating != null & cover.url != null; limit 100; offset {offset};";
             }
 
             var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
@@ -91,7 +92,24 @@ namespace praca_dyplomowa_zesp.Controllers
                 ? new List<ApiGame>()
                 : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
-            // ZMIANA: Ustawienie tytułu na podstawie trybu
+            // KROK 2: Agresywne filtrowanie w C#
+            // Odrzucamy wszystko co wygląda na pakiet, kolekcję lub inną wersję
+            var filteredGames = gamesFromApi
+                .Where(g =>
+                    // Musi być główną grą (Category 0)
+                    g.Category == 0 &&
+                    // Nie może być Legacy Edition itp.
+                    g.Version_parent == null &&
+                    // Dodatkowe filtrowanie po nazwie (eliminuje Bundle, Kolekcje, Pakiety)
+                    !string.IsNullOrEmpty(g.Name) &&
+                    !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
+                    !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
+                    !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
+                    !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase) // Np. "Expansion Pack"
+                )
+                .Take(PageSize)
+                .ToList();
+
             if (mode == "guides")
             {
                 ViewData["Title"] = "Guides & Tips - Wybierz grę";
@@ -103,7 +121,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var viewModel = new Models.Modules.Games.GameBrowserViewModel
             {
-                Games = gamesFromApi.Select(apiGame => new ApiGame
+                Games = filteredGames.Select(apiGame => new ApiGame
                 {
                     Id = apiGame.Id,
                     Name = apiGame.Name,
@@ -111,19 +129,18 @@ namespace praca_dyplomowa_zesp.Controllers
                 }).ToList(),
                 CurrentPage = page,
                 SearchString = searchString,
-                Mode = mode // ZMIANA: Przekazanie trybu do widoku
+                Mode = mode
             };
 
             return View(viewModel);
         }
 
-        // GET: Games/Details/5 (gdzie 5 to ID gry z IGDB)
+        // GET: Games/Details/5
         [HttpGet]
         public async Task<IActionResult> Details(long id)
         {
             var currentUserId = GetCurrentUserId();
 
-            // Krok 1: Sprawdź, czy użytkownik jest zalogowany i ma tę grę w bibliotece
             if (currentUserId != Guid.Empty)
             {
                 var gameInLibrary = await _context.GamesInLibraries
@@ -131,13 +148,10 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (gameInLibrary != null)
                 {
-                    // Użytkownik ma grę - przekieruj do widoku szczegółów w bibliotece
                     return RedirectToAction("Details", "Library", new { id = gameInLibrary.Id });
                 }
             }
 
-            // Krok 2: Użytkownik nie ma gry lub nie jest zalogowany. Pokaż widok publiczny.
-            // Używamy zapytania podobnego do tego z LibraryController.Details
             var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human; where id = {id}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
 
@@ -147,7 +161,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (gameDetailsFromApi == null) return NotFound();
 
-            // Krok 3: Stwórz ViewModel
             var viewModel = new Models.Modules.Games.GameDetailViewModel
             {
                 IgdbGameId = gameDetailsFromApi.Id,
@@ -161,21 +174,16 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(viewModel);
         }
 
-        // --- NOWA METODA: Przekierowanie ze Steam ---
+        // Redirect ze Steam
         [HttpGet]
         public async Task<IActionResult> SteamRedirect(string query)
         {
-            if (string.IsNullOrEmpty(query))
-            {
-                return RedirectToAction("Index");
-            }
+            if (string.IsNullOrEmpty(query)) return RedirectToAction("Index");
 
-            // Zabezpieczenie przed cudzysłowami w nazwie gry, które mogłyby zepsuć zapytanie IGDB
-            var safeQuery = query.Replace("\"", "");
+            var safeQuery = query.Replace("\"", "").Trim();
 
-            // Szukamy gry w IGDB po nazwie otrzymanej ze Steam
-            // fields id, name; -> potrzebujemy tylko ID, by zrobić przekierowanie
-            var igdbQuery = $"fields id, name; search \"{safeQuery}\"; limit 1;";
+            // Pobieramy więcej wyników, żeby móc filtrować
+            var igdbQuery = $"fields id, name, category, version_parent; search \"{safeQuery}\"; where parent_game = null; limit 20;";
 
             try
             {
@@ -185,21 +193,25 @@ namespace praca_dyplomowa_zesp.Controllers
                     ? new List<ApiGame>()
                     : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
-                var foundGame = games.FirstOrDefault();
+                // Stosujemy to samo filtrowanie co w Index
+                var foundGame = games.FirstOrDefault(g =>
+                    g.Category == 0 &&
+                    g.Version_parent == null &&
+                    !string.IsNullOrEmpty(g.Name) &&
+                    !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
+                    !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase)
+                );
 
                 if (foundGame != null)
                 {
-                    // Sukces! Mamy ID gry w naszym systemie (IGDB), przekierowujemy do Details
                     return RedirectToAction("Details", new { id = foundGame.Id });
                 }
             }
             catch (Exception ex)
             {
-                // Logowanie błędu można dodać tutaj
                 Console.WriteLine($"Błąd podczas wyszukiwania gry ze Steam: {ex.Message}");
             }
 
-            // Fallback: Jeśli nie znaleziono gry automatycznie, przekieruj do wyszukiwarki z wpisaną nazwą
             TempData["ErrorMessage"] = $"Nie udało się automatycznie dopasować gry '{query}'. Spróbuj znaleźć ją na liście poniżej.";
             return RedirectToAction("Index", new { searchString = query });
         }
