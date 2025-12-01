@@ -25,12 +25,13 @@
         margin-bottom: 0 !important;
         background-color: var(--dark-bg);
         color: #fff;
-        overflow: hidden !important;
-        height: 100vh;
+        /* ZMIANA 1: Usunięto overflow: hidden, aby umożliwić przewijanie na małych ekranach */
+        overflow-x: hidden !important;
+        min-height: 100vh;
     }
 
     .container {
-        max-width: 85% !important;
+        max-width: 90% !important; /* ZMIANA: Lekko szerszy kontener na mniejszych ekranach */
         margin: 0 auto !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
@@ -44,7 +45,12 @@
 
     .hero-section {
         text-align: center;
-        height: calc(100vh - 57px);
+        /* ZMIANA 2: Zamiast sztywnego height, używamy min-height.
+               Dzięki temu sekcja urośnie, jeśli treść się nie zmieści. */
+        min-height: calc(100vh - 57px);
+        height: auto;
+        padding: 40px 0; /* Dodano padding, żeby treść nie dotykała krawędzi */
+
         position: relative;
         display: flex;
         flex-direction: column;
@@ -54,7 +60,8 @@
     }
 
     .hero-title {
-        font-size: 3.5rem;
+        /* ZMIANA 3: Responsywna czcionka (clamp) */
+        font-size: clamp(2rem, 5vw, 3.5rem);
         font-weight: 800;
         margin-bottom: 10px;
         text-transform: uppercase;
@@ -64,16 +71,18 @@
         text-shadow: 0 0 25px rgba(188, 19, 254, 0.6);
         position: relative;
         z-index: 20;
+        padding: 0 15px; /* Margines boczny na telefonach */
     }
 
     .hero-subtitle {
-        font-size: 1.4rem;
+        font-size: clamp(1rem, 2vw, 1.4rem);
         color: #aaa;
-        margin-bottom: 40px;
+        margin-bottom: 30px; /* Zmniejszono margines */
         font-weight: 300;
         letter-spacing: 1px;
         position: relative;
         z-index: 20;
+        padding: 0 15px;
     }
 
     /* --- SWIPER STYLES --- */
@@ -82,7 +91,7 @@
         padding-top: 30px;
         padding-bottom: 50px;
         overflow: hidden !important;
-        border-radius: 20px;
+        /* Maska gradientowa dla efektu zanikania po bokach */
         -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
         mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
     }
@@ -90,8 +99,9 @@
     .swiper-slide {
         background-position: center;
         background-size: cover;
-        width: 380px;
-        height: 570px;
+        /* ZMIANA 4: Responsywne wymiary kart */
+        width: 280px;
+        height: 420px;
         border-radius: 20px;
         overflow: hidden;
         position: relative;
@@ -102,14 +112,33 @@
         backface-visibility: hidden;
     }
 
-        .swiper-slide img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.6s ease;
-            /* Usunięto loading="lazy", żeby obrazki były gotowe od razu */
+    /* Media Query dla dużych ekranów (powrót do dużych kart) */
+    @@media (min-width: 1400px) and (min-height: 900px) {
+        .swiper-slide {
+            width: 380px;
+            height: 570px;
         }
+    }
+
+    /* Media Query dla bardzo małych ekranów (telefony) */
+    @@media (max-width: 576px) {
+        .swiper-slide {
+            width: 220px;
+            height: 330px;
+        }
+
+        .hero-section {
+            border-radius: 0; /* Usunięcie zaokrąglenia dołu na mobile */
+        }
+    }
+
+    .swiper-slide img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
 
     .swiper-slide-active:hover img {
         transform: scale(1.08);
@@ -126,7 +155,7 @@
         bottom: 0;
         left: 0;
         width: 100%;
-        padding: 30px 20px;
+        padding: 20px 15px; /* Lekko zmniejszony padding */
         background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
         transform: translateY(120px);
         transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -143,7 +172,7 @@
     }
 
     .game-title {
-        font-size: 1.5rem;
+        font-size: 1.3rem; /* Lekko mniejsza czcionka bazowa */
         font-weight: bold;
         color: white;
         margin-bottom: 8px;
@@ -154,8 +183,8 @@
     .badge-library {
         background-color: var(--neon-blue);
         color: #000;
-        font-size: 0.8rem;
-        padding: 4px 12px;
+        font-size: 0.7rem;
+        padding: 4px 10px;
         border-radius: 12px;
         font-weight: 800;
         text-transform: uppercase;
@@ -166,15 +195,15 @@
 
     .btn-details {
         display: inline-block;
-        margin-top: 15px;
-        padding: 10px 30px;
+        margin-top: 10px;
+        padding: 8px 24px;
         background: linear-gradient(45deg, var(--neon-purple), var(--neon-blue));
         border: none;
         border-radius: 30px;
         color: white;
         text-decoration: none;
         font-weight: bold;
-        font-size: 1rem;
+        font-size: 0.9rem;
         transition: all 0.3s;
         box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
@@ -212,7 +241,6 @@
                             @if (game.IsInLibrary)
                             {
                                 <span class="badge-library">W Bibliotece</span>
-
                                 <br />
                             }
                             <div class="game-title">@game.Name</div>
@@ -240,13 +268,9 @@
         centeredSlides: true,
         slidesPerView: "auto",
         initialSlide: 2,
-
-        // ZMIANY W PĘTLI
         loop: true,
-        loopedSlides: 15, // Wymuszamy na Swiperze przygotowanie większej liczby duplikatów z obu stron
-
+        loopedSlides: 15,
         speed: 800,
-
         coverflowEffect: {
             rotate: 15,
             stretch: 0,
@@ -254,17 +278,14 @@
             modifier: 1,
             slideShadows: true,
         },
-
         autoplay: {
             delay: 3000,
             disableOnInteraction: false,
             pauseOnMouseEnter: true
         },
-
         keyboard: {
             enabled: true,
         },
-
         mousewheel: {
             invert: false,
         },

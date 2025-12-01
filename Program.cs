@@ -83,7 +83,7 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<User>>();
 
         // 1. Tworzenie ról (ZMIANA: Dodano "Verified")
-        string[] roleNames = { "Admin", "Moderator", "User", "Verified" };
+        string[] roleNames = { "Admin", "Moderator", "User"};
 
         foreach (var roleName in roleNames)
         {
