@@ -1,0 +1,92 @@
+﻿@model praca_dyplomowa_zesp.Models.Modules.Guides.Guide
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="container mt-4">
+    <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-secondary mb-3">
+        <i class="fas fa-arrow-left"></i> Wróć do listy
+    </a>
+
+    <div class="card bg-dark text-white border-secondary shadow-lg">
+
+        <div class="card-header border-secondary p-4 text-center" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('@(Model.CoverImage != null ? $"data:{Model.CoverImageContentType};base64,{Convert.ToBase64String(Model.CoverImage)}" : "")') center/cover no-repeat;">
+
+            <h1 class="display-4 fw-bold mt-3">@Model.Title</h1>
+            <p class="lead text-light mb-4">@Model.Description</p>
+
+            <div class="d-flex justify-content-center align-items-center gap-3 text-muted">
+                <span><i class="fas fa-user"></i> @Model.User?.UserName</span>
+                <span><i class="fas fa-calendar"></i> @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                @if (Model.UpdatedAt.HasValue)
+                {
+                    <span><i class="fas fa-edit"></i> Edytowano: @Model.UpdatedAt.Value.ToString("dd.MM.yyyy")</span>
+                }
+            </div>
+        </div>
+
+        <div class="card-body p-4 p-md-5 guide-content">
+            @if (!string.IsNullOrEmpty(Model.Content))
+            {
+                @Html.Raw(Model.Content)
+            }
+            else
+            {
+                <p class="text-muted text-center">Ten poradnik nie ma jeszcze treści.</p>
+            }
+        </div>
+
+        @if (User.Identity.IsAuthenticated && (User.Identity.Name == Model.User?.UserName || User.IsInRole("Admin")))
+        {
+            <div class="card-footer border-secondary p-3 d-flex justify-content-end gap-2">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edytuj
+                </a>
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Usuń
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .guide-content {
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+
+        .guide-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .guide-content h2, .guide-content h3 {
+            color: var(--bs-primary);
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .guide-content blockquote {
+            border-left: 4px solid var(--bs-primary);
+            padding-left: 15px;
+            color: #ccc;
+            font-style: italic;
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .guide-content a {
+            color: #00d4ff;
+            text-decoration: underline;
+        }
+</style>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+}

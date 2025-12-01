@@ -309,10 +309,21 @@ namespace praca_dyplomowa_zesp.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Content")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("CoverImage")
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("CoverImageContentType")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<long>("IgdbGameId")

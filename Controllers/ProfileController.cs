@@ -56,7 +56,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            bool isSteamAccount = user.Login.StartsWith("Steam_");
+            bool isSteamAccount = !string.IsNullOrEmpty(user.SteamId);
 
             var viewModel = new ProfileViewModel
             {

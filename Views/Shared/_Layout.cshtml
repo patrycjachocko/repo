@@ -1,62 +1,112 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - praca_dyplomowa_zesp</title>
+    <title>@ViewData["Title"] - GameHub</title>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/praca_dyplomowa_zesp.styles.css" asp-append-version="true" />
+
+    <style>
+        /* Ciemny pasek nawigacyjny */
+        .navbar {
+            background-color: #1a1a20 !important;
+            border-bottom: 1px solid #333 !important;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: #fff !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            color: #ddd !important;
+            transition: color 0.3s;
+        }
+
+            .nav-link:hover {
+                color: #fff !important;
+                text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            }
+
+        /* Stopka */
+        footer {
+            background-color: #1a1a20;
+            color: #aaa;
+            border-top: 1px solid #333 !important;
+        }
+
+            footer a {
+                color: #ccc;
+                text-decoration: none;
+            }
+    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">praca_dyplomowa_zesp</a>
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">GameHub</a>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                         <li class="nav-item">
-                            @* ZMIANA: Dodano asp-route-mode="browse" *@
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Games" asp-action="Index" asp-route-mode="browse">Przeglądaj Gry</a>
+                            <a class="nav-link" asp-area="" asp-controller="Games" asp-action="Index" asp-route-mode="browse">Przeglądaj Gry</a>
                         </li>
 
                         <li class="nav-item dropdown">
-                            @* ZMIANA: Dodano asp-route-mode="guides" *@
-                            <a class="nav-link dropdown-toggle text-dark" id="guidesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                            <a class="nav-link dropdown-toggle" id="guidesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false"
                                asp-controller="Games" asp-action="Index" asp-route-mode="guides">
                                 Guides & Tips
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="guidesDropdown">
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="guidesDropdown">
                                 @await Component.InvokeAsync("PopularGames")
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Library" asp-action="Index">Moja Biblioteka</a>
-                        </li>
+
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="Library" asp-action="Index">Moja Biblioteka</a>
+                            </li>
+                        }
                     </ul>
+
                     <partial name="_LoginPartial" />
                 </div>
             </div>
         </nav>
     </header>
+
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - praca_dyplomowa_zesp - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <footer class="border-top footer text-muted mt-5 py-3">
+        <div class="container text-center">
+            &copy; 2025 - GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

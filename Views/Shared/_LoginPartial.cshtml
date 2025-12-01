@@ -7,30 +7,29 @@
 <ul class="navbar-nav">
     @if (SignInManager.IsSignedIn(User))
     {
-        // Pobieramy pełny obiekt użytkownika, aby mieć dostęp do SteamId
         var user = await UserManager.GetUserAsync(User);
 
         if (user != null)
         {
-            // --- 1. SEKCJA STEAM (ZALOGOWANY) ---
+            @* --- UŻYTKOWNIK ISTNIEJE W BAZIE - POPRAWNE LOGOWANIE --- *@
+
+            @* 1. SEKCJA STEAM *@
             <li class="nav-item d-flex align-items-center me-3">
                 @if (string.IsNullOrEmpty(user.SteamId))
                 {
-                    // Jeśli brak SteamId -> Pokaż guzik łączenia (skrót do profilu)
-                    <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Połącz konto Steam">
+                    <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-outline-secondary text-light" title="Połącz konto Steam">
                         <i class="bi bi-steam"></i> Połącz Steam
                     </a>
                 }
                 else
                 {
-                    // Jeśli jest SteamId -> Pokaż guzik do biblioteki
                     <a asp-controller="Profile" asp-action="SteamLibrary" class="btn btn-sm btn-outline-success" title="Twoja Biblioteka Steam">
                         <i class="bi bi-controller"></i> Biblioteka Steam
                     </a>
                 }
             </li>
 
-            // --- 1.5. SEKCJA ADMINA (DODANE) ---
+            @* 1.5. SEKCJA ADMINA *@
             @if (User.IsInRole("Admin"))
             {
                 <li class="nav-item d-flex align-items-center me-3">
@@ -40,38 +39,58 @@
                 </li>
             }
 
-                    // --- 2. SEKCJA AWATARA I PROFILU ---
+            @* --- 2. SEKCJA AWATARA I PROFILU --- *@
             <li class="nav-item d-flex align-items-center">
-                <a class="nav-link text-dark d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
-                    <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" />
-                    Cześć @User.Identity?.Name!
+                <a class="nav-link text-light d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
+                    @if (user.ProfilePicture != null)
+                    {
+                        @* Awatar z bazy danych *@
+                        <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
+                    }
+                    else
+                    {
+                        @* POPRAWKA: Domyślny awatar z pliku *@
+                        <img src="~/uploads/avatars/default_avatar.png" alt="Domyślny awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
+                    }
+                    Cześć @(user.UserName)!
                 </a>
             </li>
 
-            // --- 3. WYLOGOWANIE ---
+            @* 3. WYLOGOWANIE *@
             <li class="nav-item">
                 <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-                    <button type="submit" class="nav-link btn btn-link text-dark">Wyloguj</button>
+                    <button type="submit" class="nav-link btn btn-link text-light" style="text-decoration: none;">Wyloguj</button>
+                </form>
+            </li>
+        }
+        else
+        {
+            @* --- AWARYJNE WYLOGOWANIE (Gdy masz ciasteczko, ale nie ma Cię w bazie) --- *@
+            <li class="nav-item">
+                <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                    <button type="submit" class="nav-link btn btn-link text-danger fw-bold" style="text-decoration: none;">
+                        <i class="fas fa-exclamation-triangle"></i> Błąd sesji - Kliknij, aby naprawić
+                    </button>
                 </form>
             </li>
         }
     }
     else
     {
-        // --- 4. SEKCJA DLA NIEZALOGOWANYCH ---
+        @* --- 4. DLA NIEZALOGOWANYCH --- *@
         <li class="nav-item d-flex align-items-center me-2">
             <form asp-controller="Account" asp-action="LoginWithSteam" method="post">
-                <button type="submit" class="btn btn-sm btn-dark d-flex align-items-center" style="background-color: #171a21; border-color: #171a21;">
+                <button type="submit" class="btn btn-sm btn-dark d-flex align-items-center border-secondary">
                     <i class="bi bi-steam me-2"></i> Zaloguj przez Steam
                 </button>
             </form>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Rejestracja</a>
+            <a class="nav-link text-light" asp-controller="Account" asp-action="Register">Rejestracja</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Zaloguj</a>
+            <a class="nav-link text-light" asp-controller="Account" asp-action="Login">Zaloguj</a>
         </li>
     }
 </ul>

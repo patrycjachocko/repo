@@ -38,13 +38,10 @@ namespace praca_dyplomowa_zesp.Controllers.Users
         public IActionResult Login(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
-
-            // POPRAWKA: Sprawdzamy, czy przyszedł błąd z przekierowania (np. ze Steam)
             if (TempData["Error"] != null)
             {
                 ModelState.AddModelError(string.Empty, TempData["Error"].ToString());
             }
-
             return View();
         }
 
@@ -74,7 +71,6 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                     return RedirectToLocal(returnUrl);
                 }
 
-                // OBSŁUGA BANA DLA ZWYKŁEGO LOGOWANIA
                 if (result.IsLockedOut)
                 {
                     string errorMsg = GetBanMessage(user);
@@ -87,7 +83,6 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                     return View(model);
                 }
             }
-
             return View(model);
         }
 
@@ -117,8 +112,8 @@ namespace praca_dyplomowa_zesp.Controllers.Users
 
                 var user = new User
                 {
-                    UserName = model.UserName,
-                    Login = model.Login,
+                    UserName = model.UserName, // Wyświetlana nazwa
+                    Login = model.Login,       // Login do logowania
                     CreatedAt = DateTime.Now,
                     EmailConfirmed = true,
                     Role = "User"
@@ -133,7 +128,6 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 }
                 AddErrors(result);
             }
-
             return View(model);
         }
 
@@ -148,7 +142,6 @@ namespace praca_dyplomowa_zesp.Controllers.Users
 
         // --- STEAM ---
 
-        // 1. Inicjacja
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -159,57 +152,44 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             return Challenge(properties, "Steam");
         }
 
-        // 2. Callback
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> SteamLoginCallback(string returnUrl = null, string remoteError = null)
         {
-            if (remoteError != null)
-            {
-                return RedirectToAction(nameof(Login));
-            }
+            if (remoteError != null) return RedirectToAction(nameof(Login));
 
             var info = await _signInManager.GetExternalLoginInfoAsync();
-            if (info == null)
-            {
-                return RedirectToAction(nameof(Login));
-            }
+            if (info == null) return RedirectToAction(nameof(Login));
 
             var steamIdClaim = info.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var steamId = steamIdClaim?.Split('/').LastOrDefault();
 
-            if (string.IsNullOrEmpty(steamId))
-            {
-                return RedirectToAction(nameof(Login));
-            }
+            if (string.IsNullOrEmpty(steamId)) return RedirectToAction(nameof(Login));
 
             // A. UŻYTKOWNIK ISTNIEJE
             var user = await _context.Users.FirstOrDefaultAsync(u => u.SteamId == steamId);
 
             if (user != null)
             {
-                // POPRAWKA: Sprawdzenie bana dla Steam
                 if (await _userManager.IsLockedOutAsync(user))
                 {
-                    // Zapisujemy wiadomość w TempData, bo robimy Redirect
                     TempData["Error"] = GetBanMessage(user);
                     return RedirectToAction(nameof(Login));
                 }
 
                 user.LastActive = DateTime.Now;
                 await _userManager.UpdateAsync(user);
-
                 await _signInManager.SignInAsync(user, isPersistent: false);
                 return RedirectToLocal(returnUrl);
             }
 
-            // B. NOWY UŻYTKOWNIK (Steam)
+            // B. NOWY UŻYTKOWNIK (Steam) - Tworzymy konto
             var steamProfile = await _steamService.GetPlayerSummaryAsync(steamId);
+
+            // Pobieramy nick ze Steam (np. "KoxGamer")
             string nick = steamProfile?.PersonaName ?? $"Gracz_{steamId.Substring(0, 5)}";
 
-            var uniqueLogin = "Steam_" + Guid.NewGuid().ToString("N").Substring(0, 8);
-            var randomPassword = "SteamPassword!" + Guid.NewGuid().ToString();
-
+            // Upewniamy się, że UserName jest unikalne
             var finalUserName = nick;
             int counter = 1;
             while (await _userManager.FindByNameAsync(finalUserName) != null)
@@ -217,10 +197,22 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 finalUserName = $"{nick}{counter++}";
             }
 
+            // ZMIANA: Login ustawiamy taki sam jak UserName (jeśli wolny), zamiast "Steam_..."
+            // Dzięki temu w bazie będzie ładnie: Login="KoxGamer", UserName="KoxGamer"
+            var finalLogin = finalUserName;
+            // Sprawdzamy unikalność Loginu (bo w modelu User.Login musi być unikalny)
+            counter = 1;
+            while (await _context.Users.AnyAsync(u => u.Login == finalLogin))
+            {
+                finalLogin = $"{nick}{counter++}";
+            }
+
+            var randomPassword = "SteamPassword!" + Guid.NewGuid().ToString();
+
             var newUser = new User
             {
-                UserName = finalUserName,
-                Login = uniqueLogin,
+                UserName = finalUserName, // To wyświetlamy (np. KoxGamer)
+                Login = finalLogin,       // To zapisujemy jako login
                 SteamId = steamId,
                 CreatedAt = DateTime.Now,
                 EmailConfirmed = true,
@@ -254,8 +246,6 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             return View("Login");
         }
 
-        // --- Metody pomocnicze ---
-
         private IActionResult RedirectToLocal(string? returnUrl)
         {
             if (Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
@@ -270,7 +260,6 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             }
         }
 
-        // Metoda pomocnicza do generowania treści bana
         private string GetBanMessage(User user)
         {
             string errorMsg = "Twoje konto zostało zablokowane.";
@@ -278,11 +267,7 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             {
                 var endDate = user.LockoutEnd.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
                 errorMsg = $"Twoje konto jest zbanowane do: {endDate}.";
-
-                if (!string.IsNullOrEmpty(user.BanReason))
-                {
-                    errorMsg += $" Powód: {user.BanReason}";
-                }
+                if (!string.IsNullOrEmpty(user.BanReason)) errorMsg += $" Powód: {user.BanReason}";
             }
             return errorMsg;
         }

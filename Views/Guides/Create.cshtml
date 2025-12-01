@@ -1,0 +1,98 @@
+﻿@model praca_dyplomowa_zesp.Models.Modules.Guides.Guide
+
+@{
+    ViewData["Title"] = "Utwórz poradnik";
+}
+
+<script src="https://unpkg.com/tinymce@6.8.2/tinymce.min.js"></script>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card bg-dark text-white border-secondary shadow">
+                <div class="card-header border-secondary bg-transparent py-3">
+                    <h2 class="mb-0"><i class="fas fa-pen-fancy text-primary"></i> Nowy Poradnik</h2>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="IgdbGameId" />
+
+                        <div class="form-group mb-4">
+                            <label asp-for="Title" class="form-label fw-bold">Tytuł poradnika</label>
+                            <input asp-for="Title" class="form-control form-control-lg bg-secondary text-white border-0" placeholder="Wpisz chwytliwy tytuł..." />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label asp-for="Description" class="form-label fw-bold">Krótki wstęp (widoczny na liście)</label>
+                            <textarea asp-for="Description" class="form-control bg-secondary text-white border-0" rows="3" placeholder="O czym jest ten poradnik? Zachęć do czytania..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Zdjęcie okładkowe (opcjonalne)</label>
+                            <input type="file" name="coverImageFile" class="form-control bg-secondary text-white border-0" accept="image/*" />
+                            <small class="text-muted">Wyświetli się na liście poradników.</small>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label asp-for="Content" class="form-label fw-bold">Treść poradnika</label>
+                            <textarea asp-for="Content" id="guide-editor"></textarea>
+                            <span asp-validation-for="Content" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between pt-3">
+                            <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-light px-4">Anuluj</a>
+                            <button type="submit" class="btn btn-primary px-5 fw-bold">Opublikuj poradnik</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        tinymce.init({
+            selector: '#guide-editor',
+            plugins: 'anchor autolink charmap emoticons image link lists media searchreplace table visualblocks wordcount',
+            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+            height: 600,
+            menubar: false,
+            // Usunąłem wymuszanie ciemnego motywu (skin: 'oxide-dark'), bo to często psuje ładowanie z CDN.
+            // Zamiast tego edytor będzie jasny, co jest bezpieczniejsze.
+
+            image_title: true,
+            automatic_uploads: true,
+            file_picker_types: 'image',
+            file_picker_callback: function (cb, value, meta) {
+                var input = document.createElement('input');
+                input.setAttribute('type', 'file');
+                input.setAttribute('accept', 'image/*');
+                input.onchange = function () {
+                    var file = this.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var id = 'blobid' + (new Date()).getTime();
+                        var blobCache =  tinymce.activeEditor.editorUpload.blobCache;
+                        var base64 = reader.result.split(',')[1];
+                        var blobInfo = blobCache.create(id, file, base64);
+                        blobCache.add(blobInfo);
+                        cb(blobInfo.blobUri(), { title: file.name });
+                    };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            }
+        });
+    });
+</script>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+}

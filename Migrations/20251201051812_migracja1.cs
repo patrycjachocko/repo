@@ -241,7 +241,10 @@ namespace praca_dyplomowa_zesp.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     IgdbGameId = table.Column<long>(type: "INTEGER", nullable: false),
                     Title = table.Column<string>(type: "TEXT", nullable: false),
-                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    Content = table.Column<string>(type: "TEXT", nullable: true),
+                    CoverImage = table.Column<byte[]>(type: "BLOB", nullable: true),
+                    CoverImageContentType = table.Column<string>(type: "TEXT", nullable: true),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)

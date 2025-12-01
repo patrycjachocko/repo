@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251128220852_migracja1")]
+    [Migration("20251201051812_migracja1")]
     partial class migracja1
     {
         /// <inheritdoc />
@@ -312,10 +312,21 @@ namespace praca_dyplomowa_zesp.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Content")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("CoverImage")
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("CoverImageContentType")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<long>("IgdbGameId")
