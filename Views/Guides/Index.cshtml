@@ -67,11 +67,23 @@
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             @foreach (var guide in Model.Guides)
             {
-                @* Obliczanie średniej dla kafelka (jeśli dostępne w modelu, inaczej 0) *@
+                @* Obliczanie średniej *@
                 var avgRating = guide.Rates != null && guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0;
 
+                // Sprawdzenie czy oczekujący
+                bool isPending = !guide.IsApproved;
+
                 <div class="col">
-                    <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect">
+                    <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect @(isPending ? "guide-card-pending" : "")">
+
+                        @* BADGE DLA OCZEKUJĄCYCH *@
+                        @if (isPending)
+                        {
+                            <div class="pending-badge">
+                                <i class="fas fa-lock"></i> Oczekujący
+                            </div>
+                        }
+
                         <div style="height: 200px; overflow: hidden; background-color: #2c2c35; display: flex; align-items: center; justify-content: center; position: relative;">
                             @if (guide.CoverImage != null)
                             {
@@ -96,8 +108,17 @@
                             </p>
                             <p class="card-text flex-grow-1 text-truncate" style="max-height: 3em;">@guide.Description</p>
 
-                            <div class="mt-3">
-                                <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-outline-light w-100 stretched-link">Czytaj dalej</a>
+                            <div class="mt-3 d-flex justify-content-between">
+                                <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-outline-light flex-grow-1 stretched-link">Czytaj dalej</a>
+
+                                @* --- ZMIANA TUTAJ --- *@
+                                @* Przycisk widoczny dla: Admina, Moderatora ORAZ Autora postu (zawsze) *@
+                                @if (User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@guide.Id" class="btn btn-outline-warning ms-2" style="z-index: 5; position: relative;">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                }
                             </div>
                         </div>
                     </div>
@@ -125,6 +146,26 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.5) !important;
             border-color: var(--bs-primary) !important;
         }
+
+    /* --- Style dla niezatwierdzonych --- */
+    .guide-card-pending {
+        opacity: 0.75; /* Lekka przeźroczystość */
+        border: 2px dashed #ffc107 !important; /* Żółta przerywana ramka */
+    }
+
+    .pending-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: #ffc107;
+        color: #000;
+        font-weight: bold;
+        padding: 5px 12px;
+        border-radius: 20px;
+        z-index: 10;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        font-size: 0.85rem;
+    }
 </style>
 
 @section Scripts {

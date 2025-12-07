@@ -77,41 +77,49 @@ namespace praca_dyplomowa_zesp.Controllers
             // -------------------------------------
 
             bool isInLibrary = false;
+            var currentUserId = Guid.Empty;
+            bool canSeeAllPending = false;
+
             if (User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var uid = GetCurrentUserId();
-                if (uid != Guid.Empty) isInLibrary = await _context.GamesInLibraries.AnyAsync(g => g.UserId == uid && g.IgdbGameId == gameId);
+                currentUserId = GetCurrentUserId();
+                if (currentUserId != Guid.Empty)
+                {
+                    isInLibrary = await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameId);
+                }
+
+                // Sprawdzenie uprawnień do widzenia wszystkich oczekujących
+                canSeeAllPending = User.IsInRole("Admin") || User.IsInRole("Moderator");
             }
 
-            // --- BUDOWANIE ZAPYTANIA (tylko filtrowanie) ---
+            // --- BUDOWANIE ZAPYTANIA ---
             var guidesQuery = _context.Guides
                 .Include(g => g.User)
-                .Include(g => g.Rates) // Ważne: pobieramy oceny, żeby móc po nich posortować w pamięci
+                .Include(g => g.Rates)
                 .Where(g => g.IgdbGameId == gameId)
+                // --- NOWY WARUNEK FILTROWANIA ---
+                // 1. Jest zatwierdzony LUB
+                // 2. To mój post (nawet niezatwierdzony) LUB
+                // 3. Jestem władzą (widzę wszystko)
+                .Where(g => g.IsApproved == true || g.UserId == currentUserId || canSeeAllPending == true)
                 .AsQueryable();
 
-            // 1. Wyszukiwanie (to może zostać w SQL, działa dobrze)
+            // 1. Wyszukiwanie
             if (!string.IsNullOrEmpty(searchString))
             {
-                // Zamieniamy frazę wyszukiwania na małe litery
                 var term = searchString.ToLower();
-
-                // Sprawdzamy, czy tytuł (zmieniony na małe) LUB treść (zmieniona na małe) zawiera frazę
                 guidesQuery = guidesQuery.Where(s =>
                     s.Title.ToLower().Contains(term) ||
                     s.Content.ToLower().Contains(term));
             }
 
             // 2. POBRANIE DANYCH DO PAMIĘCI
-            // Wywołujemy ToListAsync TERAZ, przed sortowaniem, aby uniknąć błędu translacji LINQ
             var guidesFromDb = await guidesQuery.ToListAsync();
 
-            // 3. SORTOWANIE W PAMIĘCI (LINQ to Objects)
-            // Tutaj C# radzi sobie świetnie z matematyką i nullami
+            // 3. SORTOWANIE W PAMIĘCI
             switch (sortOrder)
             {
                 case "rating_desc":
-                    // Sortujemy malejąco po średniej. Jeśli brak ocen (Any jest false), przyjmujemy 0.
                     guidesFromDb = guidesFromDb
                         .OrderByDescending(g => g.Rates.Any() ? g.Rates.Average(r => r.Value) : 0)
                         .ToList();
@@ -354,6 +362,15 @@ namespace praca_dyplomowa_zesp.Controllers
                 guide.UserId = GetCurrentUserId();
                 guide.CreatedAt = DateTime.Now;
 
+                if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+                {
+                    guide.IsApproved = true; // Admin/Mod publikuje od razu
+                }
+                else
+                {
+                    guide.IsApproved = false; // Zwykły user czeka na akceptację
+                }
+
                 // Tutaj już wiemy, że plik istnieje, bo przeszliśmy walidację wyżej
                 using (var memoryStream = new MemoryStream())
                 {
@@ -397,6 +414,7 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (id != guide.Id) return NotFound();
 
+            // Usuwamy walidację pól, które uzupełniamy ręcznie z bazy
             ModelState.Remove("User");
             ModelState.Remove("CoverImage");
 
@@ -404,16 +422,30 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 try
                 {
+                    // 1. Pobieramy ORYGINAŁ z bazy danych (AsNoTracking, żeby nie blokować kontekstu)
                     var existingGuide = await _context.Guides.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id);
+
                     if (existingGuide == null) return NotFound();
 
+                    // 2. Sprawdzamy uprawnienia: Autor, Admin lub Moderator
                     var currentUserId = GetCurrentUserId();
-                    if (existingGuide.UserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
+                    bool isAuthorized = existingGuide.UserId == currentUserId || User.IsInRole("Admin") || User.IsInRole("Moderator");
 
-                    guide.UserId = existingGuide.UserId;
-                    guide.CreatedAt = existingGuide.CreatedAt;
-                    guide.UpdatedAt = DateTime.Now;
+                    if (!isAuthorized) return Forbid();
 
+                    // 3. PRZEPISANIE KLUCZOWYCH DANYCH Z ORYGINAŁU
+                    guide.UserId = existingGuide.UserId;       // Autor się nie zmienia
+                    guide.CreatedAt = existingGuide.CreatedAt; // Data utworzenia się nie zmienia
+                    guide.UpdatedAt = DateTime.Now;            // Data aktualizacji = teraz
+
+                    // --- KLUCZOWA ZMIANA ---
+                    // Zachowujemy status taki, jaki był w bazie.
+                    // Jeśli był zatwierdzony -> zostaje zatwierdzony.
+                    // Jeśli czekał na akceptację -> nadal czeka.
+                    guide.IsApproved = existingGuide.IsApproved;
+                    // -----------------------
+
+                    // 4. Obsługa zdjęcia (jeśli wgrano nowe - podmień, jeśli nie - zostaw stare)
                     if (coverImageFile != null && coverImageFile.Length > 0)
                     {
                         using (var memoryStream = new MemoryStream())
@@ -429,6 +461,7 @@ namespace praca_dyplomowa_zesp.Controllers
                         guide.CoverImageContentType = existingGuide.CoverImageContentType;
                     }
 
+                    // 5. Zapis zmian
                     _context.Update(guide);
                     await _context.SaveChangesAsync();
                 }
@@ -437,7 +470,18 @@ namespace praca_dyplomowa_zesp.Controllers
                     if (!_context.Guides.Any(e => e.Id == guide.Id)) return NotFound();
                     else throw;
                 }
-                return RedirectToAction(nameof(Details), new { id = guide.Id });
+
+                // Przekierowanie:
+                // Jeśli post jest zatwierdzony lub użytkownik to admin/mod -> do widoku szczegółów
+                if (guide.IsApproved || User.IsInRole("Admin") || User.IsInRole("Moderator"))
+                {
+                    return RedirectToAction(nameof(Details), new { id = guide.Id });
+                }
+                else
+                {
+                    // Jeśli post nadal wisi jako oczekujący (i edytował go zwykły user), wracamy do listy (gdzie zobaczy go jako "pending")
+                    return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
+                }
             }
             return View(guide);
         }
@@ -507,6 +551,21 @@ namespace praca_dyplomowa_zesp.Controllers
                 // Opcjonalnie: marginesy
                 PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 10, 10)
             };
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Moderator")] // Tylko dla władzy
+        public async Task<IActionResult> ApproveGuide(int id)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide == null) return NotFound();
+
+            guide.IsApproved = true;
+            _context.Update(guide);
+            await _context.SaveChangesAsync();
+
+            // Wróć tam, skąd przyszedłeś (np. do panelu admina)
+            return Redirect(Request.Headers["Referer"].ToString());
         }
     }
 }

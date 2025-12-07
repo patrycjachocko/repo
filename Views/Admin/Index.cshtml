@@ -85,6 +85,13 @@
         margin-right: 10px;
     }
 
+    /* Style dla przycisków akcji w tabeli */
+    .action-btn-group {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
     .badge-role-admin {
         background-color: #dc3545;
         color: white;
@@ -123,7 +130,6 @@
         box-shadow: 0 0 5px #ffc107;
     }
 
-    /* --- SEARCH --- */
     .search-box input {
         background-color: #222;
         border: 1px solid #444;
@@ -137,21 +143,6 @@
         color: black;
         font-weight: bold;
         border: none;
-    }
-
-    /* --- WIP SECTION --- */
-    .wip-box {
-        text-align: center;
-        padding: 50px;
-        border: 2px dashed #444;
-        border-radius: 20px;
-        color: #666;
-    }
-
-    .wip-icon {
-        font-size: 3rem;
-        margin-bottom: 15px;
-        color: var(--neon-purple);
     }
 </style>
 
@@ -168,139 +159,199 @@
             <div class="alert alert-danger">@TempData["Error"]</div>
         }
 
+@* --- ZMIENNA POMOCNICZA: CZY JEST ADMINEM --- *@
+@{
+    bool isAdmin = User.IsInRole("Admin");
+}
+
         <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+
+            @* Zakładka Użytkownicy - TYLKO DLA ADMINA *@
+            @if (isAdmin)
+            {
+                <li class="nav-item" role="presentation">
+                    @* Dodajemy klasę 'active' tylko jeśli jest adminem *@
+                    <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
+                        Zarządzanie Użytkownikami
+                    </button>
+                </li>
+            }
+
+            @* Zakładka Posty - DLA WSZYSTKICH (Admin i Mod) *@
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
-                    Zarządzanie Użytkownikami
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab">
+                @* Jeśli NIE jest adminem (czyli mod), to ta zakładka musi być 'active' domyślnie *@
+                <button class="nav-link @(!isAdmin ? "active" : "")" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab">
                     Akceptacja Postów
+                    @if (Model.PendingGuides.Count > 0)
+                    {
+                        <span class="badge bg-danger rounded-pill ms-2">@Model.PendingGuides.Count</span>
+                    }
                 </button>
             </li>
         </ul>
 
         <div class="tab-content" id="adminTabsContent">
 
-            <div class="tab-pane fade show active" id="users" role="tabpanel">
+            @* Renderujemy treść tylko dla Admina *@
+            @if (isAdmin)
+            {
+                <div class="tab-pane fade show active" id="users" role="tabpanel">
+                    <form asp-action="Index" method="get" class="mb-4">
+                        <div class="input-group search-box" style="max-width: 400px;">
+                            <input type="text" name="searchString" class="form-control" placeholder="Szukaj (Nazwa lub Login)..." value="@Model.SearchString">
+                            <button class="btn btn-outline-secondary" type="submit">Szukaj</button>
+                        </div>
+                    </form>
 
-                <form asp-action="Index" method="get" class="mb-4">
-                    <div class="input-group search-box" style="max-width: 400px;">
-                        <input type="text" name="searchString" class="form-control" placeholder="Szukaj (Nazwa lub Login)..." value="@Model.SearchString">
-                        <button class="btn btn-outline-secondary" type="submit">Szukaj</button>
-                    </div>
-                </form>
-
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover">
-                        <thead>
-                            <tr>
-                                <th>Użytkownik (Display)</th>
-                                <th>Login</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th class="text-end">Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var user in Model.Users)
-                            {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <img src="@user.AvatarUrl" class="user-avatar" alt="Avatar">
-                                            <span class="fw-bold">@user.UserName</span>
-                                        </div>
-                                    </td>
-                                    <td>@user.Login</td>
-                                    <td>
-                                        @foreach (var role in user.Roles)
-                                        {
-                                            if (role == "Admin")
+                                    <th>Użytkownik (Display)</th>
+                                    <th>Login</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in Model.Users)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="@user.AvatarUrl" class="user-avatar" alt="Avatar">
+                                                <span class="fw-bold">@user.UserName</span>
+                                            </div>
+                                        </td>
+                                        <td>@user.Login</td>
+                                        <td>
+                                            @foreach (var role in user.Roles)
                                             {
-                                                <span class="badge badge-role-admin me-1">Admin</span>
-                                            }
-                                            else if (role == "Moderator")
-                                            {
+                                                if (role == "Admin")
+                                                {
+                                                    <span class="badge badge-role-admin me-1">Admin</span>
+                                                }
+                                                else if (role == "Moderator")
+                                                {
 
-                                                <span class="badge badge-role-mod me-1">Mod</span>
+                                                    <span class="badge badge-role-mod me-1">Mod</span>
+                                                }
+                                                else
+                                                {
+
+                                                    <span class="badge badge-role-user me-1">User</span>
+                                                }
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (user.IsLockedOut)
+                                            {
+                                                <span class="text-danger" title="Zbanowany do @user.LockoutEnd"><span class="status-dot status-banned"></span> BAN</span>
+                                            }
+                                            else if (user.IsMuted)
+                                            {
+                                                <span class="text-warning" title="Wyciszony do @user.MuteEnd"><span class="status-dot status-muted"></span> MUTE</span>
                                             }
                                             else
                                             {
-
-                                                <span class="badge badge-role-user me-1">User</span>
+                                                <span class="text-success"><span class="status-dot status-active"></span> Aktywny</span>
                                             }
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (user.IsLockedOut)
-                                        {
-                                            <span class="text-danger" title="Zbanowany do @user.LockoutEnd">
-                                                <span class="status-dot status-banned"></span> BAN
-                                            </span>
-                                        }
-                                        else if (user.IsMuted)
-                                        {
-                                            <span class="text-warning" title="Wyciszony do @user.MuteEnd">
-                                                <span class="status-dot status-muted"></span> MUTE
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-success">
-                                                <span class="status-dot status-active"></span> Aktywny
-                                            </span>
-                                        }
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                Opcje
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-dark">
-                                                <li>
-                                                    <form asp-action="ToggleModerator" method="post">
-                                                        <input type="hidden" name="userId" value="@user.Id" />
-                                                        @if (user.Roles.Contains("Moderator"))
-                                                        {
-                                                            <button type="submit" class="dropdown-item text-warning">Odbierz Moderatora</button>
-                                                        }
-                                                        else
-                                                        {
-                                                            <button type="submit" class="dropdown-item text-success">Mianuj Moderatorem</button>
-                                                        }
-                                                    </form>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
+                                        </td>
+                                        <td class="text-end">
+                                            @if (!user.Roles.Contains("Admin"))
+                                            {
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Opcje</button>
+                                                    <ul class="dropdown-menu dropdown-menu-dark">
+                                                        <li>
+                                                            <form asp-action="ToggleModerator" method="post">
+                                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                                @if (user.Roles.Contains("Moderator"))
+                                                                {
+                                                                    <button type="submit" class="dropdown-item text-warning">Odbierz Moderatora</button>
+                                                                }
+                                                                else
+                                                                {
 
-                                                <li>
-                                                    <button class="dropdown-item text-info" onclick="openMuteModal('@user.Id', '@user.UserName')">
-                                                        @(user.IsMuted ? "Zmień Wyciszenie" : "Wycisz (Mute)")
-                                                    </button>
-                                                </li>
+                                                                    <button type="submit" class="dropdown-item text-success">Mianuj Moderatorem</button>
+                                                                }
+                                                            </form>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <button class="dropdown-item text-info" onclick="openMuteModal('@user.Id', '@user.UserName')">@(user.IsMuted ? "Zmień Wyciszenie" : "Wycisz (Mute)")</button>
+                                                        </li>
+                                                        <li>
+                                                            <button class="dropdown-item text-danger" onclick="openBanModal('@user.Id', '@user.UserName')">@(user.IsLockedOut ? "Zmień Bana / Odbanuj" : "Zbanuj (Ban)")</button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">Brak akcji</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
 
-                                                <li>
-                                                    <button class="dropdown-item text-danger" onclick="openBanModal('@user.Id', '@user.UserName')">
-                                                        @(user.IsLockedOut ? "Zmień Bana / Odbanuj" : "Zbanuj (Ban)")
-                                                    </button>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
+            @* Dodajemy klasę 'show active' oraz 'active' JEŚLI user nie jest adminem (czyli jest modem) *@
+            <div class="tab-pane fade @(!isAdmin ? "show active" : "")" id="posts" role="tabpanel">
+                @if (Model.PendingGuides.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tytuł</th>
+                                    <th>Autor</th>
+                                    <th>Data dodania</th>
+                                    <th class="text-end">Decyzja</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="posts" role="tabpanel">
-                <div class="wip-box">
-                    <div class="wip-icon">🚧</div>
-                    <h4>Sekcja w budowie</h4>
-                    <p>Tutaj pojawi się panel do akceptacji postów i komentarzy zgłoszonych przez użytkowników.</p>
-                </div>
+                            </thead>
+                            <tbody>
+                                @foreach (var guide in Model.PendingGuides)
+                                {
+                                    <tr>
+                                        <td class="fw-bold">
+                                            <a asp-controller="Guides" asp-action="Details" asp-route-id="@guide.Id" target="_blank" class="text-white text-decoration-none" title="Kliknij, aby zobaczyć szczegóły">
+                                                <i class="fas fa-external-link-alt text-muted small me-2"></i>@guide.Title
+                                            </a>
+                                        </td>
+                                        <td>@guide.User?.UserName</td>
+                                        <td>@guide.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>
+                                            <div class="action-btn-group">
+                                                <form asp-action="ApproveGuide" method="post" style="display:inline;">
+                                                    <input type="hidden" name="id" value="@guide.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-success" title="Zatwierdź"><i class="fas fa-check"></i></button>
+                                                </form>
+                                                <form asp-action="RejectGuide" method="post" style="display:inline;" onsubmit="return confirm('Czy na pewno chcesz odrzucić i USUNĄĆ ten poradnik?');">
+                                                    <input type="hidden" name="id" value="@guide.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Odrzuć i usuń"><i class="fas fa-trash"></i></button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center p-5 text-muted">
+                        <i class="fas fa-check-circle fa-3x mb-3 text-success" style="opacity: 0.5"></i>
+                        <h4>Wszystko wyczyszczone!</h4>
+                        <p>Brak oczekujących poradników do zatwierdzenia.</p>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -344,7 +395,6 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="userId" id="banUserId" />
-
                     <label class="form-label">Czas trwania (dni):</label>
                     <select name="days" class="form-select bg-secondary text-white mb-3">
                         <option value="0">Odbanuj (0 dni)</option>
@@ -353,10 +403,8 @@
                         <option value="30">30 dni</option>
                         <option value="3650">Permanentnie (10 lat)</option>
                     </select>
-
                     <label class="form-label">Powód (opcjonalnie):</label>
                     <input type="text" name="reason" class="form-control bg-secondary text-white" placeholder="np. Spamowanie" />
-
                     <small class="text-muted d-block mt-2">Zbanowany użytkownik <strong>nie będzie mógł się zalogować</strong>.</small>
                 </div>
                 <div class="modal-footer border-secondary">
@@ -369,6 +417,25 @@
 </div>
 
 <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var triggerTabList = [].slice.call(document.querySelectorAll('#adminTabs button'))
+        triggerTabList.forEach(function (triggerEl) {
+            var tabTrigger = new bootstrap.Tab(triggerEl)
+            triggerEl.addEventListener('click', function (event) {
+                localStorage.setItem('activeAdminTab', event.target.id);
+            })
+        })
+
+        var activeTabId = localStorage.getItem('activeAdminTab');
+        if(activeTabId) {
+            var tabToActivate = document.querySelector('#' + activeTabId);
+            if(tabToActivate) {
+                var tab = new bootstrap.Tab(tabToActivate);
+                tab.show();
+            }
+        }
+    });
+
     function openMuteModal(id, name) {
         document.getElementById('muteUserId').value = id;
         document.getElementById('muteUserName').innerText = name;

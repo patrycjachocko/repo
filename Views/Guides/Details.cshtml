@@ -6,14 +6,28 @@
 }
 
 <div class="container mt-4">
-    <a asp-action="Index" asp-route-gameId="@Model.Guide.IgdbGameId" class="btn btn-outline-secondary mb-3">
-        <i class="fas fa-arrow-left"></i> Wróć do listy
-    </a>
 
-    @* --- PRZYCISK PDF --- *@
-    <a asp-action="DownloadPdf" asp-route-id="@Model.Guide.Id" class="btn btn-outline-danger" target="_blank">
-        <i class="fas fa-file-pdf"></i> Pobierz jako PDF
-    </a>
+    @* --- ALERT O STATUSIE (Jeśli niezatwierdzony) --- *@
+    @if (!Model.Guide.IsApproved)
+    {
+        <div class="alert alert-warning border-warning d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-lock fa-2x me-3"></i>
+            <div>
+                <h5 class="alert-heading fw-bold mb-1">Poradnik oczekuje na akceptację</h5>
+            </div>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between mb-3">
+        <a asp-action="Index" asp-route-gameId="@Model.Guide.IgdbGameId" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Wróć do listy
+        </a>
+
+        @* Przycisk PDF *@
+        <a asp-action="DownloadPdf" asp-route-id="@Model.Guide.Id" class="btn btn-outline-danger" target="_blank">
+            <i class="fas fa-file-pdf"></i> Pobierz jako PDF
+        </a>
+    </div>
 
     @* --- NAGŁÓWEK PORADNIKA --- *@
     <div class="card bg-dark text-white border-secondary shadow-lg mb-4">
@@ -39,7 +53,7 @@
         </div>
 
         @* Przyciski Edycji/Usuwania dla autora/admina *@
-        @if (User.Identity.IsAuthenticated && (User.Identity.Name == Model.Guide.User?.UserName || User.IsInRole("Admin")))
+        @if (User.Identity.IsAuthenticated && (User.Identity.Name == Model.Guide.User?.UserName || User.IsInRole("Admin") || User.IsInRole("Moderator")))
         {
             <div class="card-footer border-secondary p-3 d-flex justify-content-end gap-2">
                 <a asp-action="Edit" asp-route-id="@Model.Guide.Id" class="btn btn-warning"><i class="fas fa-edit"></i> Edytuj</a>
@@ -48,142 +62,143 @@
         }
     </div>
 
-    @* --- SEKCJA OCENY --- *@
-    <div class="card bg-dark text-white border-secondary mb-5">
-        <div class="card-body text-center">
-            <h4 class="mb-3">Oceń ten poradnik</h4>
-            @if (User.Identity.IsAuthenticated)
-            {
-                @* Token anty-fałszerstwa potrzebny do AJAX *@
-                @Html.AntiForgeryToken()
+    @* --- SEKCJA OCENY (Tylko jeśli zatwierdzony) --- *@
+    @if (Model.Guide.IsApproved)
+    {
+        <div class="card bg-dark text-white border-secondary mb-5">
+            <div class="card-body text-center">
+                <h4 class="mb-3">Oceń ten poradnik</h4>
+                @if (User.Identity.IsAuthenticated)
+                {
+                    @Html.AntiForgeryToken()
 
-                <input type="hidden" id="guideId" value="@Model.Guide.Id" />
-                <input type="hidden" id="currentRating" value="@Model.UserRating" />
+                    <input type="hidden" id="guideId" value="@Model.Guide.Id" />
+                    <input type="hidden" id="currentRating" value="@Model.UserRating" />
 
-                <div class="d-flex flex-column justify-content-center align-items-center gap-2 mb-2">
-                    <div id="star-container" style="cursor: pointer; font-size: 2rem; color: #ccc;">
-                        @* Gwiazdki *@
-                        <i class="far fa-star star-icon" data-value="1"></i>
-                        <i class="far fa-star star-icon" data-value="2"></i>
-                        <i class="far fa-star star-icon" data-value="3"></i>
-                        <i class="far fa-star star-icon" data-value="4"></i>
-                        <i class="far fa-star star-icon" data-value="5"></i>
-                    </div>
+                    <div class="d-flex flex-column justify-content-center align-items-center gap-2 mb-2">
+                        <div id="star-container" style="cursor: pointer; font-size: 2rem; color: #ccc;">
+                            @* Gwiazdki *@
+                            <i class="far fa-star star-icon" data-value="1"></i>
+                            <i class="far fa-star star-icon" data-value="2"></i>
+                            <i class="far fa-star star-icon" data-value="3"></i>
+                            <i class="far fa-star star-icon" data-value="4"></i>
+                            <i class="far fa-star star-icon" data-value="5"></i>
+                        </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted small">Twoja ocena:</span>
-                        <span id="rating-display" class="fs-4 fw-bold text-warning">
-                            @(Model.UserRating > 0 ? Model.UserRating.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "0.0")
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">Twoja ocena:</span>
+                            <span id="rating-display" class="fs-4 fw-bold text-warning">
+                                @(Model.UserRating > 0 ? Model.UserRating.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "0.0")
+                            </span>
+                        </div>
+
+                        <span id="save-message" class="text-success fw-bold" style="opacity: 0; transition: opacity 0.5s;">
+                            <i class="fas fa-check"></i> Zapisano!
                         </span>
                     </div>
-
-                    @* Miejsce na komunikat "Zapisano" *@
-                    <span id="save-message" class="text-success fw-bold" style="opacity: 0; transition: opacity 0.5s;">
-                        <i class="fas fa-check"></i> Zapisano!
-                    </span>
-                </div>
-            }
-            else
-            {
-                <p class="text-muted"><a asp-controller="Account" asp-action="Login">Zaloguj się</a>, aby ocenić poradnik.</p>
-            }
-        </div>
-    </div>
-
-    @* --- SEKCJA KOMENTARZY --- *@
-    <div class="comments-section mb-5">
-        <h3 class="text-white border-bottom border-secondary pb-2 mb-4">Komentarze (@Model.Comments.Count)</h3>
-
-        @* Formularz dodawania komentarza *@
-        @if (User.Identity.IsAuthenticated)
-        {
-            <div class="card bg-dark border-secondary mb-4">
-                <div class="card-body">
-                    <form asp-action="AddComment" method="post">
-                        <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                        <div class="mb-3">
-                            <textarea name="content" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="Napisz komentarz..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary float-end">Dodaj komentarz</button>
-                    </form>
-                </div>
+                }
+                else
+                {
+                    <p class="text-muted"><a asp-controller="Account" asp-action="Login">Zaloguj się</a>, aby ocenić poradnik.</p>
+                }
             </div>
-        }
+        </div>
 
-        @* Lista komentarzy *@
-        @foreach (var comment in Model.Comments)
-        {
-            <div class="card bg-dark border-secondary mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <div>
-                            <strong class="text-primary me-2">@comment.Author.UserName</strong>
-                            <small class="text-muted">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
-                        </div>
-                    </div>
-                    <p class="card-text text-light">@comment.Content</p>
+        @* --- SEKCJA KOMENTARZY (Tylko jeśli zatwierdzony) --- *@
+        <div class="comments-section mb-5">
+            <h3 class="text-white border-bottom border-secondary pb-2 mb-4">Komentarze (@Model.Comments.Count)</h3>
 
-                    @* Pasek akcji komentarza *@
-                    <div class="d-flex align-items-center gap-3 mt-3">
-                        @* Reakcje *@
-                        <form asp-action="ToggleReaction" method="post" class="d-inline">
-                            <input type="hidden" name="commentId" value="@comment.Id" />
+            @* Formularz dodawania komentarza *@
+            @if (User.Identity.IsAuthenticated)
+            {
+                <div class="card bg-dark border-secondary mb-4">
+                    <div class="card-body">
+                        <form asp-action="AddComment" method="post">
                             <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                            <input type="hidden" name="isUpvote" value="true" />
-                            <button class="btn btn-sm btn-outline-secondary @(comment.Reactions.Any(r => r.UserId == Model.Guide.UserId && r.Type == ReactionType.Like) ? "active" : "")">
-                                <i class="bi bi-hand-thumbs-up"></i> @comment.Reactions.Count(r => r.Type == ReactionType.Like)
-                            </button>
-                        </form>
-
-                        <form asp-action="ToggleReaction" method="post" class="d-inline">
-                            <input type="hidden" name="commentId" value="@comment.Id" />
-                            <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                            <input type="hidden" name="isUpvote" value="false" />
-                            <button class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-hand-thumbs-down"></i> @comment.Reactions.Count(r => r.Type == ReactionType.Dislike)
-                            </button>
-                        </form>
-
-                        @if (User.Identity.IsAuthenticated)
-                        {
-                            <button class="btn btn-sm btn-link text-decoration-none text-muted" onclick="document.getElementById('reply-form-@comment.Id').classList.toggle('d-none')">
-                                <i class="fas fa-reply"></i> Odpowiedz
-                            </button>
-                        }
-                    </div>
-
-                    @* Formularz odpowiedzi (ukryty) *@
-                    <div id="reply-form-@comment.Id" class="mt-3 d-none border-top border-secondary pt-3">
-                        <form asp-action="AddReply" method="post">
-                            <input type="hidden" name="commentId" value="@comment.Id" />
-                            <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                            <div class="input-group">
-                                <input type="text" name="content" class="form-control bg-dark text-white border-secondary" placeholder="Twoja odpowiedź..." required>
-                                <button class="btn btn-primary" type="submit">Wyślij</button>
+                            <div class="mb-3">
+                                <textarea name="content" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="Napisz komentarz..."></textarea>
                             </div>
+                            <button type="submit" class="btn btn-primary float-end">Dodaj komentarz</button>
                         </form>
                     </div>
+                </div>
+            }
 
-                    @* Wyświetlanie odpowiedzi (zagnieżdżenie 1 poziom) *@
-                    @if (comment.Replies != null && comment.Replies.Any())
-                    {
-                        <div class="mt-3 ps-4 border-start border-secondary">
-                            @foreach (var reply in comment.Replies)
+            @* Lista komentarzy *@
+            @foreach (var comment in Model.Comments)
+            {
+                <div class="card bg-dark border-secondary mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <div>
+                                <strong class="text-primary me-2">@comment.Author.UserName</strong>
+                                <small class="text-muted">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                        <p class="card-text text-light">@comment.Content</p>
+
+                        @* Pasek akcji komentarza *@
+                        <div class="d-flex align-items-center gap-3 mt-3">
+                            @* Reakcje *@
+                            <form asp-action="ToggleReaction" method="post" class="d-inline">
+                                <input type="hidden" name="commentId" value="@comment.Id" />
+                                <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                                <input type="hidden" name="isUpvote" value="true" />
+                                <button class="btn btn-sm btn-outline-secondary @(comment.Reactions.Any(r => r.UserId == Model.Guide.UserId && r.Type == ReactionType.Like) ? "active" : "")">
+                                    <i class="bi bi-hand-thumbs-up"></i> @comment.Reactions.Count(r => r.Type == ReactionType.Like)
+                                </button>
+                            </form>
+
+                            <form asp-action="ToggleReaction" method="post" class="d-inline">
+                                <input type="hidden" name="commentId" value="@comment.Id" />
+                                <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                                <input type="hidden" name="isUpvote" value="false" />
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-hand-thumbs-down"></i> @comment.Reactions.Count(r => r.Type == ReactionType.Dislike)
+                                </button>
+                            </form>
+
+                            @if (User.Identity.IsAuthenticated)
                             {
-                                <div class="mb-2">
-                                    <div class="d-flex justify-content-between">
-                                        <strong class="text-info small">@reply.Author.UserName</strong>
-                                        <small class="text-muted" style="font-size: 0.8rem;">@reply.CreatedAt.ToString("dd.MM HH:mm")</small>
-                                    </div>
-                                    <p class="mb-1 text-light small">@reply.Content</p>
-                                </div>
+                                <button class="btn btn-sm btn-link text-decoration-none text-muted" onclick="document.getElementById('reply-form-@comment.Id').classList.toggle('d-none')">
+                                    <i class="fas fa-reply"></i> Odpowiedz
+                                </button>
                             }
                         </div>
-                    }
+
+                        @* Formularz odpowiedzi *@
+                        <div id="reply-form-@comment.Id" class="mt-3 d-none border-top border-secondary pt-3">
+                            <form asp-action="AddReply" method="post">
+                                <input type="hidden" name="commentId" value="@comment.Id" />
+                                <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                                <div class="input-group">
+                                    <input type="text" name="content" class="form-control bg-dark text-white border-secondary" placeholder="Twoja odpowiedź..." required>
+                                    <button class="btn btn-primary" type="submit">Wyślij</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        @* Odpowiedzi *@
+                        @if (comment.Replies != null && comment.Replies.Any())
+                        {
+                            <div class="mt-3 ps-4 border-start border-secondary">
+                                @foreach (var reply in comment.Replies)
+                                {
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <strong class="text-info small">@reply.Author.UserName</strong>
+                                            <small class="text-muted" style="font-size: 0.8rem;">@reply.CreatedAt.ToString("dd.MM HH:mm")</small>
+                                        </div>
+                                        <p class="mb-1 text-light small">@reply.Content</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
-            </div>
-        }
-    </div>
+            }
+        </div>
+    }
 </div>
 
 <style>
@@ -204,114 +219,102 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const container = document.getElementById('star-container');
-            if (!container) return; // Jeśli użytkownik niezalogowany, przerwij
+    @* Skrypt tylko dla zatwierdzonych (bo tylko tam są gwiazdki) *@
+    @if (Model.Guide.IsApproved)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const container = document.getElementById('star-container');
+                if (!container) return;
 
-            const stars = container.querySelectorAll('.star-icon');
-            const display = document.getElementById('rating-display');
-            const guideId = document.getElementById('guideId').value;
-            const saveMessage = document.getElementById('save-message');
+                const stars = container.querySelectorAll('.star-icon');
+                const display = document.getElementById('rating-display');
+                const guideId = document.getElementById('guideId').value;
+                const saveMessage = document.getElementById('save-message');
 
-            // Pobierz token z ukrytego inputa wygenerowanego przez @Html.AntiForgeryToken()
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                // Token anty-fałszerstwa
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : '';
 
-            // Pobierz aktualną ocenę z modelu (zamień przecinek na kropkę dla JS)
-            let currentRating = parseFloat(document.getElementById('currentRating').value.replace(',', '.'));
+                let currentRating = parseFloat(document.getElementById('currentRating').value.replace(',', '.'));
 
-            // Funkcja pomocnicza do rysowania gwiazdek
-            function renderStars(value) {
-                stars.forEach((star, index) => {
-                    const starValue = index + 1;
-                    star.className = 'star-icon far fa-star'; // Pusta
-                    star.style.color = '#ccc';
+                function renderStars(value) {
+                    stars.forEach((star, index) => {
+                        const starValue = index + 1;
+                        star.className = 'star-icon far fa-star';
+                        star.style.color = '#ccc';
 
-                    if (value >= starValue) {
-                        star.className = 'star-icon fas fa-star'; // Pełna
-                        star.style.color = '#ffc107';
-                    } else if (value >= starValue - 0.5) {
-                        star.className = 'star-icon fas fa-star-half-alt'; // Połówka
-                        star.style.color = '#ffc107';
-                    }
-                });
-            }
+                        if (value >= starValue) {
+                            star.className = 'star-icon fas fa-star';
+                            star.style.color = '#ffc107';
+                        } else if (value >= starValue - 0.5) {
+                            star.className = 'star-icon fas fa-star-half-alt';
+                            star.style.color = '#ffc107';
+                        }
+                    });
+                }
 
-            // Inicjalizacja
-            renderStars(currentRating);
-
-            // Obsługa najechania myszką (podgląd)
-            stars.forEach((star, index) => {
-                star.addEventListener('mousemove', (e) => {
-                    const rect = star.getBoundingClientRect();
-                    const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
-                    let hoverValue = index + 1;
-                    if (isLeftHalf) hoverValue -= 0.5;
-                    renderStars(hoverValue);
-                });
-            });
-
-            // Obsługa zjechania myszką (powrót do zapisanej oceny)
-            container.addEventListener('mouseleave', () => {
                 renderStars(currentRating);
-            });
 
-            // --- KLUCZOWA ZMIANA: KLIKNIĘCIE WYSYŁA DANE ---
-            stars.forEach((star, index) => {
-                star.addEventListener('click', (e) => {
-                    const rect = star.getBoundingClientRect();
-                    const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
-                    let selectedValue = index + 1;
-                    if (isLeftHalf) selectedValue -= 0.5;
+                stars.forEach((star, index) => {
+                    star.addEventListener('mousemove', (e) => {
+                        const rect = star.getBoundingClientRect();
+                        const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
+                        let hoverValue = index + 1;
+                        if (isLeftHalf) hoverValue -= 0.5;
+                        renderStars(hoverValue);
+                    });
+                });
 
-                    // Zaktualizuj zmienną lokalną i widok
-                    currentRating = selectedValue;
-                    display.innerText = selectedValue.toFixed(1);
+                container.addEventListener('mouseleave', () => {
                     renderStars(currentRating);
-
-                    // Wyślij do serwera (AJAX)
-                    sendRating(selectedValue);
                 });
-            });
 
-            function sendRating(value) {
-                // Pokaż komunikat "Zapisywanie..." (opcjonalnie)
-                saveMessage.style.opacity = '0';
+                stars.forEach((star, index) => {
+                    star.addEventListener('click', (e) => {
+                        const rect = star.getBoundingClientRect();
+                        const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
+                        let selectedValue = index + 1;
+                        if (isLeftHalf) selectedValue -= 0.5;
 
-                fetch('/Guides/RateGuide', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': token
-                    },
-                    body: JSON.stringify({
-                        guideId: parseInt(guideId),
-                        ratingValue: value
+                        currentRating = selectedValue;
+                        display.innerText = selectedValue.toFixed(1);
+                        renderStars(currentRating);
+                        sendRating(selectedValue);
+                    });
+                });
+
+                function sendRating(value) {
+                    saveMessage.style.opacity = '0';
+
+                    fetch('/Guides/RateGuide', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': token
+                        },
+                        body: JSON.stringify({
+                            guideId: parseInt(guideId),
+                            ratingValue: value
+                        })
                     })
-                })
-                .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    }
-                    throw new Error('Błąd sieci');
-                })
-                .then(data => {
-                    if(data.success) {
-                        // Pokaż komunikat sukcesu
-                        saveMessage.innerText = "Zapisano!";
-                        saveMessage.style.opacity = '1';
-
-                        // Ukryj komunikat po 2 sekundach
-                        setTimeout(() => {
-                            saveMessage.style.opacity = '0';
-                        }, 2000);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert("Wystąpił błąd podczas zapisywania oceny.");
-                });
-            }
-        });
-    </script>
+                    .then(response => {
+                        if (response.ok) return response.json();
+                        throw new Error('Błąd sieci');
+                    })
+                    .then(data => {
+                        if(data.success) {
+                            saveMessage.innerText = "Zapisano!";
+                            saveMessage.style.opacity = '1';
+                            setTimeout(() => { saveMessage.style.opacity = '0'; }, 2000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // alert("Wystąpił błąd podczas zapisywania oceny."); // Opcjonalnie
+                    });
+                }
+            });
+        </script>
+    }
 }

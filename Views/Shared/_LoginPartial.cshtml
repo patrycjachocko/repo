@@ -24,15 +24,22 @@
                 @* Usunięto 'else' z linkiem do biblioteki - jest teraz w _Layout *@
             </li>
 
-            @* 1.5. SEKCJA ADMINA *@
-            @if (User.IsInRole("Admin"))
-            {
-                <li class="nav-item d-flex align-items-center me-3">
-                    <a class="btn btn-sm btn-danger fw-bold" asp-controller="Admin" asp-action="Index" title="Panel Administratora">
-                        PANEL ADMINA
-                    </a>
-                </li>
-            }
+            @* --- PRZYCISK PANELU (Dla Admina i Moderatora) --- *@
+    @if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+    {
+        <li class="nav-item">
+            <a class="nav-link text-white btn btn-outline-secondary border-0 me-2" asp-controller="Admin" asp-action="Index" title="Panel zarządzania">
+                @if (User.IsInRole("Admin"))
+                {
+                    <i class="fas fa-user-shield text-danger"></i> <span class="d-none d-lg-inline">Panel Admina</span>
+                }
+                else
+                {
+                    <i class="fas fa-user-check text-info"></i> <span class="d-none d-lg-inline">Panel Moderatora</span>
+                }
+            </a>
+        </li>
+    }
 
             @* --- 2. SEKCJA AWATARA I PROFILU --- *@
             <li class="nav-item d-flex align-items-center">

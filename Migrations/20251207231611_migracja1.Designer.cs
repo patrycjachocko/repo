@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251207194524_migracja1")]
+    [Migration("20251207231611_migracja1")]
     partial class migracja1
     {
         /// <inheritdoc />
@@ -335,6 +335,9 @@ namespace praca_dyplomowa_zesp.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<long>("IgdbGameId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsApproved")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")

@@ -37,5 +37,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         // Relacje dodane dla nowych funkcjonalności:
         public virtual ICollection<Rate> Rates { get; set; } = new List<Rate>();
         public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+
+        public bool IsApproved { get; set; } = false;
     }
 }

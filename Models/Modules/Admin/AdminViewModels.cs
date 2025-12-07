@@ -1,4 +1,5 @@
-﻿using System;
+﻿using praca_dyplomowa_zesp.Models.Modules.Guides;
+using System;
 using System.Collections.Generic;
 
 namespace praca_dyplomowa_zesp.Models.Modules.Admin
@@ -7,6 +8,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Admin
     {
         public List<AdminUserDto> Users { get; set; } = new List<AdminUserDto>();
         public string SearchString { get; set; }
+        public List<Guide> PendingGuides { get; set; }
     }
 
     public class AdminUserDto

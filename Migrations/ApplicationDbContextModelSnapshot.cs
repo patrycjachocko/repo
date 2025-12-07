@@ -334,6 +334,9 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Property<long>("IgdbGameId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
