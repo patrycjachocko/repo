@@ -1,6 +1,6 @@
-﻿using praca_dyplomowa_zesp.Models.Users;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+using praca_dyplomowa_zesp.Models.Users;
 
 namespace praca_dyplomowa_zesp.Models.Interactions.Comments.Replies
 {
@@ -10,18 +10,18 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Comments.Replies
         public Guid Id { get; set; }
 
         [Required]
-        [MaxLength(2000)]
-        public string Content { get; set; } = string.Empty;
+        public string Content { get; set; }
 
-        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        // Relacja z Użytkownikiem (Autorem)
         public Guid UserId { get; set; }
+        [ForeignKey("UserId")]
+        public virtual User Author { get; set; }
 
-        public User User { get; set; } = null!;
-
-        public DateTime CreatedAt { get; set; }
-
-        public DateTime? UpdatedAt { get; set; }
-        public Guid CommentId { get; set; }
-        public Comment Comment { get; set; } = null!;
-    }    
+        // Relacja z Komentarzem (Rodzicem)
+        public Guid ParentCommentId { get; set; }
+        [ForeignKey("ParentCommentId")]
+        public virtual Comment ParentComment { get; set; }
+    }
 }

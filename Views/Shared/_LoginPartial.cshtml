@@ -8,25 +8,20 @@
     @if (SignInManager.IsSignedIn(User))
     {
         var user = await UserManager.GetUserAsync(User);
-
         if (user != null)
         {
             @* --- UŻYTKOWNIK ISTNIEJE W BAZIE - POPRAWNE LOGOWANIE --- *@
 
-            @* 1. SEKCJA STEAM *@
+            @* 1. SEKCJA STEAM (TYLKO PRZYCISK POŁĄCZENIA) *@
             <li class="nav-item d-flex align-items-center me-3">
                 @if (string.IsNullOrEmpty(user.SteamId))
                 {
+                    @* Wyświetlamy tylko jeśli NIE MA Steama *@
                     <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-outline-secondary text-light" title="Połącz konto Steam">
                         <i class="bi bi-steam"></i> Połącz Steam
                     </a>
                 }
-                else
-                {
-                    <a asp-controller="Profile" asp-action="SteamLibrary" class="btn btn-sm btn-outline-success" title="Twoja Biblioteka Steam">
-                        <i class="bi bi-controller"></i> Biblioteka Steam
-                    </a>
-                }
+                @* Usunięto 'else' z linkiem do biblioteki - jest teraz w _Layout *@
             </li>
 
             @* 1.5. SEKCJA ADMINA *@
@@ -49,7 +44,7 @@
                     }
                     else
                     {
-                        @* POPRAWKA: Domyślny awatar z pliku *@
+                        @* Domyślny awatar z pliku *@
                         <img src="~/uploads/avatars/default_avatar.png" alt="Domyślny awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
                     }
                     Cześć @(user.UserName)!
@@ -89,6 +84,7 @@
         <li class="nav-item">
             <a class="nav-link text-light" asp-controller="Account" asp-action="Register">Rejestracja</a>
         </li>
+
         <li class="nav-item">
             <a class="nav-link text-light" asp-controller="Account" asp-action="Login">Zaloguj</a>
         </li>

@@ -1,6 +1,8 @@
-﻿using praca_dyplomowa_zesp.Models.Users;
-using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using praca_dyplomowa_zesp.Models.Interactions.Comments;
+using praca_dyplomowa_zesp.Models.Interactions.Rates;
+using praca_dyplomowa_zesp.Models.Users;
 
 namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {
@@ -9,30 +11,31 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         [Key]
         public int Id { get; set; }
 
-        [Required]
         public long IgdbGameId { get; set; }
 
-        [Required(ErrorMessage = "Tytuł jest wymagany.")]
-        [Display(Name = "Tytuł poradnika")]
+        [Required(ErrorMessage = "Tytuł jest wymagany")]
+        [StringLength(200, MinimumLength = 3)]
         public string Title { get; set; }
 
-        [Required(ErrorMessage = "Krótki opis (wstęp) jest wymagany.")]
-        [Display(Name = "Wstęp (zajawka)")]
-        [StringLength(300, ErrorMessage = "Wstęp nie może być dłuższy niż 300 znaków.")]
-        public string Description { get; set; } // To będzie wyświetlane na kafelku
+        [Required(ErrorMessage = "Treść jest wymagana")]
+        public string Content { get; set; }
 
-        [Display(Name = "Treść poradnika")]
-        public string? Content { get; set; } // To jest pełna treść z edytora (HTML)
+        [StringLength(500)]
+        public string Description { get; set; }
 
-        // --- Obsługa zdjęcia okładkowego ---
-        [Display(Name = "Zdjęcie okładkowe")]
         public byte[]? CoverImage { get; set; }
         public string? CoverImageContentType { get; set; }
 
-        public Guid UserId { get; set; }
-        public virtual User User { get; set; }
-
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
+
+        // Autor
+        public Guid UserId { get; set; }
+        [ForeignKey("UserId")]
+        public virtual User? User { get; set; }
+
+        // Relacje dodane dla nowych funkcjonalności:
+        public virtual ICollection<Rate> Rates { get; set; } = new List<Rate>();
+        public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 }

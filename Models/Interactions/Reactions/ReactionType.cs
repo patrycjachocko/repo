@@ -2,8 +2,8 @@
 {
     public enum ReactionType
     {
-        Upvote,
-        Downvote,
+        Like,
+        Dislike,
         Star
     }
 }

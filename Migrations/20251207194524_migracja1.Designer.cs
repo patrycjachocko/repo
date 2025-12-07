@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251201051812_migracja1")]
+    [Migration("20251207194524_migracja1")]
     partial class migracja1
     {
         /// <inheritdoc />
@@ -211,19 +211,20 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<int>("GuideId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GuideId");
 
                     b.HasIndex("UserId");
 
@@ -236,18 +237,14 @@ namespace praca_dyplomowa_zesp.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("CommentId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<Guid>("ParentCommentId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
@@ -255,7 +252,7 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CommentId");
+                    b.HasIndex("ParentCommentId");
 
                     b.HasIndex("UserId");
 
@@ -264,17 +261,25 @@ namespace praca_dyplomowa_zesp.Migrations
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Rates.Rate", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GuideId")
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Value")
-                        .HasColumnType("INTEGER");
+                    b.Property<double>("Value")
+                        .HasColumnType("REAL");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GuideId");
 
                     b.HasIndex("UserId");
 
@@ -283,14 +288,11 @@ namespace praca_dyplomowa_zesp.Migrations
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Reactions.Reaction", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("LastUpdatedAt")
+                    b.Property<Guid>("CommentId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Type")
@@ -300,6 +302,8 @@ namespace praca_dyplomowa_zesp.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
 
                     b.HasIndex("UserId");
 
@@ -313,6 +317,7 @@ namespace praca_dyplomowa_zesp.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Content")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<byte[]>("CoverImage")
@@ -326,7 +331,7 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(300)
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<long>("IgdbGameId")
@@ -334,6 +339,7 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -570,54 +576,78 @@ namespace praca_dyplomowa_zesp.Migrations
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Comments.Comment", b =>
                 {
-                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
+                    b.HasOne("praca_dyplomowa_zesp.Models.Modules.Guides.Guide", "Guide")
+                        .WithMany("Comments")
+                        .HasForeignKey("GuideId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "Author")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.Navigation("Author");
+
+                    b.Navigation("Guide");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Comments.Replies.Reply", b =>
                 {
-                    b.HasOne("praca_dyplomowa_zesp.Models.Interactions.Comments.Comment", "Comment")
+                    b.HasOne("praca_dyplomowa_zesp.Models.Interactions.Comments.Comment", "ParentComment")
                         .WithMany("Replies")
-                        .HasForeignKey("CommentId")
+                        .HasForeignKey("ParentCommentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "Author")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Comment");
+                    b.Navigation("Author");
 
-                    b.Navigation("User");
+                    b.Navigation("ParentComment");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Rates.Rate", b =>
                 {
+                    b.HasOne("praca_dyplomowa_zesp.Models.Modules.Guides.Guide", "Guide")
+                        .WithMany("Rates")
+                        .HasForeignKey("GuideId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Guide");
 
                     b.Navigation("User");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Reactions.Reaction", b =>
                 {
-                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
+                    b.HasOne("praca_dyplomowa_zesp.Models.Interactions.Comments.Comment", "Comment")
+                        .WithMany("Reactions")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "Author")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.Navigation("Author");
+
+                    b.Navigation("Comment");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.Guide", b =>
@@ -633,7 +663,16 @@ namespace praca_dyplomowa_zesp.Migrations
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Comments.Comment", b =>
                 {
+                    b.Navigation("Reactions");
+
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.Guide", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("Rates");
                 });
 #pragma warning restore 612, 618
         }

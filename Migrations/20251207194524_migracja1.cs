@@ -189,27 +189,6 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Comments",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Content = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Comments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Comments_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "GamesInLibraries",
                 columns: table => new
                 {
@@ -240,62 +219,20 @@ namespace praca_dyplomowa_zesp.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     IgdbGameId = table.Column<long>(type: "INTEGER", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                    Content = table.Column<string>(type: "TEXT", nullable: true),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Content = table.Column<string>(type: "TEXT", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     CoverImage = table.Column<byte[]>(type: "BLOB", nullable: true),
                     CoverImageContentType = table.Column<string>(type: "TEXT", nullable: true),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Guides", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Guides_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Rates",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Value = table.Column<int>(type: "INTEGER", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Rates", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Rates_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Reactions",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastUpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Reactions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Reactions_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
@@ -325,15 +262,94 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Comments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Content = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    GuideId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Comments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Comments_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Comments_Guides_GuideId",
+                        column: x => x.GuideId,
+                        principalTable: "Guides",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Rates",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Value = table.Column<double>(type: "REAL", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    GuideId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Rates", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Rates_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Rates_Guides_GuideId",
+                        column: x => x.GuideId,
+                        principalTable: "Guides",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Reactions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Type = table.Column<int>(type: "INTEGER", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CommentId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Reactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Reactions_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Reactions_Comments_CommentId",
+                        column: x => x.CommentId,
+                        principalTable: "Comments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Replies",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Content = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Content = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CommentId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ParentCommentId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -345,8 +361,8 @@ namespace praca_dyplomowa_zesp.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Replies_Comments_CommentId",
-                        column: x => x.CommentId,
+                        name: "FK_Replies_Comments_ParentCommentId",
+                        column: x => x.ParentCommentId,
                         principalTable: "Comments",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -390,6 +406,11 @@ namespace praca_dyplomowa_zesp.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Comments_GuideId",
+                table: "Comments",
+                column: "GuideId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Comments_UserId",
                 table: "Comments",
                 column: "UserId");
@@ -410,9 +431,19 @@ namespace praca_dyplomowa_zesp.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Rates_GuideId",
+                table: "Rates",
+                column: "GuideId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Rates_UserId",
                 table: "Rates",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Reactions_CommentId",
+                table: "Reactions",
+                column: "CommentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reactions_UserId",
@@ -420,9 +451,9 @@ namespace praca_dyplomowa_zesp.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Replies_CommentId",
+                name: "IX_Replies_ParentCommentId",
                 table: "Replies",
-                column: "CommentId");
+                column: "ParentCommentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Replies_UserId",
@@ -457,9 +488,6 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "GamesInLibraries");
 
             migrationBuilder.DropTable(
-                name: "Guides");
-
-            migrationBuilder.DropTable(
                 name: "Rates");
 
             migrationBuilder.DropTable(
@@ -479,6 +507,9 @@ namespace praca_dyplomowa_zesp.Migrations
 
             migrationBuilder.DropTable(
                 name: "Comments");
+
+            migrationBuilder.DropTable(
+                name: "Guides");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

@@ -1,4 +1,9 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@using praca_dyplomowa_zesp.Models.Users
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+
+<!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="utf-8" />
@@ -86,6 +91,17 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-controller="Library" asp-action="Index">Moja Biblioteka</a>
                             </li>
+
+                            @* --- LOGIKA PRZENIESIONA TUTAJ: Jeśli połączony ze Steam, pokaż link obok biblioteki --- *@
+                            var user = await UserManager.GetUserAsync(User);
+                            if (user != null && !string.IsNullOrEmpty(user.SteamId))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: #66c0f4 !important;">
+                                        <i class="bi bi-steam"></i> Biblioteka Steam
+                                    </a>
+                                </li>
+                            }
                         }
                     </ul>
 

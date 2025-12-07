@@ -14,7 +14,7 @@
                     <h2 class="mb-0"><i class="fas fa-pen-fancy text-primary"></i> Nowy Poradnik</h2>
                 </div>
                 <div class="card-body">
-                    <form asp-action="Create" enctype="multipart/form-data">
+                    <form asp-action="Create" enctype="multipart/form-data" id="createForm">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <input type="hidden" asp-for="IgdbGameId" />
 
@@ -31,9 +31,18 @@
                         </div>
 
                         <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Zdjęcie okładkowe (opcjonalne)</label>
-                            <input type="file" name="coverImageFile" class="form-control bg-secondary text-white border-0" accept="image/*" />
-                            <small class="text-muted">Wyświetli się na liście poradników.</small>
+                            <label class="form-label fw-bold">Zdjęcie okładkowe (wymagane)</label>
+
+                            <input type="file" id="coverImageInput" name="coverImageFile" class="form-control bg-secondary text-white border-0" accept="image/*" required onchange="previewFile()" />
+                            <span asp-validation-for="CoverImage" class="text-danger"></span>
+
+                            <div id="imagePreviewContainer" class="mt-3 position-relative d-none" style="width: fit-content;">
+                                <img id="imagePreview" src="#" alt="Podgląd okładki" style="max-height: 200px; border-radius: 8px; border: 1px solid #6c757d;" />
+
+                                <button type="button" onclick="clearImage()" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle" style="width: 30px; height: 30px; padding: 0; line-height: 30px;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="form-group mb-4">
@@ -54,6 +63,32 @@
 </div>
 
 <script>
+    // Obsługa podglądu i usuwania zdjęcia
+    function previewFile() {
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const previewImage = document.getElementById('imagePreview');
+        const fileInput = document.getElementById('coverImageInput');
+        const file = fileInput.files[0];
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewContainer.classList.remove('d-none');
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function clearImage() {
+        const fileInput = document.getElementById('coverImageInput');
+        const previewContainer = document.getElementById('imagePreviewContainer');
+
+        fileInput.value = ""; // Czyści input
+        previewContainer.classList.add('d-none'); // Ukrywa podgląd
+    }
+
+    // TinyMCE Init
     document.addEventListener("DOMContentLoaded", function() {
         tinymce.init({
             selector: '#guide-editor',
@@ -61,9 +96,6 @@
             toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
             height: 600,
             menubar: false,
-            // Usunąłem wymuszanie ciemnego motywu (skin: 'oxide-dark'), bo to często psuje ładowanie z CDN.
-            // Zamiast tego edytor będzie jasny, co jest bezpieczniejsze.
-
             image_title: true,
             automatic_uploads: true,
             file_picker_types: 'image',
