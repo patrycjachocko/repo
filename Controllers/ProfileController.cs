@@ -162,147 +162,183 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             // 2. Pobierz listę ID gier, które użytkownik już ma w bibliotece
+            // Używamy HashSet dla błyskawicznego sprawdzania "czy już mam tę grę"
             var ownedIgdbIds = await _context.GamesInLibraries
                 .Where(g => g.UserId == user.Id)
                 .Select(g => g.IgdbGameId)
-                .ToListAsync();
+                .ToHashSetAsync();
 
-            // Słownik do przechowywania znalezionych ID gier (klucz: Steam AppId, wartość: IGDB Game Id)
-            // Używamy słownika, żeby nie dublować wyników
-            var foundGameIds = new HashSet<long>();
+            var newIdsToAdd = new HashSet<long>();
+            var notFoundNames = new List<string>(); // Lista na gry, których nie udało się znaleźć
 
-            // --- ETAP 1: Szybkie wyszukiwanie po ID (External Games) ---
-            // To jest najdokładniejsza metoda, ale czasem brakuje powiązań w bazie IGDB.
+            // Tworzymy mapę (Nazwa -> Gra Steam), żeby łatwo zarządzać tym, co zostało do znalezienia.
+            var gamesMap = new Dictionary<string, SteamGameDto>();
 
-            var steamAppIds = steamGames.Select(g => g.AppId.ToString()).Distinct().ToList();
-            var mappedSteamIds = new HashSet<string>(); // Tutaj zapiszemy ID steam, które udało się znaleźć w etapie 1
-
-            int batchSize = 50;
-            for (int i = 0; i < steamAppIds.Count; i += batchSize)
+            foreach (var g in steamGames)
             {
-                var batch = steamAppIds.Skip(i).Take(batchSize).ToList();
-                var idsString = string.Join(",", batch.Select(id => $"\"{id}\""));
+                if (string.IsNullOrWhiteSpace(g.Name)) continue;
+                var cleanName = CleanSteamGameName(g.Name);
+                if (!string.IsNullOrEmpty(cleanName) && !gamesMap.ContainsKey(cleanName))
+                {
+                    gamesMap[cleanName] = g;
+                }
+            }
 
-                // Pobieramy też pole 'uid' żeby wiedzieć, które ID ze Steam zostały znalezione
-                var query = $"fields game, uid; where category = 1 & uid = ({idsString}); limit {batchSize};";
+            // --- ETAP 1: Szybkie wyszukiwanie grupowe (Exact Match) ---
+            var namesToProcess = gamesMap.Keys.ToList();
+            int batchSize = 50;
+
+            for (int i = 0; i < namesToProcess.Count; i += batchSize)
+            {
+                var batchNames = namesToProcess.Skip(i).Take(batchSize).ToList();
+                var namesQueryString = string.Join(",", batchNames.Select(n => $"\"{n}\""));
+
+                // Pytamy o 50 gier na raz (dokładna nazwa + kategoria Main Game)
+                var query = $"fields id, name, category, version_parent; where name = ({namesQueryString}) & category = 0 & version_parent = null; limit 50;";
 
                 try
                 {
-                    var responseJson = await _igdbClient.ApiRequestAsync("external_games", query);
-                    if (!string.IsNullOrEmpty(responseJson))
+                    if (i > 0) await Task.Delay(150); // Małe opóźnienie między batchami
+
+                    var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
+                    if (!string.IsNullOrEmpty(jsonResponse))
                     {
-                        var externalGames = JsonConvert.DeserializeObject<List<IgdbExternalGameDto>>(responseJson);
-                        if (externalGames != null)
+                        var batchResults = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
+                        if (batchResults != null)
                         {
-                            foreach (var item in externalGames)
+                            foreach (var foundGame in batchResults)
                             {
-                                foundGameIds.Add(item.Game);
-                                mappedSteamIds.Add(item.Uid); // Zapamiętujemy, że to Steam ID już mamy
+                                // Jeśli user nie ma tej gry -> dodajemy do listy "Do dodania"
+                                if (!ownedIgdbIds.Contains(foundGame.Id))
+                                {
+                                    newIdsToAdd.Add(foundGame.Id);
+                                }
+
+                                // Usuwamy z mapy "do zrobienia" (IGDB może zwrócić inną wielkość liter, więc szukamy klucza)
+                                var matchedKey = gamesMap.Keys.FirstOrDefault(k => k.Equals(foundGame.Name, StringComparison.OrdinalIgnoreCase));
+                                if (matchedKey != null)
+                                {
+                                    gamesMap.Remove(matchedKey);
+                                }
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Błąd podczas importu ID: {ex.Message}");
+                    Console.WriteLine($"Błąd w batchu: {ex.Message}");
                 }
             }
 
-            // --- ETAP 2: Fallback - Wyszukiwanie po nazwie ---
-            // Dla gier, których NIE znaleźliśmy w Etapie 1, robimy wyszukiwanie po nazwie.
-            // Jest to wolniejsze (jedno zapytanie na grę), ale rozwiązuje problem brakujących linków.
+            // --- ETAP 2: Fallback - Pojedyncze wyszukiwanie (Search) ---
+            // Tutaj trafią tylko te gry, których nie udało się znaleźć w Etapie 1
+            var remainingGames = gamesMap.Values.ToList();
 
-            var notFoundSteamGames = steamGames
-                .Where(g => !mappedSteamIds.Contains(g.AppId.ToString()))
-                .ToList();
-
-            // Ograniczamy liczbę wyszukiwań dla bezpieczeństwa (np. max 20-30 na raz, żeby nie zablokować serwera)
-            // lub po prostu robimy to z małym opóźnieniem.
-
-            foreach (var game in notFoundSteamGames)
+            foreach (var steamGame in remainingGames)
             {
-                // Pomijamy gry z bardzo krótkimi nazwami lub dziwnymi znakami, które mogą psuć zapytania
-                if (string.IsNullOrWhiteSpace(game.Name) || game.Name.Length < 2) continue;
+                var cleanName = CleanSteamGameName(steamGame.Name);
+                var query = $"fields id, name, category, version_parent; search \"{cleanName}\"; where parent_game = null; limit 10;";
 
-                var cleanName = CleanSteamGameName(game.Name);
-
-                // Szukamy po nazwie, bierzemy pierwszy najlepszy wynik
-                var query = $"fields id; search \"{cleanName}\"; limit 1;";
+                bool gameFound = false;
 
                 try
                 {
-                    // Małe opóźnienie, aby nie przekroczyć limitów API (np. 4 zapytania na sekundę dla free tier)
-                    await Task.Delay(250);
+                    await Task.Delay(250); // Opóźnienie rate-limit
 
-                    var responseJson = await _igdbClient.ApiRequestAsync("games", query);
-                    if (!string.IsNullOrEmpty(responseJson))
+                    var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
+                    if (!string.IsNullOrEmpty(jsonResponse))
                     {
-                        // Używamy tej samej klasy ApiGame co w innych miejscach, ale potrzebujemy tylko ID
-                        var searchResults = JsonConvert.DeserializeObject<List<ApiGame>>(responseJson);
-                        var bestMatch = searchResults?.FirstOrDefault();
-
-                        if (bestMatch != null)
+                        var gamesFromApi = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
+                        if (gamesFromApi != null && gamesFromApi.Any())
                         {
-                            foundGameIds.Add(bestMatch.Id);
+                            // Agresywne filtrowanie w C# (identyczne jak w GamesController)
+                            var foundGame = gamesFromApi.FirstOrDefault(g =>
+                                g.Category == 0 &&
+                                g.Version_parent == null &&
+                                !string.IsNullOrEmpty(g.Name) &&
+                                !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
+                                !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
+                                !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
+                                !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
+                            );
+
+                            if (foundGame != null)
+                            {
+                                gameFound = true;
+                                if (!ownedIgdbIds.Contains(foundGame.Id) && !newIdsToAdd.Contains(foundGame.Id))
+                                {
+                                    newIdsToAdd.Add(foundGame.Id);
+                                }
+                            }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Błąd podczas wyszukiwania gry '{game.Name}': {ex.Message}");
+                    Console.WriteLine($"Błąd fallback: {ex.Message}");
+                }
+
+                // Jeśli po wszystkich próbach nadal brak sukcesu -> dodajemy do listy błędów
+                if (!gameFound)
+                {
+                    notFoundNames.Add(steamGame.Name);
                 }
             }
 
-            // --- ETAP 3: Zapis do bazy ---
-
-            // Filtrujemy tylko te ID, których użytkownik jeszcze nie ma
-            var newIdsToAdd = foundGameIds.Where(id => !ownedIgdbIds.Contains(id)).ToList();
-
-            if (!newIdsToAdd.Any())
+            // 3. Zapis do bazy
+            if (newIdsToAdd.Any())
             {
-                TempData["StatusMessage"] = "Nie znaleziono nowych gier do dodania (wszystkie zidentyfikowane już posiadasz).";
-                return RedirectToAction("SteamLibrary");
+                var newLibraryEntries = newIdsToAdd.Select(igdbId => new GameInLibrary
+                {
+                    UserId = user.Id,
+                    IgdbGameId = igdbId,
+                    DateAddedToLibrary = DateTime.Now,
+                    CurrentUserStoryProgressPercent = 0
+                }).ToList();
+
+                await _context.GamesInLibraries.AddRangeAsync(newLibraryEntries);
+                await _context.SaveChangesAsync();
+
+                TempData["StatusMessage"] = $"Sukces! Dodano {newLibraryEntries.Count} nowych gier do Twojej biblioteki.";
+            }
+            else
+            {
+                TempData["StatusMessage"] = "Przetworzono bibliotekę. Nie znaleziono nowych gier do dodania (lub wszystkie wykryte już posiadasz).";
             }
 
-            var newLibraryEntries = newIdsToAdd.Select(igdbId => new GameInLibrary
+            // 4. Raportowanie braków
+            if (notFoundNames.Any())
             {
-                UserId = user.Id,
-                IgdbGameId = igdbId,
-                DateAddedToLibrary = DateTime.Now,
-                CurrentUserStoryProgressPercent = 0
-            }).ToList();
+                int maxDisplay = 10; // Ile nazw pokazać w komunikacie
+                var namesToShow = notFoundNames.Take(maxDisplay);
+                string missingList = string.Join(", ", namesToShow);
 
-            await _context.GamesInLibraries.AddRangeAsync(newLibraryEntries);
-            await _context.SaveChangesAsync();
+                string errorMsg = $"Nie udało się automatycznie dopasować {notFoundNames.Count} gier: {missingList}";
 
-            TempData["StatusMessage"] = $"Sukces! Dodano {newLibraryEntries.Count} nowych gier do Twojej biblioteki.";
+                if (notFoundNames.Count > maxDisplay)
+                {
+                    errorMsg += $" ...i {notFoundNames.Count - maxDisplay} innych.";
+                }
 
-            // Jeśli dużo gier nie zostało znalezionych, możemy o tym poinformować (opcjonalne)
-            if (foundGameIds.Count < steamGames.Count)
-            {
-                int missingCount = steamGames.Count - foundGameIds.Count;
-                // Możesz odkomentować poniższą linię, jeśli chcesz szczegółowy komunikat:
-                // TempData["StatusMessage"] += $" Nie udało się dopasować automacznie {missingCount} gier.";
+                // Wyświetlamy to jako ErrorMessage, aby użytkownik zwrócił na to uwagę
+                // W widoku SteamLibrary obsługa TempData["ErrorMessage"] powinna wyświetlić czerwony alert.
+                TempData["ErrorMessage"] = errorMsg;
             }
 
             return RedirectToAction("SteamLibrary");
         }
 
-        // Metoda pomocnicza do czyszczenia nazwy gry przed wyszukiwaniem
+        // Metoda pomocnicza
         private string CleanSteamGameName(string name)
         {
             if (string.IsNullOrEmpty(name)) return "";
 
-            // Usuwamy znaki specjalne, które mogą mylić wyszukiwarkę IGDB lub psuć składnię
-            // np. "Half-Life 2" -> "Half Life 2" jest bezpieczniejsze w search
-            // oraz usuwamy znaki TM, R, itp.
-            var clean = name.Replace("™", "")
-                            .Replace("®", "")
-                            .Replace("©", "")
-                            .Replace("\"", "") // Usuwamy cudzysłowy, bo psują zapytanie
-                            .Trim();
-
-            return clean;
+            // Usuwamy cudzysłowy (psują składnię tablicy w where), znaki specjalne i spacje
+            return name.Replace("\"", "")
+                       .Replace("™", "")
+                       .Replace("®", "")
+                       .Replace("©", "")
+                       .Trim();
         }
 
         // Klasa DTO potrzebna do odczytu external_games (musi być wewnątrz klasy lub namespace)
@@ -312,7 +348,10 @@ namespace praca_dyplomowa_zesp.Controllers
             public long Game { get; set; }
 
             [JsonProperty("uid")]
-            public string Uid { get; set; }
+            public string Uid { get; set; } // Tu siedzi SteamID
+
+            [JsonProperty("category")]
+            public int Category { get; set; }
         }
 
         // GET: Profile/GetAvatar/GUID
