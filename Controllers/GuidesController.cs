@@ -16,6 +16,7 @@ using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
+using Rotativa.AspNetCore;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -92,7 +93,13 @@ namespace praca_dyplomowa_zesp.Controllers
             // 1. Wyszukiwanie (to może zostać w SQL, działa dobrze)
             if (!string.IsNullOrEmpty(searchString))
             {
-                guidesQuery = guidesQuery.Where(s => s.Title.Contains(searchString) || s.Content.Contains(searchString));
+                // Zamieniamy frazę wyszukiwania na małe litery
+                var term = searchString.ToLower();
+
+                // Sprawdzamy, czy tytuł (zmieniony na małe) LUB treść (zmieniona na małe) zawiera frazę
+                guidesQuery = guidesQuery.Where(s =>
+                    s.Title.ToLower().Contains(term) ||
+                    s.Content.ToLower().Contains(term));
             }
 
             // 2. POBRANIE DANYCH DO PAMIĘCI
@@ -471,6 +478,35 @@ namespace praca_dyplomowa_zesp.Controllers
                 return RedirectToAction(nameof(Index), new { gameId = gameId });
             }
             return RedirectToAction(nameof(Index), "Games");
+        }
+
+        public async Task<IActionResult> DownloadPdf(int id)
+        {
+            var guide = await _context.Guides
+                .Include(g => g.User)
+                .Include(g => g.Rates)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (guide == null) return NotFound();
+
+            // Używamy tego samego modelu co w Details, ale wypełniamy tylko to co potrzebne
+            var viewModel = new GuideDetailsViewModel
+            {
+                Guide = guide,
+                AverageRating = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0
+                // Komentarze nie są potrzebne w PDF, więc ich nie pobieramy
+            };
+
+            // Zwracamy widok "DetailsPdf" jako plik PDF
+            // FileName ustala nazwę pliku przy pobieraniu
+            return new ViewAsPdf("DetailsPdf", viewModel)
+            {
+                FileName = $"Poradnik_{guide.Title}.pdf",
+                PageSize = Rotativa.AspNetCore.Options.Size.A4,
+                PageOrientation = Rotativa.AspNetCore.Options.Orientation.Portrait,
+                // Opcjonalnie: marginesy
+                PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 10, 10)
+            };
         }
     }
 }

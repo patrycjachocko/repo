@@ -1,0 +1,74 @@
+﻿@model praca_dyplomowa_zesp.Models.Modules.Guides.GuideDetailsViewModel
+
+@{
+    Layout = null; // PDF nie potrzebuje Layoutu (nawigacji, stopki strony)
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>@Model.Guide.Title</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #000;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 20px;
+        }
+
+        .meta {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .content {
+            font-size: 14px;
+            line-height: 1.6;
+            text-align: justify;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>@Model.Guide.Title</h1>
+            <p class="lead">@Model.Guide.Description</p>
+        </div>
+
+        <div class="meta d-flex justify-content-between">
+            <span><strong>Autor:</strong> @Model.Guide.User?.UserName</span>
+            <span><strong>Data:</strong> @Model.Guide.CreatedAt.ToString("dd.MM.yyyy")</span>
+            <span><strong>Ocena:</strong> @Model.AverageRating.ToString("0.0")/5.0</span>
+        </div>
+
+        @if (Model.Guide.CoverImage != null)
+        {
+            <div class="text-center mb-4">
+                <img src="data:@Model.Guide.CoverImageContentType;base64,@Convert.ToBase64String(Model.Guide.CoverImage)" style="max-height: 400px; border-radius: 5px;" />
+            </div>
+        }
+
+        <div class="content mt-4">
+            @* Html.Raw jest konieczne, by wyrenderować formatowanie z edytora tekstu *@
+            @Html.Raw(Model.Guide.Content)
+        </div>
+
+        <div class="mt-5 pt-3 border-top text-center text-muted small">
+            <p>Wygenerowano z aplikacji Praca Dyplomowa | @DateTime.Now.ToString("dd.MM.yyyy HH:mm")</p>
+        </div>
+    </div>
+</body>
+</html>

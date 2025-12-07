@@ -10,6 +10,11 @@
         <i class="fas fa-arrow-left"></i> Wróć do listy
     </a>
 
+    @* --- PRZYCISK PDF --- *@
+    <a asp-action="DownloadPdf" asp-route-id="@Model.Guide.Id" class="btn btn-outline-danger" target="_blank">
+        <i class="fas fa-file-pdf"></i> Pobierz jako PDF
+    </a>
+
     @* --- NAGŁÓWEK PORADNIKA --- *@
     <div class="card bg-dark text-white border-secondary shadow-lg mb-4">
         <div class="card-header border-secondary p-4 text-center" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('@(Model.Guide.CoverImage != null ? $"data:{Model.Guide.CoverImageContentType};base64,{Convert.ToBase64String(Model.Guide.CoverImage)}" : "")') center/cover no-repeat;">

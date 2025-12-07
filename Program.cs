@@ -5,6 +5,7 @@ using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.Users;
 using praca_dyplomowa_zesp;
 using praca_dyplomowa_zesp.Models.API;
+using Rotativa.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -136,6 +137,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+RotativaConfiguration.Setup(app.Environment.WebRootPath, "Rotativa");
 
 app.MapControllerRoute(
     name: "default",
