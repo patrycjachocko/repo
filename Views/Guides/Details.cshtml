@@ -62,6 +62,40 @@
         }
     </div>
 
+    @* --- PANEL DECYZYJNY (Tylko dla Admina/Moderatora przy niezatwierdzonym poście) --- *@
+    @if (!Model.Guide.IsApproved && (User.IsInRole("Admin") || User.IsInRole("Moderator")))
+    {
+        <div class="card bg-dark border-warning mb-5 shadow">
+            <div class="card-header border-warning bg-transparent text-warning">
+                <h4 class="mb-0"><i class="fas fa-user-shield"></i> Decyzja Moderatora</h4>
+            </div>
+            <div class="card-body text-center">
+                <p class="lead mb-4">Ten poradnik oczekuje na akceptację. Zapoznałeś się z treścią - jaka jest Twoja decyzja?</p>
+
+                <div class="d-flex justify-content-center gap-3">
+                    @* Formularz Akceptacji *@
+                    <form asp-controller="Admin" asp-action="ApproveGuide" method="post">
+                        <input type="hidden" name="id" value="@Model.Guide.Id" />
+                        <button type="submit" class="btn btn-success btn-lg px-4">
+                            <i class="fas fa-check me-2"></i> Zatwierdź i Opublikuj
+                        </button>
+                    </form>
+
+                    @* Formularz Odrzucenia *@
+                    <form asp-controller="Admin" asp-action="RejectGuide" method="post" onsubmit="return confirm('Czy na pewno chcesz trwale usunąć ten poradnik? Ta operacja jest nieodwracalna.');">
+                        <input type="hidden" name="id" value="@Model.Guide.Id" />
+                        <button type="submit" class="btn btn-danger btn-lg px-4">
+                            <i class="fas fa-trash me-2"></i> Odrzuć i Usuń
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer border-warning text-muted small text-center">
+                Zatwierdzenie sprawi, że poradnik stanie się widoczny dla wszystkich, a sekcje komentarzy i ocen zostaną odblokowane.
+            </div>
+        </div>
+    }
+
     @* --- SEKCJA OCENY (Tylko jeśli zatwierdzony) --- *@
     @if (Model.Guide.IsApproved)
     {

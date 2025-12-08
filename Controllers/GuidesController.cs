@@ -398,7 +398,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (guide == null) return NotFound();
 
             var currentUserId = GetCurrentUserId();
-            if (guide.UserId != currentUserId && !User.IsInRole("Admin"))
+            if (guide.UserId != currentUserId && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
             {
                 return Forbid();
             }
@@ -499,7 +499,10 @@ namespace praca_dyplomowa_zesp.Controllers
             if (guide == null) return NotFound();
 
             var currentUserId = GetCurrentUserId();
-            if (guide.UserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
+            if (guide.UserId != currentUserId && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
+            {
+                return Forbid();
+            }
 
             return View(guide);
         }
@@ -514,7 +517,10 @@ namespace praca_dyplomowa_zesp.Controllers
             if (guide != null)
             {
                 var currentUserId = GetCurrentUserId();
-                if (guide.UserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
+                if (guide.UserId != currentUserId && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
+                {
+                    return Forbid();
+                }
 
                 long gameId = guide.IgdbGameId;
                 _context.Guides.Remove(guide);
