@@ -1,4 +1,5 @@
-﻿using praca_dyplomowa_zesp.Models.Users;
+﻿using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
+using praca_dyplomowa_zesp.Models.Users;
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -18,4 +19,5 @@ public class GameInLibrary
     public int CurrentUserStoryProgressPercent { get; set; }
 
     public string? Notes { get; set; } // <-- DODANE NOWE POLE
+    public virtual ICollection<ToDoItem> ToDoItems { get; set; } = new List<ToDoItem>();
 }

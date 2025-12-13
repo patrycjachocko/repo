@@ -1,31 +1,56 @@
 ﻿@model IEnumerable<MainLibraryViewModel>
 
 @{
-    ViewData["Title"] = "Moja Biblioteka Gier";
+    ViewData["Title"] = "Moja Biblioteka";
+    var searchString = ViewData["SearchString"] as string;
+    // Sprawdzamy czy lista jest pusta, ale CZYLI czy to wynik wyszukiwania, czy pusta baza
+    bool isResultEmpty = !Model.Any();
+    bool isSearchActive = !string.IsNullOrEmpty(searchString);
 }
 
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>@ViewData["Title"]</h1>
 
-        <div class="d-flex gap-2">
-            @* --- NOWY PRZYCISK: WYCZYŚĆ BIBLIOTEKĘ --- *@
-            @* Pojawia się tylko, gdy są jakieś gry *@
-            @if (Model.Any())
+    @* --- NAGŁÓWEK + WYSZUKIWARKA + PRZYCISKI --- *@
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-3 flex-wrap gap-3">
+
+        @* 1. Tytuł (tylko jeden raz) *@
+        <h1 class="mb-0 text-nowrap">@ViewData["Title"]</h1>
+
+        @* 2. Pasek narzędzi (Wyszukiwarka + Przyciski) *@
+        <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end flex-wrap">
+
+            @* Formularz wyszukiwania *@
+            <form asp-action="Index" method="get" class="d-flex" role="search">
+                <div class="input-group">
+                    <input type="text" name="searchString" value="@searchString" class="form-control" placeholder="Szukaj w bibliotece..." aria-label="Szukaj">
+                    <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
+                    @if (isSearchActive)
+                    {
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="Wyczyść wyszukiwanie">X</a>
+                    }
+                </div>
+            </form>
+
+            <div class="vr mx-2 d-none d-md-block"></div>
+
+            @* Przycisk: Dodaj grę *@
+            <a asp-controller="Games" asp-action="Index" class="btn btn-primary text-nowrap">
+                <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Dodaj grę</span>
+            </a>
+
+            @* Przycisk: Wyczyść bibliotekę (widoczny tylko gdy nie wyszukujemy i są gry) *@
+            @if (!isSearchActive && !isResultEmpty)
             {
                 <form asp-action="ClearLibrary" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz usunąć WSZYSTKIE gry ze swojej biblioteki? Tej operacji nie można cofnąć!');">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash"></i> Wyczyść bibliotekę
+                    <button type="submit" class="btn btn-danger" title="Usuń wszystko">
+                        <i class="bi bi-trash"></i>
                     </button>
                 </form>
             }
-
-            @* --- PRZYCISK: DODAJ GRĘ --- *@
-            <a asp-controller="Games" asp-action="Index" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> Dodaj nową grę
-            </a>
         </div>
     </div>
+
+    <hr />
 
     @* --- SEKCJA KOMUNIKATÓW (Sukces/Błąd) --- *@
     @if (TempData["StatusMessage"] != null)
@@ -43,25 +68,22 @@
         </div>
     }
 
-    <hr />
-
+    @* --- LISTA GIER --- *@
     <div class="row">
-        @if (Model.Any())
+        @if (!isResultEmpty)
         {
+            // WARIANT 1: Są gry do wyświetlenia
             @foreach (var game in Model)
             {
                 <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
                     <a asp-action="Details" asp-route-id="@game.DbId" class="text-decoration-none text-dark card-link-wrapper">
-
                         <div class="card h-100 shadow-sm grow-on-hover" style="transition: transform 0.2s; border: none;">
-
                             <div style="position: relative; padding-top: 150%; overflow: hidden; background-color: #1b2838; border-radius: 5px;">
                                 <img src="@(game.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")"
                                      class="card-img-top"
                                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
                                      alt="@game.Name">
                             </div>
-
                             <div class="card-body p-2">
                                 <h6 class="card-title text-truncate font-weight-bold mt-2" title="@game.Name" style="margin-bottom: 0.2rem; font-size: 0.9rem;">
                                     @game.Name
@@ -72,13 +94,27 @@
                 </div>
             }
         }
+        else if (isSearchActive)
+        {
+            // WARIANT 2: Lista pusta, bo nic nie znaleziono w wyszukiwarce
+            <div class="col-12">
+                <div class="alert alert-warning text-center">
+                    <h4><i class="bi bi-search"></i> Nie znaleziono gier.</h4>
+                    <p>Nie masz w bibliotece gry pasującej do frazy: <strong>"@searchString"</strong></p>
+                    <a asp-action="Index" class="btn btn-outline-dark mt-2">Pokaż wszystkie gry</a>
+                </div>
+            </div>
+        }
         else
         {
+            // WARIANT 3: Lista pusta, bo biblioteka jest pusta (brak gier w ogóle)
             <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <h4>Twoja biblioteka jest pusta.</h4>
-                    <p>Zacznij budować swoją kolekcję już teraz!</p>
-                    <a asp-controller="Games" asp-action="Index" class="btn btn-outline-primary mt-2">Przeglądaj gry</a>
+                <div class="alert alert-info text-center py-5">
+                    <h4><i class="bi bi-controller"></i> Twoja biblioteka jest pusta.</h4>
+                    <p class="mb-4">Zacznij budować swoją kolekcję już teraz!</p>
+                    <a asp-controller="Games" asp-action="Index" class="btn btn-primary btn-lg">
+                        Przeglądaj katalog gier
+                    </a>
                 </div>
             </div>
         }

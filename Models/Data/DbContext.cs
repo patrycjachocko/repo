@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Reflection.Emit;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
@@ -9,7 +7,10 @@ using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
+using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
 using praca_dyplomowa_zesp.Models.Users;
+using System.Collections.Generic;
+using System.Reflection.Emit;
 
 namespace praca_dyplomowa.Data
 {
@@ -32,6 +33,7 @@ namespace praca_dyplomowa.Data
         // --- NOWE TABELE DODANE DO BAZY ---
         public DbSet<GameInLibrary> GamesInLibraries { get; set; } = null!;
         public DbSet<UserAchievement> UserAchievements { get; set; } = null!;
+        public DbSet<ToDoItem> ToDoItems { get; set; } = null!;
 
 
 

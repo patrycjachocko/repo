@@ -28,5 +28,6 @@ namespace praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary
 
         // NOWE POLE: Lista ID osiągnięć, które są zdobyte na Steam (do sterowania widokiem)
         public List<string> SteamUnlockedAchievementIds { get; set; } = new List<string>();
+        public List<ToDoItem> ToDoItems { get; set; } = new List<ToDoItem>();
     }
 }

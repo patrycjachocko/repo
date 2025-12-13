@@ -3,10 +3,24 @@
 
 @{
     ViewData["Title"] = Model.Name;
+    bool hasAchievements = Model.Achievements != null && Model.Achievements.Any();
 }
 
 <style>
-    /* Styl dla ikony osiągnięć */
+    /* --- STYLIZACJA SUWAKA MANUALNEGO (Niewidzialny Overlay) --- */
+    .range-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0; /* Całkowicie niewidoczny */
+        cursor: pointer;
+        z-index: 10; /* Musi być nad paskiem wizualnym */
+        margin: 0;
+    }
+
+    /* --- INNE STYLE --- */
     .achievement-icon {
         width: 64px;
         height: 64px;
@@ -22,166 +36,275 @@
             filter: grayscale(0%);
         }
 
-    /* Kursor rączki dla badge w labelu */
     .form-check-label .badge {
         cursor: pointer;
     }
 
-    /* Styl dla pola notatek */
     #notes-area {
         resize: vertical;
         border: 1px solid #ced4da;
         background-color: #f8f9fa;
-        transition: background-color 0.3s, border-color 0.3s;
+        transition: background-color 0.3s;
     }
 
         #notes-area:focus {
             background-color: #fff;
             border-color: #80bdff;
             outline: 0;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
         }
 
-    /* Status zapisu */
-    #save-status {
+    #save-status, #progress-save-status {
         font-size: 0.85rem;
         transition: opacity 0.5s;
         opacity: 0;
+    }
+
+    .todo-completed {
+        text-decoration: line-through;
+        color: #6c757d;
     }
 </style>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
+    const libraryGameId = @Model.DbId;
+
+    // --- FUNKCJE TO-DO LIST ---
+    function addToDoItem() {
+        const input = document.getElementById('newToDoInput');
+        const content = input.value;
+        if (!content) return;
+        $.post('/Library/AddToDoItem', { gameId: libraryGameId, content: content }, function (data) {
+            if (data.success) {
+                const list = document.getElementById('toDoList');
+                const newItemHtml = `
+                    <li class="list-group-item d-flex justify-content-between align-items-center" id="item-${data.id}">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" onchange="toggleToDo(${data.id}, this)">
+                            <label class="form-check-label">${escapeHtml(data.content)}</label>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteToDo(${data.id})">X</button>
+                    </li>`;
+                list.insertAdjacentHTML('beforeend', newItemHtml);
+                input.value = '';
+                $('#todo-empty-info').hide();
+            }
+        });
+    }
+
+    function toggleToDo(id, checkbox) {
+        $.post('/Library/ToggleToDoItem', { itemId: id }, function (data) {
+            if (data.success) {
+                const label = checkbox.nextElementSibling;
+                if (data.isCompleted) label.classList.add('todo-completed');
+                else label.classList.remove('todo-completed');
+            }
+        });
+    }
+
+    function deleteToDo(id) {
+        $.post('/Library/DeleteToDoItem', { itemId: id }, function (data) {
+            if (data.success) {
+                const item = document.getElementById(`item-${id}`);
+                if(item) item.remove();
+            }
+        });
+    }
+
+    function deleteCompletedToDo() {
+        if(!confirm("Usunąć ukończone zadania?")) return;
+        $.post('/Library/DeleteCompletedToDoItems', { gameId: libraryGameId }, function (data) {
+            if (data.success) location.reload();
+        });
+    }
+
+    function resetToDoList() {
+        if(!confirm("Usunąć WSZYSTKIE zadania?")) return;
+        $.post('/Library/ResetToDoList', { gameId: libraryGameId }, function (data) {
+            if (data.success) {
+                document.getElementById('toDoList').innerHTML = '';
+                $('#todo-empty-info').show();
+            }
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return text;
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // --- DOCUMENT READY ---
     $(document).ready(function () {
 
-        // --- Funkcja do przeliczania paska postępu w czasie rzeczywistym ---
-        function recalculateProgress() {
-            var total = $('.list-group-item').length; // Wszystkie osiągnięcia na liście
-            if (total === 0) return;
+        // --- OBSŁUGA MANUALNEGO SUWAKA ---
+        const slider = document.getElementById('manual-progress-range');
+        if (slider) {
+            // Zdarzenie input: Aktualizuje wizualny pasek Bootstrapa i tekst "na żywo"
+            $(slider).on('input', function() {
+                var val = $(this).val();
+                // Aktualizujemy szerokość PRAWDZIWEGO paska pod spodem
+                $('#manual-visual-bar').css('width', val + '%');
+                // Aktualizujemy tekst nad paskiem
+                $('#manual-progress-label').text(val + '%');
+            });
 
-            // Zliczamy, ile obrazków ma klasę 'unlocked'
-            var unlocked = $('.achievement-icon.unlocked').length;
+            // Zdarzenie change: Zapis do bazy (po puszczeniu myszki)
+            $(slider).on('change', function() {
+                var val = $(this).val();
+                var statusSpan = $('#progress-save-status');
+                statusSpan.text("Zapisywanie...").css('color', 'gray').css('opacity', 1);
 
-            var percent = Math.round((unlocked / total) * 100);
-
-            var progressBar = $('#game-progress-bar');
-            progressBar.css('width', percent + '%');
-            progressBar.text(percent + '%');
-            progressBar.attr('aria-valuenow', percent);
+                $.ajax({
+                    url: '@Url.Action("UpdateProgress", "Library")',
+                    type: 'POST',
+                    data: { id: libraryGameId, percent: val },
+                    headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+                    success: function (response) {
+                        if (response.success) {
+                            statusSpan.text("Zapisano").css('color', 'green');
+                            setTimeout(function () { statusSpan.css('opacity', 0); }, 2000);
+                        } else statusSpan.text("Błąd").css('color', 'red');
+                    },
+                    error: function () { statusSpan.text("Błąd sieci").css('color', 'red'); }
+                });
+            });
         }
 
-        // --- Obsługa przełączania osiągnięć ---
+        // --- OBSŁUGA AUTOMATYCZNEGO PASKA (OSIĄGNIĘCIA) ---
+        function recalculateProgress() {
+            var total = $('.achievement-list-item').length;
+            if (total === 0) return;
+            var unlocked = $('.achievement-icon.unlocked').length;
+            var percent = Math.round((unlocked / total) * 100);
+
+            // Aktualizacja wizualnego paska
+            var progressBar = $('#game-progress-bar');
+            if(progressBar.length) {
+                progressBar.css('width', percent + '%');
+                progressBar.attr('aria-valuenow', percent);
+                // USUNIĘTO: progressBar.text(percent + '%'); -> Tekst w środku usunięty na prośbę
+            }
+            // Aktualizacja tekstu NAD paskiem
+            $('#auto-progress-label').text(percent + '%');
+        }
+
         $('.achievement-checkbox').change(function () {
-            var gameId = @Model.IgdbGameId;
+            var igdbGameId = @Model.IgdbGameId;
             var achievementId = $(this).data('external-id');
             var isChecked = $(this).is(':checked');
-
-            // Znajdź elementy powiązane z tym osiągnięciem
             var imgElement = $('#img-' + achievementId.replace(/[^a-zA-Z0-9]/g, '_'));
             var checkbox = $(this);
 
             $.ajax({
                 url: '@Url.Action("ToggleAchievement", "Library")',
                 type: 'POST',
-                data: {
-                    igdbGameId: gameId,
-                    achievementExternalId: achievementId
-                },
-                headers: {
-                    RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                },
+                data: { igdbGameId: igdbGameId, achievementExternalId: achievementId },
+                headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                 success: function (response) {
                     if (response.success) {
-                        // Znajdź label i badge wewnątrz niego
                         var label = $('label[for="' + checkbox.attr('id') + '"]');
                         var badge = label.find('.badge');
-
                         if (response.isUnlocked) {
-                            // Wizualizacja: Odblokowane
                             imgElement.removeClass('locked').addClass('unlocked');
-                            badge.removeClass('bg-secondary').addClass('bg-success');
-                            badge.text("Odblokowane");
+                            badge.removeClass('bg-secondary').addClass('bg-success').text("Odblokowane");
                         } else {
-                            // Wizualizacja: Zablokowane
                             imgElement.removeClass('unlocked').addClass('locked');
-                            badge.removeClass('bg-success').addClass('bg-secondary');
-                            badge.text("Zablokowane");
+                            badge.removeClass('bg-success').addClass('bg-secondary').text("Zablokowane");
                         }
-
-                        // Przelicz pasek postępu natychmiast
                         recalculateProgress();
-
-                    } else {
-                        alert(response.error || 'Wystąpił błąd');
-                        checkbox.prop('checked', !isChecked); // Cofnij zmianę
-                    }
+                    } else checkbox.prop('checked', !isChecked);
                 },
-                error: function () {
-                    alert('Błąd komunikacji z serwerem.');
-                    checkbox.prop('checked', !isChecked); // Cofnij zmianę
-                }
+                error: function () { checkbox.prop('checked', !isChecked); }
             });
         });
 
-        // --- Obsługa Notatek (Auto-zapis) ---
-        // Zapisuje przy wyjściu z pola (blur)
+        // --- Auto-zapis notatek ---
         $('#notes-area').on('blur', function () {
             var notesContent = $(this).val();
-            var gameId = @Model.DbId; // ID z tabeli GamesInLibraries
             var statusSpan = $('#save-status');
-
             statusSpan.text("Zapisywanie...").css('color', 'gray').css('opacity', 1);
 
             $.ajax({
                 url: '@Url.Action("UpdateNotes", "Library")',
                 type: 'POST',
-                data: {
-                    id: gameId,
-                    notes: notesContent
-                },
-                headers: {
-                    RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                },
+                data: { id: libraryGameId, notes: notesContent },
+                headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                 success: function (response) {
                     if (response.success) {
                         statusSpan.text("Zapisano pomyślnie!").css('color', 'green');
-                        // Ukryj komunikat po 2 sekundach
                         setTimeout(function () { statusSpan.css('opacity', 0); }, 2000);
-                    } else {
-                        statusSpan.text("Błąd zapisu.").css('color', 'red');
-                    }
+                    } else statusSpan.text("Błąd zapisu.").css('color', 'red');
                 },
-                error: function () {
-                    statusSpan.text("Błąd połączenia.").css('color', 'red');
-                }
+                error: function () { statusSpan.text("Błąd połączenia.").css('color', 'red'); }
             });
+        });
+
+        $('#newToDoInput').keypress(function (e) {
+            if (e.which == 13) { addToDoItem(); return false; }
         });
     });
 </script>
 
 <div class="row">
     <div class="col-md-4">
-        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded mb-3" alt="Okładka @Model.Name">
+        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded mb-3 shadow-sm" alt="Okładka @Model.Name">
 
-        <p class="mb-1">
-            <strong>Postęp (%):</strong>
-        </p>
-        <div class="progress mb-3" style="height: 20px;">
-            <div id="game-progress-bar" class="progress-bar bg-info" role="progressbar"
-                 style="width: @Model.CurrentUserStoryProgressPercent%;"
-                 aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">
-                @Model.CurrentUserStoryProgressPercent%
+        @if (hasAchievements)
+        {
+            @* --- WARIANT 1: Pasek automatyczny (gdy są osiągnięcia) --- *@
+            <p class="mb-1 d-flex justify-content-between align-items-center">
+                <strong>Postęp:</strong>
+                <span id="auto-progress-label" class="fw-bold text-success h5 mb-0">@Model.CurrentUserStoryProgressPercent%</span>
+            </p>
+
+            <div class="progress mb-3" style="height: 20px;">
+                <div id="game-progress-bar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar"
+                     style="width: @Model.CurrentUserStoryProgressPercent%;"
+                     aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">
+                    @* Tekst w środku usunięty *@
+                </div>
             </div>
-        </div>
+        }
+        else
+        {
+            @* --- WARIANT 2: Suwak ręczny (wyglądający IDENCIKO jak pasek) --- *@
+            <p class="mb-1 d-flex justify-content-between align-items-center">
+                <strong>Postęp:</strong>
+                <span id="manual-progress-label" class="fw-bold text-success h5 mb-0">@Model.CurrentUserStoryProgressPercent%</span>
+            </p>
+
+            <div class="position-relative mb-3" style="height: 20px;">
+
+                @* 1. WARSTWA WIZUALNA: Prawdziwy Pasek Bootstrapa (pod spodem) *@
+                <div class="progress" style="height: 100%;">
+                    <div id="manual-visual-bar"
+                         class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width: @Model.CurrentUserStoryProgressPercent%">
+                    </div>
+                </div>
+
+                @* 2. WARSTWA FUNKCJONALNA: Niewidzialny Input (na wierzchu) *@
+                <input type="range" class="range-overlay"
+                       min="0" max="100" step="1"
+                       id="manual-progress-range"
+                       value="@Model.CurrentUserStoryProgressPercent"
+                       title="Przesuń, aby zmienić postęp">
+
+                @* Status zapisu *@
+                <div class="d-flex justify-content-end mt-1" style="height: 15px;">
+                    <span id="progress-save-status"></span>
+                </div>
+            </div>
+        }
 
         <h4>Notatki</h4>
         <div class="form-group">
-            <textarea id="notes-area" class="form-control" rows="10" placeholder="Wpisz swoje notatki tutaj...">@(Model.Notes)</textarea>
+            <textarea id="notes-area" class="form-control" rows="12" placeholder="Notatki...">@(Model.Notes)</textarea>
             <div class="mt-1" style="min-height: 20px;">
                 <span id="save-status"></span>
             </div>
         </div>
-
     </div>
 
     <div class="col-md-8">
@@ -190,55 +313,66 @@
 
         <div class="mb-3">
             <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info">
-                Przejdź do Poradników i Wskazówek
+                <i class="bi bi-book"></i> Poradniki
             </a>
-            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-danger">Usuń z biblioteki</a>
+            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-outline-danger" onclick="return confirm('Usunąć grę?');">
+                <i class="bi bi-trash"></i> Usuń
+            </a>
         </div>
 
-
-        <dl class="row">
+        <dl class="row text-muted">
             <dt class="col-sm-3">Deweloper</dt>
             <dd class="col-sm-9">@(Model.Developer ?? "Nieznany")</dd>
-
             <dt class="col-sm-3">Data wydania</dt>
             <dd class="col-sm-9">@(Model.ReleaseDate ?? "Nieznana")</dd>
-
             <dt class="col-sm-3">Data dodania</dt>
             <dd class="col-sm-9">@Model.DateAddedToLibrary.ToString("dd.MM.yyyy")</dd>
-
             <dt class="col-sm-3">Gatunki</dt>
-            <dd class="col-sm-9">
-                @if (Model.Genres != null && Model.Genres.Any())
-                {
-                    @string.Join(", ", Model.Genres)
-                }
-                else
-                {
-                    <span>Nieznane</span>
-                }
-            </dd>
+            <dd class="col-sm-9">@(Model.Genres != null && Model.Genres.Any() ? string.Join(", ", Model.Genres) : "Nieznane")</dd>
         </dl>
 
         <hr />
 
-        <h3>Osiągnięcia</h3>
+        <div class="card mb-4 border-secondary shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i> To-Do List</h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-warning text-white" onclick="deleteCompletedToDo()">Usuń ukończone</button>
+                    <button class="btn btn-sm btn-outline-danger ms-1 text-white" onclick="resetToDoList()">Reset</button>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+                <div class="input-group mb-3">
+                    <input type="text" id="newToDoInput" class="form-control" placeholder="Dodaj cel...">
+                    <button class="btn btn-success" type="button" onclick="addToDoItem()"><i class="bi bi-plus-lg"></i></button>
+                </div>
+                <ul id="toDoList" class="list-group list-group-flush rounded bg-white">
+                    @foreach (var item in Model.ToDoItems)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center" id="item-@item.Id">
+                            <div class="form-check flex-grow-1">
+                                <input class="form-check-input" type="checkbox" onchange="toggleToDo(@item.Id, this)" id="todo-check-@item.Id" @(item.IsCompleted ? "checked" : "")>
+                                <label class="form-check-label w-100 @(item.IsCompleted ? "todo-completed" : "")" for="todo-check-@item.Id" style="cursor: pointer;">@item.Content</label>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteToDo(@item.Id)">X</button>
+                        </li>
+                    }
+                </ul>
+                <div id="todo-empty-info" class="text-center text-muted mt-2" style="@(Model.ToDoItems.Any() ? "display:none;" : "") font-size: 0.9em;">
+                    Brak zadań.
+                </div>
+            </div>
+        </div>
 
+        <h3 class="mt-4"><i class="bi bi-trophy"></i> Osiągnięcia</h3>
         @if (Model.IsSteamGame && !Model.IsSteamConnected)
         {
-            <div class="alert alert-warning d-flex align-items-center" role="alert">
-                <i class="bi bi-steam me-2" style="font-size: 1.5rem;"></i>
-                <div>
-                    <strong>Chcesz automatycznie śledzić osiągnięcia?</strong><br />
-                    Ta gra obsługuje osiągnięcia Steam. Połącz swoje konto, aby zaimportować postępy.
-                    <br />
-                    <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-dark mt-2">
-                        Połącz konto Steam w Profilu
-                    </a>
-                </div>
+            <div class="alert alert-warning">
+                <i class="bi bi-steam"></i> Połącz konto Steam w profilu, aby pobrać postęp.
             </div>
         }
 
-        @if (Model.Achievements != null && Model.Achievements.Any())
+        @if (hasAchievements)
         {
             <form>
                 @Html.AntiForgeryToken()
@@ -247,42 +381,26 @@
                     {
                         var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
                         var checkboxId = "ach-" + safeId;
-
-                        // Sprawdzamy, czy to konkretne osiągnięcie pochodzi ze Steam (jest na liście zdobytych na Steamie)
                         bool isSteamUnlocked = Model.SteamUnlockedAchievementIds != null && Model.SteamUnlockedAchievementIds.Contains(ach.ExternalId);
 
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <li class="list-group-item d-flex justify-content-between align-items-center achievement-list-item">
                             <div class="d-flex align-items-center">
-                                <img src="@ach.IconUrl"
-                                     alt="Ikona"
-                                     id="img-@safeId"
-                                     class="achievement-icon rounded @(ach.IsUnlocked ? "unlocked" : "locked")">
+                                <img src="@ach.IconUrl" alt="Ikona" id="img-@safeId" class="achievement-icon rounded @(ach.IsUnlocked ? "unlocked" : "locked")">
                                 <div>
                                     <strong>@ach.Name</strong>
                                     <p class="mb-0 text-muted" style="font-size: 0.9rem;">@ach.Description</p>
                                 </div>
                             </div>
-
                             @if (isSteamUnlocked)
                             {
-                                @* Jeśli zdobyte na Steam -> Pokaż tylko info, brak możliwości zmiany *@
-                                <span class="badge bg-success">Zdobyte (Steam)</span>
+                                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Steam</span>
                             }
                             else
                             {
-                                @* Jeśli NIE zdobyte na Steam -> Pozwól użytkownikowi przełączać *@
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input achievement-checkbox"
-                                           type="checkbox"
-                                           role="switch"
-                                           id="@checkboxId"
-                                           data-external-id="@ach.ExternalId"
-                                    @(ach.IsUnlocked ? "checked" : "")>
+                                    <input class="form-check-input achievement-checkbox" type="checkbox" role="switch" id="@checkboxId" data-external-id="@ach.ExternalId" @(ach.IsUnlocked ? "checked" : "")>
                                     <label class="form-check-label" for="@checkboxId">
-                                        @* Badge, który wygląda jak ten ze Steam, ale jest klikalny (przez label) i zmienia się dynamicznie *@
-                                        <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">
-                                            @(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")
-                                        </span>
+                                        <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">@(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")</span>
                                     </label>
                                 </div>
                             }
@@ -293,7 +411,9 @@
         }
         else
         {
-            <p>Brak dostępnych osiągnięć do śledzenia dla tej gry.</p>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Brak wbudowanych osiągnięć. Ustaw postęp ręcznie suwakiem.
+            </div>
         }
     </div>
 </div>

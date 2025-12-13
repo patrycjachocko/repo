@@ -40,7 +40,7 @@ namespace praca_dyplomowa_zesp.Controllers
         }
 
         // GET: Library
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? searchString)
         {
             var currentUserId = GetCurrentUserId();
             var userGamesFromDb = await _context.GamesInLibraries
@@ -53,6 +53,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var allApiGames = new List<ApiGame>();
             var allIgdbIds = userGamesFromDb.Select(g => g.IgdbGameId).Distinct().ToList();
 
+            // ... (Logika pętli pobierającej dane z IGDB pozostaje bez zmian) ...
             int batchSize = 50;
             for (int i = 0; i < allIgdbIds.Count; i += batchSize)
             {
@@ -71,6 +72,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
                 catch (Exception ex) { Console.WriteLine($"Błąd index: {ex.Message}"); }
             }
+            // ... (Koniec pętli) ...
 
             var viewModels = userGamesFromDb.Select(dbGame =>
             {
@@ -84,6 +86,15 @@ namespace praca_dyplomowa_zesp.Controllers
                 };
             }).ToList();
 
+            // --- NOWA CZĘŚĆ: FILTROWANIE ---
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                viewModels = viewModels
+                    .Where(g => g.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            ViewData["SearchString"] = searchString; // Aby zachować wpisany tekst w inpucie
             return View(viewModels);
         }
 
@@ -95,7 +106,9 @@ namespace praca_dyplomowa_zesp.Controllers
             var currentUserId = GetCurrentUserId();
             var user = await _userManager.GetUserAsync(User);
 
-            var gameFromDb = await _context.GamesInLibraries.FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId);
+            var gameFromDb = await _context.GamesInLibraries
+                .Include(g => g.ToDoItems)
+                .FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId);
             if (gameFromDb == null) return NotFound();
 
             // 1. Pobierz dane gry z IGDB
@@ -180,20 +193,27 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             // --- AUTOMATYCZNE OBLICZANIE POSTĘPU % ---
-            int progressPercent = 0;
+
+            // <--- POPRAWKA 1: Inicjalizujemy wartością z bazy! 
+            // Dzięki temu, jeśli nie ma osiągnięć, manualny suwak nie zostanie nadpisany zerem.
+            int progressPercent = gameFromDb.CurrentUserStoryProgressPercent;
+
             if (finalAchievements.Any())
             {
                 int unlockedCount = finalAchievements.Count(a => a.IsUnlocked);
-                // Obliczamy procent i zaokrąglamy
-                progressPercent = (int)Math.Round((double)unlockedCount / finalAchievements.Count * 100);
-            }
+                int calculatedPercent = (int)Math.Round((double)unlockedCount / finalAchievements.Count * 100);
 
-            // Aktualizujemy rekord w bazie, jeśli procent się zmienił
-            if (gameFromDb.CurrentUserStoryProgressPercent != progressPercent)
-            {
-                gameFromDb.CurrentUserStoryProgressPercent = progressPercent;
-                _context.Update(gameFromDb);
-                await _context.SaveChangesAsync();
+                // <--- POPRAWKA 2: Przypisujemy wyliczoną wartość do zmiennej lokalnej, 
+                // żeby widok dostał aktualny wynik, a nie stare dane.
+                progressPercent = calculatedPercent;
+
+                // Aktualizujemy rekord w bazie tylko w trybie automatycznym
+                if (gameFromDb.CurrentUserStoryProgressPercent != calculatedPercent)
+                {
+                    gameFromDb.CurrentUserStoryProgressPercent = calculatedPercent;
+                    _context.Update(gameFromDb);
+                    await _context.SaveChangesAsync();
+                }
             }
 
             var viewModel = new GameInLibraryViewModel
@@ -208,12 +228,13 @@ namespace praca_dyplomowa_zesp.Controllers
                 ReleaseDate = gameDetailsFromApi?.Release_dates?.FirstOrDefault()?.Human,
                 DateAddedToLibrary = gameFromDb.DateAddedToLibrary,
                 CurrentUserStoryMission = gameFromDb.CurrentUserStoryMission,
-                CurrentUserStoryProgressPercent = progressPercent, // Używamy obliczonej wartości
+                CurrentUserStoryProgressPercent = progressPercent, // Teraz zawsze poprawna wartość (z bazy lub z wyliczeń)
                 Notes = gameFromDb.Notes,
                 Achievements = finalAchievements,
                 IsSteamConnected = isSteamConnected,
                 IsSteamGame = isSteamGame,
-                SteamUnlockedAchievementIds = steamUnlockedIds
+                SteamUnlockedAchievementIds = steamUnlockedIds,
+                ToDoItems = gameFromDb.ToDoItems.ToList()
             };
 
             return View(viewModel);
@@ -347,6 +368,112 @@ namespace praca_dyplomowa_zesp.Controllers
             await _context.SaveChangesAsync();
             TempData["StatusMessage"] = "Wyczyszczono bibliotekę.";
             return RedirectToAction(nameof(Index));
+        }
+
+        // --- OBSŁUGA TO-DO LIST (AJAX) ---
+
+        [HttpPost]
+        public async Task<IActionResult> AddToDoItem(int gameId, string content)
+        {
+            if (string.IsNullOrWhiteSpace(content)) return Json(new { success = false });
+
+            var currentUserId = GetCurrentUserId();
+            var game = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == gameId && g.UserId == currentUserId);
+
+            if (game == null) return Json(new { success = false, message = "Gra nie znaleziona." });
+
+            var newItem = new ToDoItem { Content = content, GameInLibraryId = gameId, IsCompleted = false };
+            _context.ToDoItems.Add(newItem);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, id = newItem.Id, content = newItem.Content });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleToDoItem(int itemId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var item = await _context.ToDoItems
+                .Include(t => t.GameInLibrary)
+                .FirstOrDefaultAsync(t => t.Id == itemId && t.GameInLibrary.UserId == currentUserId);
+
+            if (item == null) return Json(new { success = false });
+
+            item.IsCompleted = !item.IsCompleted;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, isCompleted = item.IsCompleted });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteToDoItem(int itemId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var item = await _context.ToDoItems
+                .Include(t => t.GameInLibrary)
+                .FirstOrDefaultAsync(t => t.Id == itemId && t.GameInLibrary.UserId == currentUserId);
+
+            if (item == null) return Json(new { success = false });
+
+            _context.ToDoItems.Remove(item);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteCompletedToDoItems(int gameId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var itemsToDelete = await _context.ToDoItems
+                .Where(t => t.GameInLibraryId == gameId && t.GameInLibrary.UserId == currentUserId && t.IsCompleted)
+                .ToListAsync();
+
+            if (itemsToDelete.Any())
+            {
+                _context.ToDoItems.RemoveRange(itemsToDelete);
+                await _context.SaveChangesAsync();
+            }
+
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetToDoList(int gameId)
+        {
+            var currentUserId = GetCurrentUserId();
+            // Usuwamy wszystkie elementy z listy dla tej gry
+            var items = await _context.ToDoItems
+                .Where(t => t.GameInLibraryId == gameId && t.GameInLibrary.UserId == currentUserId)
+                .ToListAsync();
+
+            if (items.Any())
+            {
+                _context.ToDoItems.RemoveRange(items);
+                await _context.SaveChangesAsync();
+            }
+
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateProgress(int id, int percent)
+        {
+            var currentUserId = GetCurrentUserId();
+            var gameInLibrary = await _context.GamesInLibraries
+                .FirstOrDefaultAsync(g => g.Id == id && g.UserId == currentUserId);
+
+            if (gameInLibrary == null) return Json(new { success = false, error = "Nie znaleziono gry." });
+
+            // Zabezpieczenie zakresu 0-100
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            gameInLibrary.CurrentUserStoryProgressPercent = percent;
+            _context.Update(gameInLibrary);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
         }
     }
 }
