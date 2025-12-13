@@ -17,6 +17,17 @@
             </div>
         </div>
     }
+    @* --- ALERT O STATUSIE (Jeśli w koszu) --- *@
+    @if (Model.Guide.IsDeleted)
+    {
+        <div class="alert alert-danger border-danger d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-trash-alt fa-2x me-3"></i>
+            <div>
+                <h5 class="alert-heading fw-bold mb-1">Ten poradnik znajduje się w KOSZU</h5>
+                <p class="mb-0 small">Został usunięty. Tylko Ty i administracja go widzicie.</p>
+            </div>
+        </div>
+    }
 
     <div class="d-flex justify-content-between mb-3">
         <a asp-action="Index" asp-route-gameId="@Model.Guide.IgdbGameId" class="btn btn-outline-secondary">
@@ -57,7 +68,10 @@
         {
             <div class="card-footer border-secondary p-3 d-flex justify-content-end gap-2">
                 <a asp-action="Edit" asp-route-id="@Model.Guide.Id" class="btn btn-warning"><i class="fas fa-edit"></i> Edytuj</a>
-                <a asp-action="Delete" asp-route-id="@Model.Guide.Id" class="btn btn-danger"><i class="fas fa-trash"></i> Usuń</a>
+                @if (!Model.Guide.IsDeleted)
+                {
+                    <a asp-action="Delete" asp-route-id="@Model.Guide.Id" class="btn btn-danger"><i class="fas fa-trash"></i> Usuń</a>
+                }
             </div>
         }
     </div>

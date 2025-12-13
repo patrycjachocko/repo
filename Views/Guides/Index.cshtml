@@ -32,19 +32,16 @@
         </div>
     </div>
 
-    @* --- SEKCJA FILTROWANIA I SORTOWANIA --- *@
     <div class="card bg-dark border-secondary mb-4">
         <div class="card-body">
             <form asp-action="Index" method="get" class="row g-3 align-items-center">
                 <input type="hidden" name="gameId" value="@Model.IgdbGameId" />
-
                 <div class="col-md-6">
                     <div class="input-group">
                         <span class="input-group-text bg-secondary border-secondary text-white"><i class="fas fa-search"></i></span>
                         <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control bg-dark text-white border-secondary" placeholder="Szukaj po tytule lub treści..." />
                     </div>
                 </div>
-
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-secondary border-secondary text-white"><i class="fas fa-sort"></i></span>
@@ -54,7 +51,6 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary w-100">Filtruj</button>
                 </div>
@@ -67,19 +63,31 @@
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             @foreach (var guide in Model.Guides)
             {
-                @* Obliczanie średniej *@
                 var avgRating = guide.Rates != null && guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0;
 
-                // Sprawdzenie czy oczekujący
-                bool isPending = !guide.IsApproved;
+                // --- NOWA LOGIKA STATUSÓW ---
+                bool isDeleted = guide.IsDeleted;       // Czy w koszu?
+                bool isPending = !guide.IsApproved;     // Czy oczekuje?
+
+                // Klasa CSS zależna od statusu (Deleted ma priorytet nad Pending)
+                string cardClass = isDeleted ? "guide-card-deleted" : (isPending ? "guide-card-pending" : "");
+
+                // Sprawdzenie uprawnień do edycji/usuwania (Autor, Admin, Mod)
+                bool canManage = User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName;
 
                 <div class="col">
-                    <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect @(isPending ? "guide-card-pending" : "")">
+                    <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect @cardClass">
 
-                        @* BADGE DLA OCZEKUJĄCYCH *@
-                        @if (isPending)
+                        @* --- BADGE DLA STATUSÓW --- *@
+                        @if (isDeleted)
                         {
-                            <div class="pending-badge">
+                            <div class="status-badge badge-deleted">
+                                <i class="fas fa-trash-alt"></i> Usunięty (Kosz)
+                            </div>
+                        }
+                        else if (isPending)
+                        {
+                            <div class="status-badge badge-pending">
                                 <i class="fas fa-lock"></i> Oczekujący
                             </div>
                         }
@@ -88,14 +96,14 @@
                             @if (guide.CoverImage != null)
                             {
                                 <img src="data:@guide.CoverImageContentType;base64,@Convert.ToBase64String(guide.CoverImage)"
-                                     class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;" alt="@guide.Title">
+                                     class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;"
+                                     alt="@guide.Title">
                             }
                             else
                             {
                                 <i class="fas fa-book-open fa-4x text-secondary"></i>
                             }
 
-                            @* Badge z oceną *@
                             <div class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark fs-6 shadow">
                                 <i class="fas fa-star"></i> @avgRating.ToString("0.0")
                             </div>
@@ -104,20 +112,29 @@
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title text-primary fw-bold">@guide.Title</h5>
                             <p class="card-text text-muted small mb-3">
-                                Autor: <span class="text-white">@guide.User?.UserName</span> | @guide.CreatedAt.ToString("dd.MM.yyyy")
+                                Autor: <span class="text-white">@guide.User?.UserName</span> |
+                                @guide.CreatedAt.ToString("dd.MM.yyyy")
                             </p>
                             <p class="card-text flex-grow-1 text-truncate" style="max-height: 3em;">@guide.Description</p>
 
                             <div class="mt-3 d-flex justify-content-between">
                                 <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-outline-light flex-grow-1 stretched-link">Czytaj dalej</a>
 
-                                @* --- ZMIANA TUTAJ --- *@
-                                @* Przycisk widoczny dla: Admina, Moderatora ORAZ Autora postu (zawsze) *@
-                                @if (User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName)
+                                @* --- PRZYCISKI EDYCJI I USUWANIA --- *@
+                                @if (canManage)
                                 {
-                                    <a asp-action="Edit" asp-route-id="@guide.Id" class="btn btn-outline-warning ms-2" style="z-index: 5; position: relative;">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
+                                    <div class="d-flex" style="z-index: 5; position: relative;">
+                                        <a asp-action="Edit" asp-route-id="@guide.Id" class="btn btn-outline-warning ms-2" title="Edytuj">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+
+                                        @if (!isDeleted)
+                                        {
+                                            <a asp-action="Delete" asp-route-id="@guide.Id" class="btn btn-outline-danger ms-1" title="Usuń">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        }
+                                    </div>
                                 }
                             </div>
                         </div>
@@ -147,17 +164,24 @@
             border-color: var(--bs-primary) !important;
         }
 
-    /* --- Style dla niezatwierdzonych --- */
+    /* --- Styl dla oczekujących (ŻÓŁTY) --- */
     .guide-card-pending {
-        opacity: 0.75; /* Lekka przeźroczystość */
-        border: 2px dashed #ffc107 !important; /* Żółta przerywana ramka */
+        opacity: 0.85;
+        border: 2px dashed #ffc107 !important;
     }
 
-    .pending-badge {
+    /* --- Styl dla usuniętych (CZERWONY) --- */
+    .guide-card-deleted {
+        opacity: 0.7; /* Bardziej wyblakły */
+        border: 2px dashed #dc3545 !important;
+        background-color: #2a1515 !important; /* Lekko czerwonawe tło */
+    }
+
+    /* --- Badges --- */
+    .status-badge {
         position: absolute;
         top: 10px;
         left: 10px;
-        background-color: #ffc107;
         color: #000;
         font-weight: bold;
         padding: 5px 12px;
@@ -165,6 +189,15 @@
         z-index: 10;
         box-shadow: 0 2px 5px rgba(0,0,0,0.5);
         font-size: 0.85rem;
+    }
+
+    .badge-pending {
+        background-color: #ffc107; /* Żółty */
+    }
+
+    .badge-deleted {
+        background-color: #dc3545; /* Czerwony */
+        color: white;
     }
 </style>
 

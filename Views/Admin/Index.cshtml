@@ -56,6 +56,12 @@
                 font-weight: bold;
             }
 
+                /* Styl dla aktywnej zakładki kosza (czerwony zamiast fioletowego) */
+                .nav-tabs .nav-link.active.text-danger {
+                    color: #dc3545 !important;
+                    border-bottom: 3px solid #dc3545;
+                }
+
     /* --- TABLE --- */
     .table-dark {
         background-color: #15151a;
@@ -144,6 +150,11 @@
         font-weight: bold;
         border: none;
     }
+
+    /* Styl dla wierszy w koszu starszych niż 30 dni */
+    .trash-warning td {
+        color: #ff6b6b;
+    }
 </style>
 
 <div class="container">
@@ -159,10 +170,10 @@
             <div class="alert alert-danger">@TempData["Error"]</div>
         }
 
-@* --- ZMIENNA POMOCNICZA: CZY JEST ADMINEM --- *@
-@{
-    bool isAdmin = User.IsInRole("Admin");
-}
+        @* --- ZMIENNA POMOCNICZA: CZY JEST ADMINEM --- *@
+        @{
+            bool isAdmin = User.IsInRole("Admin");
+        }
 
         <ul class="nav nav-tabs" id="adminTabs" role="tablist">
 
@@ -170,7 +181,6 @@
             @if (isAdmin)
             {
                 <li class="nav-item" role="presentation">
-                    @* Dodajemy klasę 'active' tylko jeśli jest adminem *@
                     <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
                         Zarządzanie Użytkownikami
                     </button>
@@ -185,6 +195,17 @@
                     @if (Model.PendingGuides.Count > 0)
                     {
                         <span class="badge bg-danger rounded-pill ms-2">@Model.PendingGuides.Count</span>
+                    }
+                </button>
+            </li>
+
+            @* --- NOWA ZAKŁADKA: KOSZ (Admin i Mod) --- *@
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-danger" id="trash-tab" data-bs-toggle="tab" data-bs-target="#trash" type="button" role="tab">
+                    <i class="fas fa-trash-alt me-2"></i> Kosz
+                    @if (Model.DeletedGuides != null && Model.DeletedGuides.Count > 0)
+                    {
+                        <span class="badge bg-danger rounded-pill ms-2">@Model.DeletedGuides.Count</span>
                     }
                 </button>
             </li>
@@ -353,6 +374,104 @@
                     </div>
                 }
             </div>
+
+            @* --- ZAKŁADKA TREŚCI: KOSZ --- *@
+            <div class="tab-pane fade" id="trash" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-danger"><i class="fas fa-trash-alt me-2"></i>Usunięte poradniki (Soft Delete)</h4>
+                    @if (Model.DeletedGuides != null && Model.DeletedGuides.Any())
+                    {
+                        <form asp-action="EmptyTrash" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz OPRÓŻNIĆ cały kosz? Tej operacji NIE można cofnąć!');">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-fire me-1"></i> Opróżnij Kosz
+                            </button>
+                        </form>
+                    }
+                </div>
+
+                @if (Model.DeletedGuides != null && Model.DeletedGuides.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tytuł</th>
+                                    <th>Autor</th>
+                                    <th>Usunięto</th>
+                                    <th>Status (30 dni)</th>
+                                    <th class="text-end">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.DeletedGuides)
+                                {
+                                    // Obliczamy ile dni jest w koszu
+                                    var daysInTrash = (DateTime.Now - (item.DeletedAt ?? DateTime.Now)).TotalDays;
+                                    bool isOld = daysInTrash > 30;
+
+                                    <tr class="@(isOld ? "trash-warning" : "")">
+                                        <td class="fw-bold">
+                                            @* Link do podglądu (Admin może widzieć usunięte) *@
+                                            <a asp-controller="Guides" asp-action="Details" asp-route-id="@item.Id" target="_blank" class="@(isOld ? "text-danger" : "text-muted") text-decoration-none">
+                                                @item.Title
+                                            </a>
+                                        </td>
+                                        <td>@item.User?.UserName</td>
+                                        <td>
+                                            @item.DeletedAt?.ToString("dd.MM.yyyy HH:mm")
+                                        </td>
+                                        <td>
+                                            @if (isOld)
+                                            {
+                                                <span class="text-danger fw-bold">
+                                                    <i class="fas fa-exclamation-triangle"></i> > 30 dni
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">
+                                                    @Math.Floor(daysInTrash) dni
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="action-btn-group">
+                                                <form asp-action="RestoreGuide" asp-route-id="@item.Id" method="post" style="display:inline;">
+                                                    <button type="submit" class="btn btn-success btn-sm" title="Przywróć do żywych">
+                                                        <i class="fas fa-undo"></i>
+                                                    </button>
+                                                </form>
+
+                                                <a asp-controller="Guides" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm" title="Edytuj treść">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+
+                                                <form asp-action="DeletePermanently" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('Czy na pewno usunąć PERMANENTNIE?');">
+                                                    <button type="submit" class="btn btn-danger btn-sm" title="Usuń bezpowrotnie">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-2 text-muted small">
+                        * Elementy oznaczone kolorem czerwonym znajdują się w koszu dłużej niż 30 dni.
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center p-5 text-muted">
+                        <i class="fas fa-trash-restore fa-3x mb-3" style="opacity: 0.3"></i>
+                        <h4>Kosz jest pusty</h4>
+                        <p>Tutaj trafią usunięte poradniki.</p>
+                    </div>
+                }
+            </div>
+
         </div>
     </div>
 </div>

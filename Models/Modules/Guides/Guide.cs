@@ -39,5 +39,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
         public bool IsApproved { get; set; } = false;
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
     }
 }

@@ -97,11 +97,14 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Include(g => g.User)
                 .Include(g => g.Rates)
                 .Where(g => g.IgdbGameId == gameId)
-                // --- NOWY WARUNEK FILTROWANIA ---
-                // 1. Jest zatwierdzony LUB
-                // 2. To mój post (nawet niezatwierdzony) LUB
-                // 3. Jestem władzą (widzę wszystko)
-                .Where(g => g.IsApproved == true || g.UserId == currentUserId || canSeeAllPending == true)
+                .Where(g =>
+            // 1. PUBLICZNE: Musi być zatwierdzony I NIE usunięty
+            (g.IsApproved == true && g.IsDeleted == false) ||
+            // 2. AUTOR: Widzi wszystko swoje (zatwierdzone, oczekujące, usunięte)
+            (g.UserId == currentUserId) ||
+            // 3. WŁADZA: Widzi wszystko (jak wyżej)
+            (canSeeAllPending == true)
+        )
                 .AsQueryable();
 
             // 1. Wyszukiwanie
@@ -180,6 +183,10 @@ namespace praca_dyplomowa_zesp.Controllers
                     .FirstOrDefaultAsync(r => r.GuideId == id && r.UserId == userId);
 
                 if (existingRate != null) viewModel.UserRating = existingRate.Value;
+            }
+            if (guide.IsDeleted && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
+            {
+                return NotFound();
             }
 
             return View(viewModel);
@@ -443,6 +450,8 @@ namespace praca_dyplomowa_zesp.Controllers
                     // Jeśli był zatwierdzony -> zostaje zatwierdzony.
                     // Jeśli czekał na akceptację -> nadal czeka.
                     guide.IsApproved = existingGuide.IsApproved;
+                    guide.IsDeleted = existingGuide.IsDeleted;
+                    guide.DeletedAt = existingGuide.DeletedAt;
                     // -----------------------
 
                     // 4. Obsługa zdjęcia (jeśli wgrano nowe - podmień, jeśli nie - zostaw stare)
@@ -473,6 +482,10 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 // Przekierowanie:
                 // Jeśli post jest zatwierdzony lub użytkownik to admin/mod -> do widoku szczegółów
+                if (guide.IsDeleted)
+                {
+                    return RedirectToAction("Index", "Admin"); // Wracamy do panelu admina (do kosza)
+                }
                 if (guide.IsApproved || User.IsInRole("Admin") || User.IsInRole("Moderator"))
                 {
                     return RedirectToAction(nameof(Details), new { id = guide.Id });
@@ -523,7 +536,9 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
 
                 long gameId = guide.IgdbGameId;
-                _context.Guides.Remove(guide);
+                guide.IsDeleted = true;
+                guide.DeletedAt = DateTime.Now;
+                _context.Update(guide);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index), new { gameId = gameId });
             }

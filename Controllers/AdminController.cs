@@ -34,7 +34,8 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 SearchString = searchString,
                 Users = new List<AdminUserDto>(),
-                PendingGuides = new List<Guide>() // Inicjalizacja pustej listy
+                PendingGuides = new List<Guide>(), // Inicjalizacja pustej listy
+                DeletedGuides = new List<Guide>()
             };
 
             // 1. UŻYTKOWNICY - Pobieramy TYLKO jeśli użytkownik jest Adminem
@@ -82,6 +83,14 @@ namespace praca_dyplomowa_zesp.Controllers
                 .ToListAsync();
 
             model.PendingGuides = pendingGuides;
+
+            var deletedGuides = await _context.Guides
+                .Include(g => g.User)
+                .Where(g => g.IsDeleted)
+                .OrderBy(g => g.DeletedAt)
+                .ToListAsync();
+
+            model.DeletedGuides = deletedGuides;
 
             return View(model);
         }
@@ -209,6 +218,54 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> RestoreGuide(int id)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide != null)
+            {
+                guide.IsDeleted = false;
+                guide.DeletedAt = null;
+                _context.Update(guide);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Przywrócono poradnik z kosza.";
+            }
+            return RedirectToAction("Index");
+        }
+
+        // ZMIANA: long id -> int id
+        [HttpPost]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> DeletePermanently(int id)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide != null)
+            {
+                _context.Guides.Remove(guide);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Poradnik został usunięty permanentnie.";
+            }
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> EmptyTrash()
+        {
+            // Tutaj musimy sprawdzić, czy masz już pole IsDeleted w modelu Guide,
+            // jeśli tak - to zadziała:
+            var trashGuides = await _context.Guides.Where(g => g.IsDeleted).ToListAsync();
+
+            if (trashGuides.Any())
+            {
+                _context.Guides.RemoveRange(trashGuides);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Kosz został opróżniony.";
+            }
+            return RedirectToAction("Index");
         }
     }
 }
