@@ -16,4 +16,5 @@ public class MainLibraryViewModel
     public string ReleaseDate { get; set; }
     public List<AchievementViewModel> Achievements { get; set; }
     public string SystemRequirementsUrl { get; set; }
+    public int ProgressPercent { get; set; }
 }

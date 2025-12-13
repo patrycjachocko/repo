@@ -1,47 +1,54 @@
-﻿@model IEnumerable<MainLibraryViewModel>
+﻿@using praca_dyplomowa_zesp.Models.Modules.Libraries
+@model IEnumerable<MainLibraryViewModel>
 
 @{
     ViewData["Title"] = "Moja Biblioteka";
     var searchString = ViewData["SearchString"] as string;
-    // Sprawdzamy czy lista jest pusta, ale CZYLI czy to wynik wyszukiwania, czy pusta baza
+    var currentFilter = ViewData["StatusFilter"] as string ?? "all";
+
+    // Sprawdzamy, czy lista jest pusta (uwzględniając filtry)
     bool isResultEmpty = !Model.Any();
-    bool isSearchActive = !string.IsNullOrEmpty(searchString);
+    bool isSearchOrFilterActive = !string.IsNullOrEmpty(searchString) || currentFilter != "all";
 }
 
 <div class="container-fluid px-4">
 
-    @* --- NAGŁÓWEK + WYSZUKIWARKA + PRZYCISKI --- *@
+    @* --- Pasek Narzędzi --- *@
     <div class="d-flex justify-content-between align-items-center mb-4 mt-3 flex-wrap gap-3">
-
-        @* 1. Tytuł (tylko jeden raz) *@
         <h1 class="mb-0 text-nowrap">@ViewData["Title"]</h1>
 
-        @* 2. Pasek narzędzi (Wyszukiwarka + Przyciski) *@
         <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end flex-wrap">
 
-            @* Formularz wyszukiwania *@
-            <form asp-action="Index" method="get" class="d-flex" role="search">
+            @* Formularz: Szukaj + Filtruj *@
+            <form asp-action="Index" method="get" class="d-flex gap-2" role="search">
+
+                @* Dropdown Statusu *@
+                <select name="statusFilter" class="form-select" style="width: auto; min-width: 150px; cursor: pointer;" onchange="this.form.submit()">
+                    <!option value="all" @(currentFilter == "all" ? "selected" : "")>Wszystkie</!option>
+                    <!option value="completed" @(currentFilter == "completed" ? "selected" : "")>✅ Ukończone</!option>
+                    <!option value="playing" @(currentFilter == "playing" ? "selected" : "")>🎮 W trakcie</!option>
+                    <!option value="toplay" @(currentFilter == "toplay" ? "selected" : "")>🆕 Do zagrania</!option>
+                </select>
+
                 <div class="input-group">
-                    <input type="text" name="searchString" value="@searchString" class="form-control" placeholder="Szukaj w bibliotece..." aria-label="Szukaj">
+                    <input type="text" name="searchString" value="@searchString" class="form-control" placeholder="Szukaj gry..." aria-label="Szukaj">
                     <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
-                    @if (isSearchActive)
+                    @if (isSearchOrFilterActive)
                     {
-                        <a asp-action="Index" class="btn btn-outline-secondary" title="Wyczyść wyszukiwanie">X</a>
+                        <a asp-action="Index" asp-route-statusFilter="all" asp-route-searchString="" class="btn btn-outline-secondary" title="Resetuj filtry">X</a>
                     }
                 </div>
             </form>
 
             <div class="vr mx-2 d-none d-md-block"></div>
 
-            @* Przycisk: Dodaj grę *@
             <a asp-controller="Games" asp-action="Index" class="btn btn-primary text-nowrap">
                 <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Dodaj grę</span>
             </a>
 
-            @* Przycisk: Wyczyść bibliotekę (widoczny tylko gdy nie wyszukujemy i są gry) *@
-            @if (!isSearchActive && !isResultEmpty)
+            @if (!isSearchOrFilterActive && !isResultEmpty)
             {
-                <form asp-action="ClearLibrary" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz usunąć WSZYSTKIE gry ze swojej biblioteki? Tej operacji nie można cofnąć!');">
+                <form asp-action="ClearLibrary" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz usunąć WSZYSTKIE gry ze swojej biblioteki?');">
                     <button type="submit" class="btn btn-danger" title="Usuń wszystko">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -52,62 +59,86 @@
 
     <hr />
 
-    @* --- SEKCJA KOMUNIKATÓW (Sukces/Błąd) --- *@
     @if (TempData["StatusMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             @TempData["StatusMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["ErrorMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
 
-    @* --- LISTA GIER --- *@
+    @* --- Lista Gier --- *@
     <div class="row">
         @if (!isResultEmpty)
         {
-            // WARIANT 1: Są gry do wyświetlenia
             @foreach (var game in Model)
             {
+                // LOGIKA KOLORÓW I STATUSÓW
+                string statusClass = "";
+                string badgeText = "";
+                string badgeColor = "";
+
+                if (game.ProgressPercent == 100)
+                {
+                    statusClass = "status-completed";
+                    badgeText = "Ukończona";
+                    badgeColor = "bg-success";
+                }
+                else if (game.ProgressPercent > 0)
+                {
+                    statusClass = "status-playing";
+                    badgeText = "W trakcie";
+                    badgeColor = "bg-info text-dark";
+                }
+                else
+                {
+                    statusClass = "status-toplay";
+                    badgeText = "Do zagrania";
+                    badgeColor = "bg-warning text-dark";
+                }
+
                 <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
                     <a asp-action="Details" asp-route-id="@game.DbId" class="text-decoration-none text-dark card-link-wrapper">
-                        <div class="card h-100 shadow-sm grow-on-hover" style="transition: transform 0.2s; border: none;">
-                            <div style="position: relative; padding-top: 150%; overflow: hidden; background-color: #1b2838; border-radius: 5px;">
+
+                        @* Karta z klasą statusu *@
+                        <div class="card h-100 shadow-sm grow-on-hover @statusClass" style="transition: transform 0.2s;">
+
+                            <div style="position: relative; padding-top: 150%; overflow: hidden; background-color: #1b2838; border-top-left-radius: 4px; border-top-right-radius: 4px;">
                                 <img src="@(game.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")"
                                      class="card-img-top"
                                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
                                      alt="@game.Name">
-                            </div>
-                            <div class="card-body p-2">
-                                <h6 class="card-title text-truncate font-weight-bold mt-2" title="@game.Name" style="margin-bottom: 0.2rem; font-size: 0.9rem;">
-                                    @game.Name
-                                </h6>
-                            </div>
+
+                                @* Badge (Odznaka) ze statusem w rogu okładki *@
+                                <span class="badge @badgeColor position-absolute top-0 end-0 m-2 shadow-sm" style="font-size: 0.75rem; opacity: 0.9;">
+                                    @badgeText @if(game.ProgressPercent > 0 && game.ProgressPercent < 100) {
+                                    <span>(@game.ProgressPercent%)</span>
+                                }
+                            </span>
                         </div>
-                    </a>
-                </div>
-            }
+
+                        <div class="card-body p-2">
+                            <h6 class="card-title text-truncate font-weight-bold mt-2 mb-1" title="@game.Name" style="font-size: 0.9rem;">
+                                @game.Name
+                            </h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
         }
-        else if (isSearchActive)
+                }
+                else if (isSearchOrFilterActive)
         {
-            // WARIANT 2: Lista pusta, bo nic nie znaleziono w wyszukiwarce
             <div class="col-12">
                 <div class="alert alert-warning text-center">
-                    <h4><i class="bi bi-search"></i> Nie znaleziono gier.</h4>
-                    <p>Nie masz w bibliotece gry pasującej do frazy: <strong>"@searchString"</strong></p>
-                    <a asp-action="Index" class="btn btn-outline-dark mt-2">Pokaż wszystkie gry</a>
+                    <h4><i class="bi bi-filter-circle"></i> Brak wyników.</h4>
+                    <p>Nie znaleziono gier pasujących do wybranych filtrów.</p>
+                    <a asp-action="Index" asp-route-statusFilter="all" class="btn btn-outline-dark mt-2">Pokaż wszystkie</a>
                 </div>
             </div>
         }
         else
         {
-            // WARIANT 3: Lista pusta, bo biblioteka jest pusta (brak gier w ogóle)
             <div class="col-12">
                 <div class="alert alert-info text-center py-5">
                     <h4><i class="bi bi-controller"></i> Twoja biblioteka jest pusta.</h4>
@@ -122,15 +153,47 @@
 </div>
 
 <style>
-    /* Styl animacji podnoszenia kafelka */
+    /* --- STYLE STATUSÓW (Subtelne obramowania i cienie) --- */
+
+    /* Domyślny stan karty ma border: none (ustawiony inline w HTML),
+           więc dodajemy border tylko przez klasy statusowe z !important, by nadpisać style inline/bootstrap */
+
+    .status-completed {
+        border: 1px solid #198754 !important; /* Zielony Bootstrap */
+        box-shadow: 0 0 8px rgba(25, 135, 84, 0.15) !important;
+    }
+
+    .status-playing {
+        border: 1px solid #0dcaf0 !important; /* Błękitny Bootstrap */
+        box-shadow: 0 0 8px rgba(13, 202, 240, 0.2) !important;
+    }
+
+    .status-toplay {
+        border: 1px solid #ffc107 !important; /* Żółty Bootstrap */
+        box-shadow: 0 0 8px rgba(255, 193, 7, 0.2) !important;
+    }
+
+    /* Efekt Hover - Podbicie poświaty */
     .grow-on-hover:hover {
         transform: scale(1.05);
         cursor: pointer;
         z-index: 10;
-        box-shadow: 0 1rem 3rem rgba(0,0,0,.2) !important;
     }
 
-    /* Fix dla linków wewnątrz karty, aby nie zmieniały koloru tekstu */
+    /* Poświata staje się mocniejsza po najechaniu */
+    .status-completed:hover {
+        box-shadow: 0 0 15px rgba(25, 135, 84, 0.4) !important;
+    }
+
+    .status-playing:hover {
+        box-shadow: 0 0 15px rgba(13, 202, 240, 0.5) !important;
+    }
+
+    .status-toplay:hover {
+        box-shadow: 0 0 15px rgba(255, 193, 7, 0.5) !important;
+    }
+
+    /* Fix dla linków */
     .card-link-wrapper:hover {
         text-decoration: none;
         color: inherit;

@@ -39,28 +39,27 @@ namespace praca_dyplomowa_zesp.Controllers
             return Guid.Empty;
         }
 
-        // GET: Library
-        public async Task<IActionResult> Index(string? searchString)
+        [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Index(string? searchString, string statusFilter = "all")
         {
             var currentUserId = GetCurrentUserId();
             var userGamesFromDb = await _context.GamesInLibraries
                 .Where(g => g.UserId == currentUserId)
-                .OrderByDescending(g => g.DateAddedToLibrary)
+                .OrderByDescending(g => g.LastAccessed)
                 .ToListAsync();
 
             if (!userGamesFromDb.Any()) return View(new List<MainLibraryViewModel>());
 
+            // --- Pobieranie danych z IGDB (bez zmian) ---
             var allApiGames = new List<ApiGame>();
             var allIgdbIds = userGamesFromDb.Select(g => g.IgdbGameId).Distinct().ToList();
-
-            // ... (Logika pętli pobierającej dane z IGDB pozostaje bez zmian) ...
             int batchSize = 50;
             for (int i = 0; i < allIgdbIds.Count; i += batchSize)
             {
                 var batchIds = allIgdbIds.Skip(i).Take(batchSize).ToList();
                 var idsString = string.Join(",", batchIds);
                 var query = $"fields name, cover.url; where id = ({idsString}); limit {batchSize};";
-
                 try
                 {
                     var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
@@ -72,8 +71,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
                 catch (Exception ex) { Console.WriteLine($"Błąd index: {ex.Message}"); }
             }
-            // ... (Koniec pętli) ...
 
+            // --- Mapowanie na ViewModel (TERAZ Z PROCENTAMI) ---
             var viewModels = userGamesFromDb.Select(dbGame =>
             {
                 var apiGame = allApiGames.FirstOrDefault(apiG => apiG.Id == dbGame.IgdbGameId);
@@ -82,11 +81,12 @@ namespace praca_dyplomowa_zesp.Controllers
                     DbId = dbGame.Id,
                     IgdbGameId = dbGame.IgdbGameId,
                     Name = apiGame?.Name ?? "Wczytywanie...",
-                    CoverUrl = apiGame?.Cover?.Url?.Replace("t_thumb", "t_cover_big") ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki"
+                    CoverUrl = apiGame?.Cover?.Url?.Replace("t_thumb", "t_cover_big") ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki",
+                    ProgressPercent = dbGame.CurrentUserStoryProgressPercent // <--- Przypisujemy procenty z bazy
                 };
             }).ToList();
 
-            // --- NOWA CZĘŚĆ: FILTROWANIE ---
+            // --- WYSZUKIWANIE ---
             if (!string.IsNullOrEmpty(searchString))
             {
                 viewModels = viewModels
@@ -94,7 +94,24 @@ namespace praca_dyplomowa_zesp.Controllers
                     .ToList();
             }
 
-            ViewData["SearchString"] = searchString; // Aby zachować wpisany tekst w inpucie
+            // --- FILTROWANIE PO STATUSIE (Nowość) ---
+            switch (statusFilter)
+            {
+                case "completed": // Ukończone (100%)
+                    viewModels = viewModels.Where(g => g.ProgressPercent == 100).ToList();
+                    break;
+                case "playing": // W trakcie (1-99%)
+                    viewModels = viewModels.Where(g => g.ProgressPercent > 0 && g.ProgressPercent < 100).ToList();
+                    break;
+                case "toplay": // Do zagrania (0%)
+                    viewModels = viewModels.Where(g => g.ProgressPercent == 0).ToList();
+                    break;
+            }
+
+            // Przekazujemy parametry do widoku, aby zachować stan filtrów
+            ViewData["SearchString"] = searchString;
+            ViewData["StatusFilter"] = statusFilter;
+
             return View(viewModels);
         }
 
@@ -192,29 +209,26 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
 
-            // --- AUTOMATYCZNE OBLICZANIE POSTĘPU % ---
+            gameFromDb.LastAccessed = DateTime.Now;
 
-            // <--- POPRAWKA 1: Inicjalizujemy wartością z bazy! 
-            // Dzięki temu, jeśli nie ma osiągnięć, manualny suwak nie zostanie nadpisany zerem.
+            // 2. Inicjalizujemy procenty wartością z bazy (dla manualnych)
             int progressPercent = gameFromDb.CurrentUserStoryProgressPercent;
 
+            // 3. Jeśli są osiągnięcia, przeliczamy procenty automatycznie
             if (finalAchievements.Any())
             {
                 int unlockedCount = finalAchievements.Count(a => a.IsUnlocked);
                 int calculatedPercent = (int)Math.Round((double)unlockedCount / finalAchievements.Count * 100);
 
-                // <--- POPRAWKA 2: Przypisujemy wyliczoną wartość do zmiennej lokalnej, 
-                // żeby widok dostał aktualny wynik, a nie stare dane.
+                // Aktualizujemy zmienną lokalną i pole w obiekcie
                 progressPercent = calculatedPercent;
-
-                // Aktualizujemy rekord w bazie tylko w trybie automatycznym
-                if (gameFromDb.CurrentUserStoryProgressPercent != calculatedPercent)
-                {
-                    gameFromDb.CurrentUserStoryProgressPercent = calculatedPercent;
-                    _context.Update(gameFromDb);
-                    await _context.SaveChangesAsync();
-                }
+                gameFromDb.CurrentUserStoryProgressPercent = calculatedPercent;
             }
+
+            // 4. ZAPISUJEMY ZMIANY W BAZIE (Zawsze!)
+            // To zapisze zarówno nową datę LastAccessed, jak i ewentualnie zmieniony procent.
+            _context.Update(gameFromDb);
+            await _context.SaveChangesAsync();
 
             var viewModel = new GameInLibraryViewModel
             {
@@ -249,6 +263,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var currentUserId = GetCurrentUserId();
             gameInLibrary.UserId = currentUserId;
             gameInLibrary.DateAddedToLibrary = DateTime.Now;
+            gameInLibrary.LastAccessed = DateTime.Now;
 
             try
             {

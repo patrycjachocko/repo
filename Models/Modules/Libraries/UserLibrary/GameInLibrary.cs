@@ -18,6 +18,7 @@ public class GameInLibrary
     public string? CurrentUserStoryMission { get; set; }
     public int CurrentUserStoryProgressPercent { get; set; }
 
-    public string? Notes { get; set; } // <-- DODANE NOWE POLE
+    public string? Notes { get; set; }
     public virtual ICollection<ToDoItem> ToDoItems { get; set; } = new List<ToDoItem>();
+    public DateTime LastAccessed { get; set; }
 }
