@@ -315,7 +315,7 @@
             <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info">
                 <i class="bi bi-book"></i> Poradniki
             </a>
-            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-outline-danger" onclick="return confirm('Usunąć grę?');">
+            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-outline-danger">
                 <i class="bi bi-trash"></i> Usuń
             </a>
         </div>

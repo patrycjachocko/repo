@@ -378,7 +378,7 @@
             @* --- ZAKŁADKA TREŚCI: KOSZ --- *@
             <div class="tab-pane fade" id="trash" role="tabpanel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="text-danger"><i class="fas fa-trash-alt me-2"></i>Usunięte poradniki (Soft Delete)</h4>
+                    <h4 class="text-danger"><i class="fas fa-trash-alt me-2"></i>Usunięte poradniki</h4>
                     @if (Model.DeletedGuides != null && Model.DeletedGuides.Any())
                     {
                         <form asp-action="EmptyTrash" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz OPRÓŻNIĆ cały kosz? Tej operacji NIE można cofnąć!');">
