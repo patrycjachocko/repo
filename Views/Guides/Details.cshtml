@@ -7,8 +7,8 @@
 
 <div class="container mt-4">
 
-    @* --- ALERT O STATUSIE (Jeśli niezatwierdzony) --- *@
-    @if (!Model.Guide.IsApproved)
+    @* --- ALERT O STATUSIE (Jeśli niezatwierdzony i NIE usunięty) --- *@
+    @if (!Model.Guide.IsApproved && !Model.Guide.IsDeleted)
     {
         <div class="alert alert-warning border-warning d-flex align-items-center mb-4" role="alert">
             <i class="fas fa-lock fa-2x me-3"></i>
@@ -17,15 +17,41 @@
             </div>
         </div>
     }
+
     @* --- ALERT O STATUSIE (Jeśli w koszu) --- *@
     @if (Model.Guide.IsDeleted)
     {
-        <div class="alert alert-danger border-danger d-flex align-items-center mb-4" role="alert">
-            <i class="fas fa-trash-alt fa-2x me-3"></i>
-            <div>
-                <h5 class="alert-heading fw-bold mb-1">Ten poradnik znajduje się w KOSZU</h5>
-                <p class="mb-0 small">Został usunięty. Tylko Ty i administracja go widzicie.</p>
+        <div class="alert alert-danger border-danger mb-4 shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-trash-alt fa-2x me-3"></i>
+                <div>
+                    <h5 class="alert-heading fw-bold mb-1">Ten poradnik znajduje się w KOSZU</h5>
+                    <p class="mb-0 small">Został usunięty lub odrzucony. Jest widoczny tylko dla administracji.</p>
+                </div>
             </div>
+
+            @* --- PRZYCISKI ADMINISTRACYJNE DLA KOSZA --- *@
+            @if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+            {
+                <hr class="border-danger my-3">
+                <div class="d-flex gap-3 justify-content-end">
+                    @* Formularz Przywracania *@
+                    <form asp-controller="Admin" asp-action="RestoreGuide" method="post">
+                        <input type="hidden" name="id" value="@Model.Guide.Id" />
+                        <button type="submit" class="btn btn-warning btn-sm">
+                            <i class="fas fa-trash-restore"></i> Przywróć z kosza
+                        </button>
+                    </form>
+
+                    @* Formularz Usuwania Permanentnego *@
+                    <form asp-controller="Admin" asp-action="DeletePermanently" method="post" onsubmit="return confirm('Czy na pewno chcesz trwale usunąć ten poradnik? Ta operacja jest NIEODWRACALNA.');">
+                        <input type="hidden" name="id" value="@Model.Guide.Id" />
+                        <button type="submit" class="btn btn-dark btn-sm text-danger border-danger">
+                            <i class="fas fa-times"></i> Usuń na zawsze
+                        </button>
+                    </form>
+                </div>
+            }
         </div>
     }
 
@@ -63,21 +89,18 @@
             }
         </div>
 
-        @* Przyciski Edycji/Usuwania dla autora/admina *@
-        @if (User.Identity.IsAuthenticated && (User.Identity.Name == Model.Guide.User?.UserName || User.IsInRole("Admin") || User.IsInRole("Moderator")))
+        @* Przyciski Edycji/Usuwania dla autora/admina (Ukryte jeśli jest w koszu - tam są specjale przyciski wyżej) *@
+        @if (!Model.Guide.IsDeleted && User.Identity.IsAuthenticated && (User.Identity.Name == Model.Guide.User?.UserName || User.IsInRole("Admin") || User.IsInRole("Moderator")))
         {
             <div class="card-footer border-secondary p-3 d-flex justify-content-end gap-2">
                 <a asp-action="Edit" asp-route-id="@Model.Guide.Id" class="btn btn-warning"><i class="fas fa-edit"></i> Edytuj</a>
-                @if (!Model.Guide.IsDeleted)
-                {
-                    <a asp-action="Delete" asp-route-id="@Model.Guide.Id" class="btn btn-danger"><i class="fas fa-trash"></i> Usuń</a>
-                }
+                <a asp-action="Delete" asp-route-id="@Model.Guide.Id" class="btn btn-danger"><i class="fas fa-trash"></i> Usuń</a>
             </div>
         }
     </div>
 
-    @* --- PANEL DECYZYJNY (Tylko dla Admina/Moderatora przy niezatwierdzonym poście) --- *@
-    @if (!Model.Guide.IsApproved && (User.IsInRole("Admin") || User.IsInRole("Moderator")))
+    @* --- PANEL DECYZYJNY (Tylko dla Admina/Moderatora przy niezatwierdzonym poście, który NIE jest w koszu) --- *@
+    @if (!Model.Guide.IsApproved && !Model.Guide.IsDeleted && (User.IsInRole("Admin") || User.IsInRole("Moderator")))
     {
         <div class="card bg-dark border-warning mb-5 shadow">
             <div class="card-header border-warning bg-transparent text-warning">
@@ -95,23 +118,23 @@
                         </button>
                     </form>
 
-                    @* Formularz Odrzucenia *@
-                    <form asp-controller="Admin" asp-action="RejectGuide" method="post" onsubmit="return confirm('Czy na pewno chcesz trwale usunąć ten poradnik? Ta operacja jest nieodwracalna.');">
+                    @* Formularz Odrzucenia (TERAZ DO KOSZA) *@
+                    <form asp-controller="Admin" asp-action="RejectGuide" method="post" onsubmit="return confirm('Czy na pewno chcesz odrzucić ten poradnik? Trafi on do KOSZA, skąd będzie można go później usunąć permanentnie.');">
                         <input type="hidden" name="id" value="@Model.Guide.Id" />
                         <button type="submit" class="btn btn-danger btn-lg px-4">
-                            <i class="fas fa-trash me-2"></i> Odrzuć i Usuń
+                            <i class="fas fa-trash me-2"></i> Odrzuć (do kosza)
                         </button>
                     </form>
                 </div>
             </div>
             <div class="card-footer border-warning text-muted small text-center">
-                Zatwierdzenie sprawi, że poradnik stanie się widoczny dla wszystkich, a sekcje komentarzy i ocen zostaną odblokowane.
+                Zatwierdzenie sprawi, że poradnik stanie się widoczny dla wszystkich. Odrzucenie przeniesie go do kosza.
             </div>
         </div>
     }
 
-    @* --- SEKCJA OCENY (Tylko jeśli zatwierdzony) --- *@
-    @if (Model.Guide.IsApproved)
+    @* --- SEKCJA OCENY (Tylko jeśli zatwierdzony i nie usunięty) --- *@
+    @if (Model.Guide.IsApproved && !Model.Guide.IsDeleted)
     {
         <div class="card bg-dark text-white border-secondary mb-5">
             <div class="card-body text-center">
@@ -152,7 +175,7 @@
             </div>
         </div>
 
-        @* --- SEKCJA KOMENTARZY (Tylko jeśli zatwierdzony) --- *@
+        @* --- SEKCJA KOMENTARZY (Tylko jeśli zatwierdzony i nie usunięty) --- *@
         <div class="comments-section mb-5">
             <h3 class="text-white border-bottom border-secondary pb-2 mb-4">Komentarze (@Model.Comments.Count)</h3>
 
@@ -268,7 +291,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     @* Skrypt tylko dla zatwierdzonych (bo tylko tam są gwiazdki) *@
-    @if (Model.Guide.IsApproved)
+    @if (Model.Guide.IsApproved && !Model.Guide.IsDeleted)
     {
         <script>
             document.addEventListener("DOMContentLoaded", function() {
@@ -359,7 +382,6 @@
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        // alert("Wystąpił błąd podczas zapisywania oceny."); // Opcjonalnie
                     });
                 }
             });

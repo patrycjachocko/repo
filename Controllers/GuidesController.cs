@@ -97,14 +97,16 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Include(g => g.User)
                 .Include(g => g.Rates)
                 .Where(g => g.IgdbGameId == gameId)
+                // ZMIANA: Najpierw wykluczamy wszystkie usunięte z tego widoku (User ich nie widzi, Admin ma od tego Panel Admina)
+                .Where(g => g.IsDeleted == false)
                 .Where(g =>
-            // 1. PUBLICZNE: Musi być zatwierdzony I NIE usunięty
-            (g.IsApproved == true && g.IsDeleted == false) ||
-            // 2. AUTOR: Widzi wszystko swoje (zatwierdzone, oczekujące, usunięte)
-            (g.UserId == currentUserId) ||
-            // 3. WŁADZA: Widzi wszystko (jak wyżej)
-            (canSeeAllPending == true)
-        )
+                    // 1. PUBLICZNE: Musi być zatwierdzony
+                    (g.IsApproved == true) ||
+                    // 2. AUTOR: Widzi swoje (nawet jeśli oczekują na akceptację, ale NIE usunięte - patrz wyżej)
+                    (g.UserId == currentUserId) ||
+                    // 3. WŁADZA: Widzi wszystkie oczekujące
+                    (canSeeAllPending == true)
+                )
                 .AsQueryable();
 
             // 1. Wyszukiwanie

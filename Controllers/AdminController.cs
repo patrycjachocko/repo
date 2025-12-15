@@ -80,7 +80,7 @@ namespace praca_dyplomowa_zesp.Controllers
             // Logika bez zmian
             var pendingGuides = await _context.Guides
                 .Include(g => g.User)
-                .Where(g => !g.IsApproved)
+                .Where(g => !g.IsApproved && !g.IsDeleted)
                 .OrderBy(g => g.CreatedAt)
                 .ToListAsync();
 
@@ -128,11 +128,22 @@ namespace praca_dyplomowa_zesp.Controllers
             var guide = await _context.Guides.FindAsync(id);
             if (guide == null) return NotFound();
 
-            // Odrzucenie = Usunięcie (można ewentualnie dodać pole "IsRejected" i powód, ale na razie usuwamy)
-            _context.Guides.Remove(guide);
+            // ZMIANA: Zamiast usuwać (Remove), przenosimy do kosza (Soft Delete)
+            guide.IsDeleted = true;
+            guide.DeletedAt = DateTime.Now;
+
+            // Zostawiamy IsApproved = false, więc po ewentualnym przywróceniu 
+            // z kosza nadal będzie "Oczekujący", a nie od razu "Publiczny".
+
+            _context.Update(guide);
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = $"Odrzucono (usunięto) poradnik: {guide.Title}";
+            TempData["Success"] = $"Odrzucono poradnik: {guide.Title} (trafił do kosza)";
+
+            // Powrót do widoku, z którego przyszliśmy (np. Details lub Index)
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrEmpty(referer)) return Redirect(referer);
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -238,10 +249,17 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 guide.IsDeleted = false;
                 guide.DeletedAt = null;
+                // NIE ZMIENIAMY IsApproved. Jeśli był false (oczekujący), to nadal jest false.
+
                 _context.Update(guide);
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Przywrócono poradnik z kosza.";
             }
+
+            // Jeśli wywołane z Details, wróć do Details, jeśli z Panelu - do Panelu
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrEmpty(referer)) return Redirect(referer);
+
             return RedirectToAction("Index");
         }
 

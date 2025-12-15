@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251214235558_migracja")]
+    [Migration("20251215014716_migracja")]
     partial class migracja
     {
         /// <inheritdoc />
