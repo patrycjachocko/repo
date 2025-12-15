@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using praca_dyplomowa_zesp.Models;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
@@ -34,6 +35,9 @@ namespace praca_dyplomowa.Data
         public DbSet<GameInLibrary> GamesInLibraries { get; set; } = null!;
         public DbSet<UserAchievement> UserAchievements { get; set; } = null!;
         public DbSet<ToDoItem> ToDoItems { get; set; } = null!;
+        public DbSet<Ticket> Tickets { get; set; } = null!;
+        public DbSet<TicketMessage> TicketMessages { get; set; } = null!;
+        public DbSet<TicketAttachment> TicketAttachments { get; set; } = null!;
 
 
 

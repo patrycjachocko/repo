@@ -40,9 +40,7 @@
                                 <p class="text-warning small mb-1">Nowa okładka (do zapisania):</p>
                                 <img id="imagePreview" src="#" alt="Podgląd nowej okładki" style="max-height: 200px; border-radius: 8px; border: 1px solid #ffc107;" />
 
-                                <button type="button" onclick="clearNewImage()" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle" style="width: 30px; height: 30px; padding: 0; line-height: 30px; margin-top: 25px !important;">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" aria-label="Close" onclick="clearNewImage()"></button>
                             </div>
 
                             @if (Model.CoverImage != null)

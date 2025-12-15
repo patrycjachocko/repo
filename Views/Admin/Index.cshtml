@@ -56,10 +56,16 @@
                 font-weight: bold;
             }
 
-                /* Styl dla aktywnej zakładki kosza (czerwony zamiast fioletowego) */
+                /* Styl dla aktywnej zakładki kosza (czerwony) */
                 .nav-tabs .nav-link.active.text-danger {
                     color: #dc3545 !important;
                     border-bottom: 3px solid #dc3545;
+                }
+
+                /* Styl dla aktywnej zakładki ticketów (żółty) */
+                .nav-tabs .nav-link.active.text-warning {
+                    color: #ffc107 !important;
+                    border-bottom: 3px solid #ffc107;
                 }
 
     /* --- TABLE --- */
@@ -91,27 +97,15 @@
         margin-right: 10px;
     }
 
-    /* Style dla przycisków akcji w tabeli */
     .action-btn-group {
         display: flex;
         gap: 10px;
         justify-content: flex-end;
     }
 
-    .badge-role-admin {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .badge-role-mod {
-        background-color: var(--neon-purple);
-        color: white;
-    }
-
-    .badge-role-user {
-        background-color: #6c757d;
-        color: white;
-    }
+    .badge-role-admin { background-color: #dc3545; color: white; }
+    .badge-role-mod { background-color: var(--neon-purple); color: white; }
+    .badge-role-user { background-color: #6c757d; color: white; }
 
     .status-dot {
         height: 10px;
@@ -121,20 +115,9 @@
         margin-right: 5px;
     }
 
-    .status-active {
-        background-color: #28a745;
-        box-shadow: 0 0 5px #28a745;
-    }
-
-    .status-banned {
-        background-color: #dc3545;
-        box-shadow: 0 0 5px #dc3545;
-    }
-
-    .status-muted {
-        background-color: #ffc107;
-        box-shadow: 0 0 5px #ffc107;
-    }
+    .status-active { background-color: #28a745; box-shadow: 0 0 5px #28a745; }
+    .status-banned { background-color: #dc3545; box-shadow: 0 0 5px #dc3545; }
+    .status-muted { background-color: #ffc107; box-shadow: 0 0 5px #ffc107; }
 
     .search-box input {
         background-color: #222;
@@ -151,9 +134,11 @@
         border: none;
     }
 
-    /* Styl dla wierszy w koszu starszych niż 30 dni */
-    .trash-warning td {
-        color: #ff6b6b;
+    .trash-warning td { color: #ff6b6b; }
+
+    @("@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }")
+    .animate-pulse {
+        animation: pulse 1.5s infinite;
     }
 </style>
 
@@ -170,14 +155,12 @@
             <div class="alert alert-danger">@TempData["Error"]</div>
         }
 
-        @* --- ZMIENNA POMOCNICZA: CZY JEST ADMINEM --- *@
         @{
             bool isAdmin = User.IsInRole("Admin");
+            int openTicketsCount = Model.Tickets != null ? Model.Tickets.Count(t => t.Status == praca_dyplomowa_zesp.Models.TicketStatus.Oczekujące) : 0;
         }
 
         <ul class="nav nav-tabs" id="adminTabs" role="tablist">
-
-            @* Zakładka Użytkownicy - TYLKO DLA ADMINA *@
             @if (isAdmin)
             {
                 <li class="nav-item" role="presentation">
@@ -187,9 +170,7 @@
                 </li>
             }
 
-            @* Zakładka Posty - DLA WSZYSTKICH (Admin i Mod) *@
             <li class="nav-item" role="presentation">
-                @* Jeśli NIE jest adminem (czyli mod), to ta zakładka musi być 'active' domyślnie *@
                 <button class="nav-link @(!isAdmin ? "active" : "")" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab">
                     Akceptacja Postów
                     @if (Model.PendingGuides.Count > 0)
@@ -199,7 +180,6 @@
                 </button>
             </li>
 
-            @* --- NOWA ZAKŁADKA: KOSZ (Admin i Mod) --- *@
             <li class="nav-item" role="presentation">
                 <button class="nav-link text-danger" id="trash-tab" data-bs-toggle="tab" data-bs-target="#trash" type="button" role="tab">
                     <i class="fas fa-trash-alt me-2"></i> Kosz
@@ -209,11 +189,21 @@
                     }
                 </button>
             </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-warning" id="tickets-tab" data-bs-toggle="tab" data-bs-target="#tickets" type="button" role="tab">
+                    <i class="fas fa-envelope-open-text me-2"></i> Zgłoszenia
+                    @if (openTicketsCount > 0)
+                    {
+                        <span class="badge bg-danger rounded-pill ms-2">@openTicketsCount</span>
+                    }
+                </button>
+            </li>
         </ul>
 
         <div class="tab-content" id="adminTabsContent">
 
-            @* Renderujemy treść tylko dla Admina *@
+            @* 1. TREŚĆ: UŻYTKOWNICY *@
             @if (isAdmin)
             {
                 <div class="tab-pane fade show active" id="users" role="tabpanel">
@@ -249,35 +239,15 @@
                                         <td>
                                             @foreach (var role in user.Roles)
                                             {
-                                                if (role == "Admin")
-                                                {
-                                                    <span class="badge badge-role-admin me-1">Admin</span>
-                                                }
-                                                else if (role == "Moderator")
-                                                {
-
-                                                    <span class="badge badge-role-mod me-1">Mod</span>
-                                                }
-                                                else
-                                                {
-
-                                                    <span class="badge badge-role-user me-1">User</span>
-                                                }
+                                                if (role == "Admin") { <span class="badge badge-role-admin me-1">Admin</span> }
+                                                else if (role == "Moderator") { <span class="badge badge-role-mod me-1">Mod</span> }
+                                                else { <span class="badge badge-role-user me-1">User</span> }
                                             }
                                         </td>
                                         <td>
-                                            @if (user.IsLockedOut)
-                                            {
-                                                <span class="text-danger" title="Zbanowany do @user.LockoutEnd"><span class="status-dot status-banned"></span> BAN</span>
-                                            }
-                                            else if (user.IsMuted)
-                                            {
-                                                <span class="text-warning" title="Wyciszony do @user.MuteEnd"><span class="status-dot status-muted"></span> MUTE</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-success"><span class="status-dot status-active"></span> Aktywny</span>
-                                            }
+                                            @if (user.IsLockedOut) { <span class="text-danger" title="Zbanowany do @user.LockoutEnd"><span class="status-dot status-banned"></span> BAN</span> }
+                                            else if (user.IsMuted) { <span class="text-warning" title="Wyciszony do @user.MuteEnd"><span class="status-dot status-muted"></span> MUTE</span> }
+                                            else { <span class="text-success"><span class="status-dot status-active"></span> Aktywny</span> }
                                         </td>
                                         <td class="text-end">
                                             @if (!user.Roles.Contains("Admin"))
@@ -294,25 +264,17 @@
                                                                 }
                                                                 else
                                                                 {
-
                                                                     <button type="submit" class="dropdown-item text-success">Mianuj Moderatorem</button>
                                                                 }
                                                             </form>
                                                         </li>
                                                         <li><hr class="dropdown-divider"></li>
-                                                        <li>
-                                                            <button class="dropdown-item text-info" onclick="openMuteModal('@user.Id', '@user.UserName')">@(user.IsMuted ? "Zmień Wyciszenie" : "Wycisz (Mute)")</button>
-                                                        </li>
-                                                        <li>
-                                                            <button class="dropdown-item text-danger" onclick="openBanModal('@user.Id', '@user.UserName')">@(user.IsLockedOut ? "Zmień Bana / Odbanuj" : "Zbanuj (Ban)")</button>
-                                                        </li>
+                                                        <li><button class="dropdown-item text-info" onclick="openMuteModal('@user.Id', '@user.UserName')">@(user.IsMuted ? "Zmień Wyciszenie" : "Wycisz (Mute)")</button></li>
+                                                        <li><button class="dropdown-item text-danger" onclick="openBanModal('@user.Id', '@user.UserName')">@(user.IsLockedOut ? "Zmień Bana / Odbanuj" : "Zbanuj (Ban)")</button></li>
                                                     </ul>
                                                 </div>
                                             }
-                                            else
-                                            {
-                                                <span class="text-muted small">Brak akcji</span>
-                                            }
+                                            else { <span class="text-muted small">Brak akcji</span> }
                                         </td>
                                     </tr>
                                 }
@@ -322,7 +284,7 @@
                 </div>
             }
 
-            @* Dodajemy klasę 'show active' oraz 'active' JEŚLI user nie jest adminem (czyli jest modem) *@
+            @* 2. TREŚĆ: POSTY *@
             <div class="tab-pane fade @(!isAdmin ? "show active" : "")" id="posts" role="tabpanel">
                 @if (Model.PendingGuides.Any())
                 {
@@ -341,7 +303,7 @@
                                 {
                                     <tr>
                                         <td class="fw-bold">
-                                            <a asp-controller="Guides" asp-action="Details" asp-route-id="@guide.Id" target="_blank" class="text-white text-decoration-none" title="Kliknij, aby zobaczyć szczegóły">
+                                            <a asp-controller="Guides" asp-action="Details" asp-route-id="@guide.Id" target="_blank" class="text-white text-decoration-none">
                                                 <i class="fas fa-external-link-alt text-muted small me-2"></i>@guide.Title
                                             </a>
                                         </td>
@@ -353,9 +315,9 @@
                                                     <input type="hidden" name="id" value="@guide.Id" />
                                                     <button type="submit" class="btn btn-sm btn-success" title="Zatwierdź"><i class="fas fa-check"></i></button>
                                                 </form>
-                                                <form asp-action="RejectGuide" method="post" style="display:inline;" onsubmit="return confirm('Czy na pewno chcesz odrzucić i USUNĄĆ ten poradnik?');">
+                                                <form asp-action="RejectGuide" method="post" style="display:inline;" onsubmit="return confirm('Usunąć?');">
                                                     <input type="hidden" name="id" value="@guide.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-danger" title="Odrzuć i usuń"><i class="fas fa-trash"></i></button>
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Odrzuć"><i class="fas fa-trash"></i></button>
                                                 </form>
                                             </div>
                                         </td>
@@ -370,21 +332,19 @@
                     <div class="text-center p-5 text-muted">
                         <i class="fas fa-check-circle fa-3x mb-3 text-success" style="opacity: 0.5"></i>
                         <h4>Wszystko wyczyszczone!</h4>
-                        <p>Brak oczekujących poradników do zatwierdzenia.</p>
+                        <p>Brak oczekujących poradników.</p>
                     </div>
                 }
             </div>
 
-            @* --- ZAKŁADKA TREŚCI: KOSZ --- *@
+            @* 3. TREŚĆ: KOSZ *@
             <div class="tab-pane fade" id="trash" role="tabpanel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="text-danger"><i class="fas fa-trash-alt me-2"></i>Usunięte poradniki</h4>
                     @if (Model.DeletedGuides != null && Model.DeletedGuides.Any())
                     {
-                        <form asp-action="EmptyTrash" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz OPRÓŻNIĆ cały kosz? Tej operacji NIE można cofnąć!');">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                <i class="fas fa-fire me-1"></i> Opróżnij Kosz
-                            </button>
+                        <form asp-action="EmptyTrash" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz OPRÓŻNIĆ cały kosz?');">
+                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-fire me-1"></i> Opróżnij Kosz</button>
                         </form>
                     }
                 </div>
@@ -405,51 +365,22 @@
                             <tbody>
                                 @foreach (var item in Model.DeletedGuides)
                                 {
-                                    // Obliczamy ile dni jest w koszu
                                     var daysInTrash = (DateTime.Now - (item.DeletedAt ?? DateTime.Now)).TotalDays;
                                     bool isOld = daysInTrash > 30;
-
                                     <tr class="@(isOld ? "trash-warning" : "")">
                                         <td class="fw-bold">
-                                            @* Link do podglądu (Admin może widzieć usunięte) *@
-                                            <a asp-controller="Guides" asp-action="Details" asp-route-id="@item.Id" target="_blank" class="@(isOld ? "text-danger" : "text-muted") text-decoration-none">
-                                                @item.Title
-                                            </a>
+                                            <a asp-controller="Guides" asp-action="Details" asp-route-id="@item.Id" target="_blank" class="@(isOld ? "text-danger" : "text-muted") text-decoration-none">@item.Title</a>
                                         </td>
                                         <td>@item.User?.UserName</td>
-                                        <td>
-                                            @item.DeletedAt?.ToString("dd.MM.yyyy HH:mm")
-                                        </td>
-                                        <td>
-                                            @if (isOld)
-                                            {
-                                                <span class="text-danger fw-bold">
-                                                    <i class="fas fa-exclamation-triangle"></i> > 30 dni
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">
-                                                    @Math.Floor(daysInTrash) dni
-                                                </span>
-                                            }
-                                        </td>
+                                        <td>@item.DeletedAt?.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@(isOld ? "> 30 dni" : $"{Math.Floor(daysInTrash)} dni")</td>
                                         <td>
                                             <div class="action-btn-group">
                                                 <form asp-action="RestoreGuide" asp-route-id="@item.Id" method="post" style="display:inline;">
-                                                    <button type="submit" class="btn btn-success btn-sm" title="Przywróć do żywych">
-                                                        <i class="fas fa-undo"></i>
-                                                    </button>
+                                                    <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-undo"></i></button>
                                                 </form>
-
-                                                <a asp-controller="Guides" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm" title="Edytuj treść">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-
-                                                <form asp-action="DeletePermanently" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('Czy na pewno usunąć PERMANENTNIE?');">
-                                                    <button type="submit" class="btn btn-danger btn-sm" title="Usuń bezpowrotnie">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
+                                                <form asp-action="DeletePermanently" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('Usunąć PERMANENTNIE?');">
+                                                    <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-times"></i></button>
                                                 </form>
                                             </div>
                                         </td>
@@ -458,16 +389,95 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="mt-2 text-muted small">
-                        * Elementy oznaczone kolorem czerwonym znajdują się w koszu dłużej niż 30 dni.
-                    </div>
                 }
                 else
                 {
                     <div class="text-center p-5 text-muted">
                         <i class="fas fa-trash-restore fa-3x mb-3" style="opacity: 0.3"></i>
                         <h4>Kosz jest pusty</h4>
-                        <p>Tutaj trafią usunięte poradniki.</p>
+                    </div>
+                }
+            </div>
+
+            @* 4. TREŚĆ: ZGŁOSZENIA (TICKETY) - POPRAWIONA *@
+            <div class="tab-pane fade" id="tickets" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-warning"><i class="fas fa-envelope-open-text me-2"></i>Zgłoszenia użytkowników</h4>
+                </div>
+
+                @if (Model.Tickets != null && Model.Tickets.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover text-nowrap">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                    <th>Użytkownik</th>
+                                    <th>Temat</th>
+                                    <th class="text-end">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Tickets)
+                                {
+                                    <tr class="align-middle">
+                                        <td>
+                                            @* ZMIANA NAZW STATUSÓW *@
+                                            @if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.Oczekujące)
+                                            {
+                                                <span class="badge bg-danger">Oczekujące</span>
+                                            }
+                                            else if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
+                                            {
+                                                <span class="badge bg-warning text-dark">W trakcie</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Zamknięte</span>
+                                            }
+                                        </td>
+
+                                        <td class="small text-muted">@item.CreatedAt.ToString("dd.MM HH:mm")</td>
+
+                                        <td>
+                                            @if (item.User != null)
+                                            {
+                                                <span class="fw-bold">@item.User.UserName</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Nieznany</span>
+                                            }
+
+                                            @* WYKRZYKNIK DLA ADMINA (JEŚLI USER ODPISAŁ) *@
+                                            @if (item.HasUnreadMessage && item.Status != praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
+                                            {
+                                                <span class="ms-2 text-warning" title="Użytkownik odpisał!" data-bs-toggle="tooltip">
+                                                    <i class="fas fa-exclamation-circle fa-lg animate-pulse"></i>
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <td>@item.Title</td>
+
+                                        <td class="text-end">
+                                            <a asp-controller="Admin" asp-action="TicketDetails" asp-route-id="@item.Id" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-comments me-1"></i> Otwórz
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center p-5 text-muted">
+                        <i class="fas fa-envelope fa-3x mb-3" style="opacity: 0.3"></i>
+                        <h4>Brak zgłoszeń</h4>
+                        <p>Wszystko działa jak należy, nikt nie narzeka! :)</p>
                     </div>
                 }
             </div>
@@ -476,6 +486,7 @@
     </div>
 </div>
 
+@* Modale Mute/Ban pozostają bez zmian *@
 <div class="modal fade" id="muteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content bg-dark text-white border-secondary">
@@ -493,7 +504,6 @@
                         <option value="24">24 godziny</option>
                         <option value="168">7 dni</option>
                     </select>
-                    <small class="text-muted">Wyciszony użytkownik może się zalogować, ale nie może dodawać treści.</small>
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
@@ -524,7 +534,6 @@
                     </select>
                     <label class="form-label">Powód (opcjonalnie):</label>
                     <input type="text" name="reason" class="form-control bg-secondary text-white" placeholder="np. Spamowanie" />
-                    <small class="text-muted d-block mt-2">Zbanowany użytkownik <strong>nie będzie mógł się zalogować</strong>.</small>
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
@@ -553,6 +562,11 @@
                 tab.show();
             }
         }
+
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        })
     });
 
     function openMuteModal(id, name) {

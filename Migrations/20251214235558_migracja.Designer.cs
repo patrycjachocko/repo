@@ -11,8 +11,8 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251213155707_todolist")]
-    partial class todolist
+    [Migration("20251214235558_migracja")]
+    partial class migracja
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -37,6 +37,9 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.Property<long>("IgdbGameId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastAccessed")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
@@ -329,6 +332,9 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -338,6 +344,9 @@ namespace praca_dyplomowa_zesp.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsApproved")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
@@ -418,6 +427,106 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.HasIndex("GameInLibraryId");
 
                     b.ToTable("ToDoItems");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Ticket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasUnreadMessage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasUnreadResponse")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Tickets");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.TicketAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("FileContent")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TicketMessageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketMessageId");
+
+                    b.ToTable("TicketAttachments");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.TicketMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsStaffReply")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TicketMessages");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Users.User", b =>
@@ -699,6 +808,47 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Navigation("GameInLibrary");
                 });
 
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Ticket", b =>
+                {
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.TicketAttachment", b =>
+                {
+                    b.HasOne("praca_dyplomowa_zesp.Models.TicketMessage", "TicketMessage")
+                        .WithMany("Attachments")
+                        .HasForeignKey("TicketMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TicketMessage");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.TicketMessage", b =>
+                {
+                    b.HasOne("praca_dyplomowa_zesp.Models.Ticket", "Ticket")
+                        .WithMany("Messages")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("GameInLibrary", b =>
                 {
                     b.Navigation("ToDoItems");
@@ -716,6 +866,16 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Navigation("Comments");
 
                     b.Navigation("Rates");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Ticket", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.TicketMessage", b =>
+                {
+                    b.Navigation("Attachments");
                 });
 #pragma warning restore 612, 618
         }

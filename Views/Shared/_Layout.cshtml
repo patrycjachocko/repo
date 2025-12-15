@@ -11,11 +11,8 @@
     <title>@ViewData["Title"] - GameHub</title>
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
-
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/praca_dyplomowa_zesp.styles.css" asp-append-version="true" />
 
@@ -54,6 +51,11 @@
                 color: #ccc;
                 text-decoration: none;
             }
+
+                footer a:hover {
+                    color: #fff;
+                    text-decoration: underline;
+                }
     </style>
 </head>
 <body>
@@ -92,7 +94,7 @@
                                 <a class="nav-link" asp-area="" asp-controller="Library" asp-action="Index">Moja Biblioteka</a>
                             </li>
 
-                            @* --- LOGIKA PRZENIESIONA TUTAJ: Jeśli połączony ze Steam, pokaż link obok biblioteki --- *@
+                            @* --- LOGIKA: Jeśli połączony ze Steam, pokaż link obok biblioteki --- *@
                             var user = await UserManager.GetUserAsync(User);
                             if (user != null && !string.IsNullOrEmpty(user.SteamId))
                             {
@@ -117,9 +119,15 @@
         </main>
     </div>
 
+    @* --- STOPKA Z LINKIEM DO TICKETÓW --- *@
     <footer class="border-top footer text-muted mt-5 py-3">
         <div class="container text-center">
             &copy; 2025 - GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+
+            @* Tutaj dodaliśmy nowy link: *@
+            | <a asp-controller="Tickets" asp-action="Index">
+                <i class="fas fa-headset"></i> Zgłoś błąd / Kontakt
+            </a>
         </div>
     </footer>
 

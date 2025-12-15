@@ -1,0 +1,227 @@
+﻿@model praca_dyplomowa_zesp.Models.Ticket
+@using Microsoft.AspNetCore.Identity
+@using praca_dyplomowa_zesp.Models.Users
+@inject UserManager<User> UserManager
+
+@{
+    ViewData["Title"] = "Szczegóły zgłoszenia";
+    var currentUser = await UserManager.GetUserAsync(User);
+}
+
+<style>
+    .chat-box {
+        background: #1a1a20;
+        border-radius: 10px;
+        padding: 20px;
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1px solid #333;
+    }
+
+    .message-bubble {
+        padding: 10px 15px;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        max-width: 75%;
+        position: relative;
+    }
+
+    .msg-user {
+        background-color: #0d6efd;
+        color: white;
+        margin-left: auto;
+        border-bottom-right-radius: 2px;
+    }
+
+    .msg-admin {
+        background-color: #333;
+        color: #ddd;
+        margin-right: auto;
+        border: 1px solid #444;
+        border-bottom-left-radius: 2px;
+    }
+
+    .msg-info {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+        opacity: 0.7;
+    }
+
+    .preview-thumb {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 5px;
+        border: 1px solid #555;
+    }
+
+    .preview-container {
+        position: relative;
+        display: inline-block;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="fas fa-ticket-alt text-warning me-2"></i> @Model.Title</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">Wróć do listy</a>
+    </div>
+
+    <div class="card bg-dark text-white mb-4 border-secondary">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Status:</strong>
+                @if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.Oczekujące)
+                {
+                    <span class="badge bg-success">Oczekujące</span>
+                }
+                else if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
+                {
+                    <span class="badge bg-warning text-dark">W trakcie realizacji</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Zamknięte</span>
+                }
+            </div>
+            <div class="text-muted small">Utworzono: @Model.CreatedAt.ToString("g")</div>
+        </div>
+    </div>
+
+    <div class="chat-box mb-4 d-flex flex-column">
+        <div class="message-bubble msg-user mb-4 w-100" style="background: #1e3a5f; max-width: 90%;">
+            <div class="msg-info text-end">TY (Treść zgłoszenia) • @Model.CreatedAt.ToString("g")</div>
+            <div>@Model.Content</div>
+        </div>
+        <hr class="border-secondary my-3 w-100" />
+
+        @foreach (var msg in Model.Messages.OrderBy(m => m.CreatedAt))
+        {
+            bool isMe = msg.UserId == currentUser.Id;
+            <div class="message-bubble @(isMe ? "msg-user" : "msg-admin")">
+                <div class="msg-info @(isMe ? "text-end" : "text-start")">
+                    @(isMe ? "Ty" : msg.User?.UserName ?? "Support") • @msg.CreatedAt.ToString("g")
+                </div>
+
+                @if (!string.IsNullOrEmpty(msg.Message))
+                {
+                    <div class="mb-1">@msg.Message</div>
+                }
+
+                @if (msg.Attachments != null && msg.Attachments.Any())
+                {
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        @foreach (var att in msg.Attachments)
+                        {
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#imgModal-@att.Id">
+                                <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)"
+                                     class="preview-thumb" style="width: 100px; height: 100px;" />
+                            </a>
+
+                            <div class="modal fade" id="imgModal-@att.Id" tabindex="-1">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content bg-dark">
+                                        <div class="modal-body text-center p-0">
+                                            <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)" class="img-fluid" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (Model.Status != praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
+    {
+        <div class="card bg-dark border-secondary">
+            <div class="card-body">
+                <form asp-action="Reply" method="post" enctype="multipart/form-data" id="replyForm">
+                    <input type="hidden" name="id" value="@Model.Id" />
+
+                    <div id="previews" class="d-flex flex-wrap gap-2 mb-2"></div>
+
+                    <input type="file" name="attachments" id="attachmentInput" class="d-none" multiple accept="image/*" />
+
+                    <div class="form-group">
+                        <label class="form-label text-white small text-muted">Ctrl+V aby wkleić, lub przycisk spinacza.</label>
+                        <textarea name="message" id="messageInput" class="form-control bg-secondary text-white border-0" rows="3" placeholder="Napisz wiadomość..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="document.getElementById('attachmentInput').click()">
+                            <i class="fas fa-paperclip"></i> Dodaj pliki
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-1"></i> Wyślij
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-secondary text-center"><i class="fas fa-lock me-2"></i> Zgłoszenie zamknięte.</div>
+    }
+</div>
+
+<script>
+    var chatBox = document.querySelector('.chat-box');
+    if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+
+    const dt = new DataTransfer();
+    const attachmentInput = document.getElementById('attachmentInput');
+    const previewsDiv = document.getElementById('previews');
+
+    attachmentInput?.addEventListener('change', function(){
+        for(let i = 0; i < this.files.length; i++){
+            dt.items.add(this.files[i]);
+        }
+        updateFiles();
+    });
+
+    document.getElementById('messageInput')?.addEventListener('paste', function (e) {
+        var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (var index in items) {
+            var item = items[index];
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                dt.items.add(item.getAsFile());
+                updateFiles();
+            }
+        }
+    });
+
+    function updateFiles(){
+        attachmentInput.files = dt.files;
+        renderPreviews();
+    }
+
+    function renderPreviews(){
+        previewsDiv.innerHTML = '';
+        for(let i = 0; i < dt.files.length; i++){
+            const file = dt.files[i];
+            const reader = new FileReader();
+            reader.onload = function(e){
+                const div = document.createElement('div');
+                div.className = 'preview-container';
+                // ZMIANA: Używamy btn-close
+                div.innerHTML = `
+                    <img src="${e.target.result}" class="preview-thumb" />
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-1" aria-label="Close" onclick="removeFile(${i})"></button>
+                `;
+                previewsDiv.appendChild(div);
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    window.removeFile = function(index){
+        dt.items.remove(index);
+        updateFiles();
+    }
+</script>

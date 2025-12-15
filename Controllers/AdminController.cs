@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data; // Upewnij się, że ten namespace jest poprawny dla Twojego DbContext
+using praca_dyplomowa_zesp.Models;
 using praca_dyplomowa_zesp.Models.Modules.Admin;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Users;
@@ -35,7 +36,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 SearchString = searchString,
                 Users = new List<AdminUserDto>(),
                 PendingGuides = new List<Guide>(), // Inicjalizacja pustej listy
-                DeletedGuides = new List<Guide>()
+                DeletedGuides = new List<Guide>(),
+                Tickets = new List<Ticket>()
             };
 
             // 1. UŻYTKOWNICY - Pobieramy TYLKO jeśli użytkownik jest Adminem
@@ -91,6 +93,13 @@ namespace praca_dyplomowa_zesp.Controllers
                 .ToListAsync();
 
             model.DeletedGuides = deletedGuides;
+
+            var tickets = await _context.Tickets
+            .Include(t => t.User) // Ważne, żeby widzieć kto napisał
+            .OrderByDescending(t => t.CreatedAt) // Najnowsze na górze
+            .ToListAsync();
+
+            model.Tickets = tickets;
 
             return View(model);
         }
@@ -266,6 +275,118 @@ namespace praca_dyplomowa_zesp.Controllers
                 TempData["Success"] = "Kosz został opróżniony.";
             }
             return RedirectToAction("Index");
+        }
+
+        // 2. Zmiana statusu (np. Zamknięcie ticketa)
+        [HttpPost]
+        public async Task<IActionResult> UpdateTicketStatus(int id, TicketStatus status)
+        {
+            var ticket = await _context.Tickets.FindAsync(id);
+            if (ticket == null) return NotFound();
+
+            ticket.Status = status;
+            if (status == TicketStatus.Zamknięte)
+            {
+                ticket.ClosedAt = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> TicketDetails(int id)
+        {
+            var ticket = await _context.Tickets
+                .Include(t => t.User)
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.User)
+                // --- DODANE: Pobieranie załączników do wiadomości ---
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Attachments)
+                // ----------------------------------------------------
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (ticket == null) return NotFound();
+
+            // AUTOMATYZACJA: Skoro Admin wszedł, to znaczy że widzi nowe wiadomości
+            if (ticket.HasUnreadMessage)
+            {
+                ticket.HasUnreadMessage = false;
+                await _context.SaveChangesAsync();
+            }
+
+            return View(ticket);
+        }
+
+        // 2. Odpowiedź Admina
+        [HttpPost]
+        public async Task<IActionResult> AdminReply(int id, string message, List<IFormFile> attachments)
+        {
+            var ticket = await _context.Tickets.FindAsync(id);
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            if (ticket == null) return NotFound();
+
+            if (!string.IsNullOrWhiteSpace(message) || (attachments != null && attachments.Any()))
+            {
+                var msg = new TicketMessage
+                {
+                    TicketId = id,
+                    UserId = currentUser.Id,
+                    Message = message ?? "",
+                    CreatedAt = DateTime.Now,
+                    IsStaffReply = true
+                };
+                _context.TicketMessages.Add(msg);
+                await _context.SaveChangesAsync();
+
+                if (attachments != null)
+                {
+                    foreach (var file in attachments)
+                    {
+                        if (file.Length > 0)
+                        {
+                            using (var ms = new MemoryStream())
+                            {
+                                await file.CopyToAsync(ms);
+                                var att = new TicketAttachment
+                                {
+                                    TicketMessageId = msg.Id,
+                                    FileName = file.FileName,
+                                    ContentType = file.ContentType,
+                                    FileContent = ms.ToArray()
+                                };
+                                _context.TicketAttachments.Add(att);
+                            }
+                        }
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                ticket.HasUnreadResponse = true;
+                if (ticket.Status == TicketStatus.Oczekujące) ticket.Status = TicketStatus.W_trakcie;
+
+                await _context.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(TicketDetails), new { id = id });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CloseTicket(int id)
+        {
+            var ticket = await _context.Tickets.FindAsync(id);
+            if (ticket == null) return NotFound();
+
+            ticket.Status = TicketStatus.Zamknięte;
+            ticket.ClosedAt = DateTime.Now;
+            ticket.HasUnreadMessage = false; // Po zamknięciu nie chcemy powiadomień
+
+            await _context.SaveChangesAsync();
+
+            // Wracamy do listy zgłoszeń
+            return RedirectToAction(nameof(Index));
         }
     }
 }

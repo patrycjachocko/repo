@@ -10,6 +10,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Admin
         public string SearchString { get; set; }
         public List<Guide> PendingGuides { get; set; }
         public List<Guide> DeletedGuides { get; set; } = new List<Guide>();
+        public List<praca_dyplomowa_zesp.Models.Ticket> Tickets { get; set; } = new List<praca_dyplomowa_zesp.Models.Ticket>();
     }
 
     public class AdminUserDto

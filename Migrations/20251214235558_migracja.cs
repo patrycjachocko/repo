@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace praca_dyplomowa_zesp.Migrations
 {
     /// <inheritdoc />
-    public partial class migracja1 : Migration
+    public partial class migracja : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -199,7 +199,8 @@ namespace praca_dyplomowa_zesp.Migrations
                     DateAddedToLibrary = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CurrentUserStoryMission = table.Column<string>(type: "TEXT", nullable: true),
                     CurrentUserStoryProgressPercent = table.Column<int>(type: "INTEGER", nullable: false),
-                    Notes = table.Column<string>(type: "TEXT", nullable: true)
+                    Notes = table.Column<string>(type: "TEXT", nullable: true),
+                    LastAccessed = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -227,13 +228,41 @@ namespace praca_dyplomowa_zesp.Migrations
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IsApproved = table.Column<bool>(type: "INTEGER", nullable: false)
+                    IsApproved = table.Column<bool>(type: "INTEGER", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Guides", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Guides_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tickets",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Content = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ClosedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    HasUnreadMessage = table.Column<bool>(type: "INTEGER", nullable: false),
+                    HasUnreadResponse = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tickets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tickets_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
@@ -258,6 +287,27 @@ namespace praca_dyplomowa_zesp.Migrations
                         name: "FK_UserAchievements_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ToDoItems",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Content = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false),
+                    GameInLibraryId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ToDoItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ToDoItems_GamesInLibraries_GameInLibraryId",
+                        column: x => x.GameInLibraryId,
+                        principalTable: "GamesInLibraries",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -317,6 +367,35 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TicketMessages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TicketId = table.Column<int>(type: "INTEGER", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Message = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IsStaffReply = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketMessages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketMessages_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TicketMessages_Tickets_TicketId",
+                        column: x => x.TicketId,
+                        principalTable: "Tickets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Reactions",
                 columns: table => new
                 {
@@ -365,6 +444,28 @@ namespace praca_dyplomowa_zesp.Migrations
                         name: "FK_Replies_Comments_ParentCommentId",
                         column: x => x.ParentCommentId,
                         principalTable: "Comments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TicketAttachments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    FileContent = table.Column<byte[]>(type: "BLOB", nullable: false),
+                    ContentType = table.Column<string>(type: "TEXT", nullable: false),
+                    FileName = table.Column<string>(type: "TEXT", nullable: false),
+                    TicketMessageId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketAttachments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketAttachments_TicketMessages_TicketMessageId",
+                        column: x => x.TicketMessageId,
+                        principalTable: "TicketMessages",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -462,6 +563,31 @@ namespace praca_dyplomowa_zesp.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TicketAttachments_TicketMessageId",
+                table: "TicketAttachments",
+                column: "TicketMessageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketMessages_TicketId",
+                table: "TicketMessages",
+                column: "TicketId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketMessages_UserId",
+                table: "TicketMessages",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tickets_UserId",
+                table: "Tickets",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ToDoItems_GameInLibraryId",
+                table: "ToDoItems",
+                column: "GameInLibraryId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserAchievements_UserId",
                 table: "UserAchievements",
                 column: "UserId");
@@ -486,9 +612,6 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "GamesInLibraries");
-
-            migrationBuilder.DropTable(
                 name: "Rates");
 
             migrationBuilder.DropTable(
@@ -498,7 +621,13 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "Replies");
 
             migrationBuilder.DropTable(
+                name: "TicketAttachments");
+
+            migrationBuilder.DropTable(
                 name: "Tips");
+
+            migrationBuilder.DropTable(
+                name: "ToDoItems");
 
             migrationBuilder.DropTable(
                 name: "UserAchievements");
@@ -510,7 +639,16 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "Comments");
 
             migrationBuilder.DropTable(
+                name: "TicketMessages");
+
+            migrationBuilder.DropTable(
+                name: "GamesInLibraries");
+
+            migrationBuilder.DropTable(
                 name: "Guides");
+
+            migrationBuilder.DropTable(
+                name: "Tickets");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

@@ -1,0 +1,80 @@
+﻿@model IEnumerable<praca_dyplomowa_zesp.Models.Ticket>
+
+@* Styl dla pulsującego wykrzyknika *@
+<style>
+    @("@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }")
+    .animate-pulse {
+        animation: pulse 1.5s infinite;
+    }
+</style>
+
+<div class="container mt-4">
+    <h2>Moje zgłoszenia</h2>
+    <p>
+        <a asp-action="Create" class="btn btn-primary">Nowe zgłoszenie</a>
+    </p>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">Nie masz jeszcze żadnych zgłoszeń.</div>
+    }
+    else
+    {
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Temat</th>
+                    <th>Status</th>
+                    <th>Data utworzenia</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            @item.Title
+                            
+                            @* --- PUNKT 5: Wykrzyknik dla użytkownika, gdy Admin odpisze --- *@
+                            @if (item.HasUnreadResponse)
+                            {
+                                <span class="ms-2 text-danger" title="Nowa odpowiedź od administracji!" data-bs-toggle="tooltip">
+                                    <i class="fas fa-exclamation-circle fa-lg animate-pulse"></i>
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            @if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
+                            {
+                                <span class="badge bg-secondary">Zamknięte</span>
+                            }
+                            else if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
+                            {
+                                <span class="badge bg-warning text-dark">W trakcie</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Oczekujące</span>
+                            }
+                        </td>
+                        <td>@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info">Szczegóły</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@* Skrypt do uruchomienia dymków (tooltipów) *@
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Tooltip(popoverTriggerEl)
+        })
+    });
+</script>
