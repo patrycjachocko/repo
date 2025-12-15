@@ -1,14 +1,10 @@
-﻿@using praca_dyplomowa_zesp.Models.Modules.Libraries
-@model IEnumerable<MainLibraryViewModel>
+﻿@using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary
+@model UserLibraryIndexViewModel
 
 @{
     ViewData["Title"] = "Moja Biblioteka";
-    var searchString = ViewData["SearchString"] as string;
-    var currentFilter = ViewData["StatusFilter"] as string ?? "all";
-
-    // Sprawdzamy, czy lista jest pusta (uwzględniając filtry)
-    bool isResultEmpty = !Model.Any();
-    bool isSearchOrFilterActive = !string.IsNullOrEmpty(searchString) || currentFilter != "all";
+    bool isResultEmpty = !Model.Games.Any();
+    bool isSearchOrFilterActive = !string.IsNullOrEmpty(Model.SearchString) || Model.StatusFilter != "all";
 }
 
 <div class="container-fluid px-4">
@@ -21,17 +17,18 @@
 
             @* Formularz: Szukaj + Filtruj *@
             <form asp-action="Index" method="get" class="d-flex gap-2" role="search">
+                <input type="hidden" name="page" value="1" /> @* Reset strony przy filtrowaniu *@
 
                 @* Dropdown Statusu *@
                 <select name="statusFilter" class="form-select" style="width: auto; min-width: 150px; cursor: pointer;" onchange="this.form.submit()">
-                    <!option value="all" @(currentFilter == "all" ? "selected" : "")>Wszystkie</!option>
-                    <!option value="completed" @(currentFilter == "completed" ? "selected" : "")>✅ Ukończone</!option>
-                    <!option value="playing" @(currentFilter == "playing" ? "selected" : "")>🎮 W trakcie</!option>
-                    <!option value="toplay" @(currentFilter == "toplay" ? "selected" : "")>🆕 Do zagrania</!option>
+                    <!option value="all" @(Model.StatusFilter == "all" ? "selected" : "")>Wszystkie</!option>
+                    <!option value="completed" @(Model.StatusFilter == "completed" ? "selected" : "")>✅ Ukończone</!option>
+                    <!option value="playing" @(Model.StatusFilter == "playing" ? "selected" : "")>🎮 W trakcie</!option>
+                    <!option value="toplay" @(Model.StatusFilter == "toplay" ? "selected" : "")>🆕 Do zagrania</!option>
                 </select>
 
                 <div class="input-group">
-                    <input type="text" name="searchString" value="@searchString" class="form-control" placeholder="Szukaj gry..." aria-label="Szukaj">
+                    <input type="text" name="searchString" value="@Model.SearchString" class="form-control" placeholder="Szukaj gry..." aria-label="Szukaj">
                     <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
                     @if (isSearchOrFilterActive)
                     {
@@ -71,7 +68,7 @@
     <div class="row">
         @if (!isResultEmpty)
         {
-            @foreach (var game in Model)
+            @foreach (var game in Model.Games)
             {
                 // LOGIKA KOLORÓW I STATUSÓW
                 string statusClass = "";
@@ -97,7 +94,8 @@
                     badgeColor = "bg-warning text-dark";
                 }
 
-                <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+                // SIATKA: 2 gry (col-6), 4 gry (col-md-3), 6 gier (col-xl-2)
+                <div class="col-6 col-md-3 col-xl-2 mb-4">
                     <a asp-action="Details" asp-route-id="@game.DbId" class="text-decoration-none text-dark card-link-wrapper">
 
                         @* Karta z klasą statusu *@
@@ -109,7 +107,7 @@
                                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
                                      alt="@game.Name">
 
-                                @* Badge (Odznaka) ze statusem w rogu okładki *@
+                                @* Badge *@
                                 <span class="badge @badgeColor position-absolute top-0 end-0 m-2 shadow-sm" style="font-size: 0.75rem; opacity: 0.9;">
                                     @badgeText @if(game.ProgressPercent > 0 && game.ProgressPercent < 100) {
                                     <span>(@game.ProgressPercent%)</span>
@@ -146,41 +144,69 @@
                     <a asp-controller="Games" asp-action="Index" class="btn btn-primary btn-lg">
                         Przeglądaj katalog gier
                     </a>
+                    <a asp-controller="Profile" asp-action="SteamLibrary" class="btn btn-dark btn-lg ms-2">
+                        <i class="bi bi-steam"></i> Importuj ze Steam
+                    </a>
                 </div>
             </div>
         }
     </div>
+
+    @* --- PAGINACJA --- *@
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="Paginacja">
+            <ul class="pagination justify-content-center">
+                @{
+                    var prevDisabled = Model.CurrentPage > 1 ? "" : "disabled";
+                    var nextDisabled = Model.CurrentPage < Model.TotalPages ? "" : "disabled";
+
+                    // Helper URL
+                    string GetPageUrl(int p) => Url.Action("Index", new { page = p, searchString = Model.SearchString, statusFilter = Model.StatusFilter });
+                }
+
+                <li class="page-item @prevDisabled">
+                    <a class="page-link" href="@GetPageUrl(Model.CurrentPage - 1)">Poprzednia</a>
+                </li>
+
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                        <a class="page-link" href="@GetPageUrl(i)">@i</a>
+                    </li>
+                }
+
+                <li class="page-item @nextDisabled">
+                    <a class="page-link" href="@GetPageUrl(Model.CurrentPage + 1)">Następna</a>
+                </li>
+            </ul>
+        </nav>
+    }
 </div>
 
 <style>
-    /* --- STYLE STATUSÓW (Subtelne obramowania i cienie) --- */
-
-    /* Domyślny stan karty ma border: none (ustawiony inline w HTML),
-           więc dodajemy border tylko przez klasy statusowe z !important, by nadpisać style inline/bootstrap */
-
+    /* --- STYLE STATUSÓW --- */
     .status-completed {
-        border: 1px solid #198754 !important; /* Zielony Bootstrap */
+        border: 1px solid #198754 !important;
         box-shadow: 0 0 8px rgba(25, 135, 84, 0.15) !important;
     }
 
     .status-playing {
-        border: 1px solid #0dcaf0 !important; /* Błękitny Bootstrap */
+        border: 1px solid #0dcaf0 !important;
         box-shadow: 0 0 8px rgba(13, 202, 240, 0.2) !important;
     }
 
     .status-toplay {
-        border: 1px solid #ffc107 !important; /* Żółty Bootstrap */
+        border: 1px solid #ffc107 !important;
         box-shadow: 0 0 8px rgba(255, 193, 7, 0.2) !important;
     }
 
-    /* Efekt Hover - Podbicie poświaty */
     .grow-on-hover:hover {
         transform: scale(1.05);
         cursor: pointer;
         z-index: 10;
     }
 
-    /* Poświata staje się mocniejsza po najechaniu */
     .status-completed:hover {
         box-shadow: 0 0 15px rgba(25, 135, 84, 0.4) !important;
     }
@@ -193,7 +219,6 @@
         box-shadow: 0 0 15px rgba(255, 193, 7, 0.5) !important;
     }
 
-    /* Fix dla linków */
     .card-link-wrapper:hover {
         text-decoration: none;
         color: inherit;

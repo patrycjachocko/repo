@@ -45,7 +45,7 @@ namespace praca_dyplomowa_zesp.Controllers
         private readonly IGDBClient _igdbClient;
         private readonly UserManager<User> _userManager;
 
-        private const int PageSize = 50;
+        private const int PageSize = 60;
 
         public GamesController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager)
         {

@@ -39,80 +39,127 @@ namespace praca_dyplomowa_zesp.Controllers
             return Guid.Empty;
         }
 
+        // ZMIANA: Stała na 60
+        private const int PageSize = 60;
+
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public async Task<IActionResult> Index(string? searchString, string statusFilter = "all")
+        public async Task<IActionResult> Index(string? searchString, string statusFilter = "all", int page = 1)
         {
             var currentUserId = GetCurrentUserId();
-            var userGamesFromDb = await _context.GamesInLibraries
+
+            // 1. Pobieramy WSZYSTKIE gry usera z bazy (to jest szybkie, bo to tylko ID i statusy)
+            var query = _context.GamesInLibraries
                 .Where(g => g.UserId == currentUserId)
                 .OrderByDescending(g => g.LastAccessed)
-                .ToListAsync();
+                .AsQueryable();
 
-            if (!userGamesFromDb.Any()) return View(new List<MainLibraryViewModel>());
+            // 2. Filtrowanie po statusie (w bazie danych)
+            if (statusFilter == "completed") query = query.Where(g => g.CurrentUserStoryProgressPercent == 100);
+            else if (statusFilter == "playing") query = query.Where(g => g.CurrentUserStoryProgressPercent > 0 && g.CurrentUserStoryProgressPercent < 100);
+            else if (statusFilter == "toplay") query = query.Where(g => g.CurrentUserStoryProgressPercent == 0);
 
-            // --- Pobieranie danych z IGDB (bez zmian) ---
-            var allApiGames = new List<ApiGame>();
-            var allIgdbIds = userGamesFromDb.Select(g => g.IgdbGameId).Distinct().ToList();
-            int batchSize = 50;
-            for (int i = 0; i < allIgdbIds.Count; i += batchSize)
-            {
-                var batchIds = allIgdbIds.Skip(i).Take(batchSize).ToList();
-                var idsString = string.Join(",", batchIds);
-                var query = $"fields name, cover.url; where id = ({idsString}); limit {batchSize};";
-                try
-                {
-                    var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
-                    if (!string.IsNullOrEmpty(jsonResponse))
-                    {
-                        var chunkGames = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
-                        if (chunkGames != null) allApiGames.AddRange(chunkGames);
-                    }
-                }
-                catch (Exception ex) { Console.WriteLine($"Błąd index: {ex.Message}"); }
-            }
+            var filteredDbList = await query.ToListAsync();
 
-            // --- Mapowanie na ViewModel (TERAZ Z PROCENTAMI) ---
-            var viewModels = userGamesFromDb.Select(dbGame =>
-            {
-                var apiGame = allApiGames.FirstOrDefault(apiG => apiG.Id == dbGame.IgdbGameId);
-                return new MainLibraryViewModel
-                {
-                    DbId = dbGame.Id,
-                    IgdbGameId = dbGame.IgdbGameId,
-                    Name = apiGame?.Name ?? "Wczytywanie...",
-                    CoverUrl = apiGame?.Cover?.Url?.Replace("t_thumb", "t_cover_big") ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki",
-                    ProgressPercent = dbGame.CurrentUserStoryProgressPercent // <--- Przypisujemy procenty z bazy
-                };
-            }).ToList();
+            // 3. PAGINACJA
+            // Jeśli wyszukujemy po nazwie, musimy niestety pobrać dane dla wszystkich, żeby przefiltrować
+            // Jeśli NIE wyszukujemy (domyślny widok), pobieramy API tylko dla 60 gier z obecnej strony!
 
-            // --- WYSZUKIWANIE ---
+            List<MainLibraryViewModel> finalGamesList = new List<MainLibraryViewModel>();
+            int totalGames = 0;
+
             if (!string.IsNullOrEmpty(searchString))
             {
-                viewModels = viewModels
-                    .Where(g => g.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
+                // --- SCENARIUSZ WYSZUKIWANIA (Wolniejszy, ale konieczny do szukania po nazwie) ---
+                // Pobieramy dane API dla wszystkich przefiltrowanych statusem gier
+                var allIgdbIds = filteredDbList.Select(g => g.IgdbGameId).Distinct().ToList();
+                var allApiGames = new List<ApiGame>();
 
-            // --- FILTROWANIE PO STATUSIE (Nowość) ---
-            switch (statusFilter)
+                // Pobieramy w paczkach po 50 (API limit)
+                for (int i = 0; i < allIgdbIds.Count; i += 50)
+                {
+                    var batchIds = allIgdbIds.Skip(i).Take(50).ToList();
+                    var queryApi = $"fields name, cover.url; where id = ({string.Join(",", batchIds)}); limit 50;";
+                    try
+                    {
+                        var json = await _igdbClient.ApiRequestAsync("games", queryApi);
+                        if (!string.IsNullOrEmpty(json))
+                        {
+                            var chunk = JsonConvert.DeserializeObject<List<ApiGame>>(json);
+                            if (chunk != null) allApiGames.AddRange(chunk);
+                        }
+                    }
+                    catch { }
+                }
+
+                // Łączymy i filtrujemy po nazwie
+                var allViewModels = filteredDbList.Select(dbGame => {
+                    var apiGame = allApiGames.FirstOrDefault(a => a.Id == dbGame.IgdbGameId);
+                    return new MainLibraryViewModel
+                    {
+                        DbId = dbGame.Id,
+                        IgdbGameId = dbGame.IgdbGameId,
+                        Name = apiGame?.Name ?? "Nieznana",
+                        CoverUrl = apiGame?.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
+                        ProgressPercent = dbGame.CurrentUserStoryProgressPercent
+                    };
+                }).Where(g => g.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                totalGames = allViewModels.Count;
+                finalGamesList = allViewModels.Skip((page - 1) * PageSize).Take(PageSize).ToList();
+            }
+            else
             {
-                case "completed": // Ukończone (100%)
-                    viewModels = viewModels.Where(g => g.ProgressPercent == 100).ToList();
-                    break;
-                case "playing": // W trakcie (1-99%)
-                    viewModels = viewModels.Where(g => g.ProgressPercent > 0 && g.ProgressPercent < 100).ToList();
-                    break;
-                case "toplay": // Do zagrania (0%)
-                    viewModels = viewModels.Where(g => g.ProgressPercent == 0).ToList();
-                    break;
+                // --- SCENARIUSZ OPTYMALNY (Szybkie ładowanie strony) ---
+                totalGames = filteredDbList.Count;
+
+                // Bierzemy z bazy TYLKO 60 rekordów dla obecnej strony
+                var pagedDbList = filteredDbList.Skip((page - 1) * PageSize).Take(PageSize).ToList();
+
+                // Pobieramy dane z API tylko dla tych 60
+                var pageIgdbIds = pagedDbList.Select(g => g.IgdbGameId).Distinct().ToList();
+                var pageApiGames = new List<ApiGame>();
+
+                if (pageIgdbIds.Any())
+                {
+                    var idsString = string.Join(",", pageIgdbIds);
+                    // Limit w zapytaniu 100 jest bezpieczny dla 60 ID
+                    var queryApi = $"fields name, cover.url; where id = ({idsString}); limit 100;";
+                    try
+                    {
+                        var json = await _igdbClient.ApiRequestAsync("games", queryApi);
+                        if (!string.IsNullOrEmpty(json))
+                        {
+                            pageApiGames = JsonConvert.DeserializeObject<List<ApiGame>>(json) ?? new List<ApiGame>();
+                        }
+                    }
+                    catch { }
+                }
+
+                // Mapujemy
+                finalGamesList = pagedDbList.Select(dbGame => {
+                    var apiGame = pageApiGames.FirstOrDefault(a => a.Id == dbGame.IgdbGameId);
+                    return new MainLibraryViewModel
+                    {
+                        DbId = dbGame.Id,
+                        IgdbGameId = dbGame.IgdbGameId,
+                        Name = apiGame?.Name ?? "Wczytywanie...",
+                        CoverUrl = apiGame?.Cover?.Url?.Replace("t_thumb", "t_cover_big") ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki",
+                        ProgressPercent = dbGame.CurrentUserStoryProgressPercent
+                    };
+                }).ToList();
             }
 
-            // Przekazujemy parametry do widoku, aby zachować stan filtrów
-            ViewData["SearchString"] = searchString;
-            ViewData["StatusFilter"] = statusFilter;
+            var viewModel = new UserLibraryIndexViewModel
+            {
+                Games = finalGamesList,
+                CurrentPage = page,
+                TotalPages = (int)Math.Ceiling(totalGames / (double)PageSize),
+                SearchString = searchString,
+                StatusFilter = statusFilter
+            };
 
-            return View(viewModels);
+            return View(viewModel);
         }
 
         // GET: Library/Details/5
