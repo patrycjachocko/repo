@@ -65,9 +65,26 @@ namespace praca_dyplomowa.Data
             // <-- DODANE: Konfiguracja dla nowego pola w Guide -->
             modelBuilder.Entity<Guide>()
                 .HasIndex(g => g.IgdbGameId);
+
+            modelBuilder.Entity<Reply>()
+                .HasOne(r => r.ParentComment)
+                .WithMany(c => c.Replies)
+                .HasForeignKey(r => r.ParentCommentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 2. Relacja Komentarz -> Reakcje (Usunięcie komentarza usuwa jego lajki)
+            modelBuilder.Entity<Reaction>()
+                .HasOne(r => r.Comment)
+                .WithMany(c => c.Reactions)
+                .HasForeignKey(r => r.CommentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 3. Relacja Odpowiedź -> Reakcje (Usunięcie odpowiedzi usuwa jej lajki)
+            modelBuilder.Entity<Reaction>()
+                .HasOne(r => r.Reply)
+                .WithMany(r => r.Reactions)
+                .HasForeignKey(r => r.ReplyId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
-
-
-
     }
 }

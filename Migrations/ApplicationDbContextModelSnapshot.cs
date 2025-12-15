@@ -292,7 +292,10 @@ namespace praca_dyplomowa_zesp.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("CommentId")
+                    b.Property<Guid?>("CommentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ReplyId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Type")
@@ -304,6 +307,8 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CommentId");
+
+                    b.HasIndex("ReplyId");
 
                     b.HasIndex("UserId");
 
@@ -769,18 +774,24 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.HasOne("praca_dyplomowa_zesp.Models.Interactions.Comments.Comment", "Comment")
                         .WithMany("Reactions")
                         .HasForeignKey("CommentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "Author")
+                    b.HasOne("praca_dyplomowa_zesp.Models.Interactions.Comments.Replies.Reply", "Reply")
+                        .WithMany("Reactions")
+                        .HasForeignKey("ReplyId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Author");
-
                     b.Navigation("Comment");
+
+                    b.Navigation("Reply");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.Guide", b =>
@@ -856,6 +867,11 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Navigation("Reactions");
 
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Comments.Replies.Reply", b =>
+                {
+                    b.Navigation("Reactions");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.Guide", b =>

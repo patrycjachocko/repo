@@ -1,6 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Users;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace praca_dyplomowa_zesp.Models.Interactions.Comments.Replies
 {
@@ -23,5 +24,6 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Comments.Replies
         public Guid ParentCommentId { get; set; }
         [ForeignKey("ParentCommentId")]
         public virtual Comment ParentComment { get; set; }
+        public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
     }
 }

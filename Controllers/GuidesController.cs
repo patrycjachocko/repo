@@ -41,6 +41,12 @@ namespace praca_dyplomowa_zesp.Controllers
             return Guid.Empty;
         }
 
+        private bool IsUserMuted(User user)
+        {
+            // Jeśli BanEnd ma wartość i ta data jest w przyszłości -> użytkownik jest wyciszony
+            return user.BanEnd.HasValue && user.BanEnd.Value > DateTimeOffset.Now;
+        }
+
         // GET: Guides/Index/123
         public async Task<IActionResult> Index(long gameId, string searchString, string sortOrder)
         {
@@ -164,8 +170,13 @@ namespace praca_dyplomowa_zesp.Controllers
             var comments = await _context.Comments
                 .Where(c => c.GuideId == id)
                 .Include(c => c.Author)
-                .Include(c => c.Replies).ThenInclude(r => r.Author)
-                .Include(c => c.Reactions)
+                .Include(c => c.Reactions) // Reakcje dla głównego komentarza
+                .Include(c => c.Replies)
+                    .ThenInclude(r => r.Author) // Autor odpowiedzi
+                                                // --- BRAKOWAŁO TEGO FRAGMENTU: ---
+                .Include(c => c.Replies)
+                    .ThenInclude(r => r.Reactions) // <--- TO JEST KLUCZOWE: Reakcje dla odpowiedzi
+                                                   // ---------------------------------
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
@@ -186,6 +197,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (existingRate != null) viewModel.UserRating = existingRate.Value;
             }
+
             if (guide.IsDeleted && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
             {
                 return NotFound();
@@ -260,6 +272,13 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var user = await _userManager.GetUserAsync(User);
 
+            // ZMIANA: Sprawdzenie Mute przy komentarzach
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz dodawać komentarzy.";
+                return RedirectToAction("Details", new { id = guideId });
+            }
+
             var comment = new Comment
             {
                 GuideId = guideId,
@@ -283,6 +302,13 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var user = await _userManager.GetUserAsync(User);
 
+            // ZMIANA: Sprawdzenie Mute przy odpowiedziach
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz odpowiadać.";
+                return RedirectToAction("Details", new { id = guideId });
+            }
+
             var reply = new Reply
             {
                 ParentCommentId = commentId,
@@ -291,8 +317,6 @@ namespace praca_dyplomowa_zesp.Controllers
                 CreatedAt = DateTime.Now
             };
 
-            // Zakładam, że masz DbSet<Reply> w Context, jeśli nie - dodaj go,
-            // lub użyj _context.Set<Reply>().Add(reply)
             _context.Add(reply);
             await _context.SaveChangesAsync();
 
@@ -302,49 +326,85 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleReaction(Guid commentId, int guideId, bool isUpvote)
+        public async Task<IActionResult> ToggleReaction(Guid? commentId, Guid? replyId, int guideId, bool isUpvote)
         {
             var user = await _userManager.GetUserAsync(User);
 
-            var existingReaction = await _context.Reactions
-                .FirstOrDefaultAsync(r => r.CommentId == commentId && r.UserId == user.Id);
+            // Sprawdzenie czy użytkownik nie ma mute
+            if (IsUserMuted(user)) return Forbid(); // Lub przekierowanie z komunikatem
+
+            Reaction existingReaction = null;
+
+            // 1. Sprawdzamy, czy to reakcja na KOMENTARZ
+            if (commentId.HasValue)
+            {
+                existingReaction = await _context.Reactions
+                    .FirstOrDefaultAsync(r => r.CommentId == commentId.Value && r.UserId == user.Id);
+            }
+            // 2. Sprawdzamy, czy to reakcja na ODPOWIEDŹ
+            else if (replyId.HasValue)
+            {
+                existingReaction = await _context.Reactions
+                    .FirstOrDefaultAsync(r => r.ReplyId == replyId.Value && r.UserId == user.Id);
+            }
+            else
+            {
+                return BadRequest("Brak ID komentarza lub odpowiedzi.");
+            }
 
             var targetType = isUpvote ? ReactionType.Like : ReactionType.Dislike;
 
             if (existingReaction != null)
             {
+                // Jeśli użytkownik klika to samo co już ma -> usuwamy (toggle off)
                 if (existingReaction.Type == targetType)
                 {
-                    _context.Reactions.Remove(existingReaction); // Usuń, jeśli kliknięto to samo (odznacz)
+                    _context.Reactions.Remove(existingReaction);
                 }
+                // Jeśli zmienia zdanie (z like na dislike lub odwrotnie) -> aktualizujemy
                 else
                 {
-                    existingReaction.Type = targetType; // Zmień decyzję
+                    existingReaction.Type = targetType;
                     _context.Reactions.Update(existingReaction);
                 }
             }
             else
             {
+                // Nowa reakcja
                 var reaction = new Reaction
                 {
-                    CommentId = commentId,
                     UserId = user.Id,
-                    Type = targetType
+                    Type = targetType,
+                    // Ważne: Ustawiamy jedno, drugie zostaje null
+                    CommentId = commentId,
+                    ReplyId = replyId
                 };
                 _context.Reactions.Add(reaction);
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToAction("Details", new { id = guideId });
+
+            // Zachowujemy pozycję na stronie (kotwica)
+            return RedirectToAction("Details", new { id = guideId, section = "comments" });
         }
 
         // --- POZOSTAŁE METODY (Create, Edit, Delete) - BEZ ZMIAN ---
 
         // GET: Create
         [Authorize]
-        public IActionResult Create(long gameId)
+        public async Task<IActionResult> Create(long gameId)
         {
             if (gameId <= 0) return NotFound();
+
+            // ZMIANA: Sprawdzenie Mute przed wejściem na formularz
+            var user = await _userManager.GetUserAsync(User);
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = $"Twoje konto jest wyciszone do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz tworzyć nowych treści.";
+                // Możesz przekierować do Index gry albo na Profil
+                return RedirectToAction("Index", new { gameId = gameId });
+            }
+
             return View(new Guide { IgdbGameId = gameId });
         }
 
@@ -354,6 +414,16 @@ namespace praca_dyplomowa_zesp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Guide guide, IFormFile? coverImageFile)
         {
+            // Musimy pobrać usera od razu, żeby sprawdzić mute
+            var user = await _userManager.GetUserAsync(User);
+
+            // ZMIANA: Sprawdzenie Mute przy wysyłaniu formularza
+            if (IsUserMuted(user))
+            {
+                ModelState.AddModelError(string.Empty, $"Twoje konto jest wyciszone do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz opublikować poradnika.");
+                // Jeśli zablokujemy tutaj, musimy pamiętać o ponownym wyświetleniu widoku
+                return View(guide);
+            }
             // Usuwamy walidację dla pól, które uzupełniamy automatycznie
             ModelState.Remove("User");
             ModelState.Remove("CoverImage");
@@ -589,6 +659,100 @@ namespace praca_dyplomowa_zesp.Controllers
 
             // Wróć tam, skąd przyszedłeś (np. do panelu admina)
             return Redirect(Request.Headers["Referer"].ToString());
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditComment(Guid commentId, int guideId, string content)
+        {
+            var comment = await _context.Comments.FindAsync(commentId);
+            if (comment == null) return NotFound();
+
+            var user = await _userManager.GetUserAsync(User);
+            if (comment.UserId != user.Id) return Forbid(); // Tylko autor może edytować
+
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = "Jesteś wyciszony, nie możesz edytować.";
+                return RedirectToAction("Details", new { id = guideId });
+            }
+
+            comment.Content = content;
+            // Opcjonalnie: comment.UpdatedAt = DateTime.Now; (jeśli dodasz takie pole)
+
+            _context.Update(comment);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Details", new { id = guideId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteComment(Guid commentId, int guideId)
+        {
+            var comment = await _context.Comments.FindAsync(commentId);
+            if (comment == null) return NotFound();
+
+            var user = await _userManager.GetUserAsync(User);
+
+            // Logika uprawnień: Autor LUB Admin LUB Moderator
+            bool canDelete = comment.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
+
+            if (!canDelete) return Forbid();
+
+            _context.Comments.Remove(comment); // Kaskadowo usunie odpowiedzi dzięki konfiguracji w DbContext
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Komentarz został usunięty.";
+            return RedirectToAction("Details", new { id = guideId });
+        }
+
+        // --- NOWE METODY: EDYCJA I USUWANIE ODPOWIEDZI ---
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditReply(Guid replyId, int guideId, string content)
+        {
+            var reply = await _context.Replies.FindAsync(replyId);
+            if (reply == null) return NotFound();
+
+            var user = await _userManager.GetUserAsync(User);
+            if (reply.UserId != user.Id) return Forbid();
+
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = "Jesteś wyciszony.";
+                return RedirectToAction("Details", new { id = guideId });
+            }
+
+            reply.Content = content;
+            _context.Update(reply);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Details", new { id = guideId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteReply(Guid replyId, int guideId)
+        {
+            var reply = await _context.Replies.FindAsync(replyId);
+            if (reply == null) return NotFound();
+
+            var user = await _userManager.GetUserAsync(User);
+            bool canDelete = reply.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
+
+            if (!canDelete) return Forbid();
+
+            _context.Replies.Remove(reply);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Odpowiedź została usunięta.";
+            return RedirectToAction("Details", new { id = guideId });
         }
     }
 }

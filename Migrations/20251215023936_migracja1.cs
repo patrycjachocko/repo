@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace praca_dyplomowa_zesp.Migrations
 {
     /// <inheritdoc />
-    public partial class migracja : Migration
+    public partial class migracja1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -396,32 +396,6 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Reactions",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CommentId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Reactions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Reactions_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Reactions_Comments_CommentId",
-                        column: x => x.CommentId,
-                        principalTable: "Comments",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Replies",
                 columns: table => new
                 {
@@ -466,6 +440,39 @@ namespace praca_dyplomowa_zesp.Migrations
                         name: "FK_TicketAttachments_TicketMessages_TicketMessageId",
                         column: x => x.TicketMessageId,
                         principalTable: "TicketMessages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Reactions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Type = table.Column<int>(type: "INTEGER", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CommentId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    ReplyId = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Reactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Reactions_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Reactions_Comments_CommentId",
+                        column: x => x.CommentId,
+                        principalTable: "Comments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Reactions_Replies_ReplyId",
+                        column: x => x.ReplyId,
+                        principalTable: "Replies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -548,6 +555,11 @@ namespace praca_dyplomowa_zesp.Migrations
                 column: "CommentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Reactions_ReplyId",
+                table: "Reactions",
+                column: "ReplyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Reactions_UserId",
                 table: "Reactions",
                 column: "UserId");
@@ -618,9 +630,6 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "Reactions");
 
             migrationBuilder.DropTable(
-                name: "Replies");
-
-            migrationBuilder.DropTable(
                 name: "TicketAttachments");
 
             migrationBuilder.DropTable(
@@ -636,7 +645,7 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Comments");
+                name: "Replies");
 
             migrationBuilder.DropTable(
                 name: "TicketMessages");
@@ -645,10 +654,13 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "GamesInLibraries");
 
             migrationBuilder.DropTable(
-                name: "Guides");
+                name: "Comments");
 
             migrationBuilder.DropTable(
                 name: "Tickets");
+
+            migrationBuilder.DropTable(
+                name: "Guides");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
