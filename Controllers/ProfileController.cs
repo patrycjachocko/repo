@@ -162,16 +162,17 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             // 2. Pobierz listę ID gier, które użytkownik już ma w bibliotece
-            // Używamy HashSet dla błyskawicznego sprawdzania "czy już mam tę grę"
             var ownedIgdbIds = await _context.GamesInLibraries
                 .Where(g => g.UserId == user.Id)
                 .Select(g => g.IgdbGameId)
                 .ToHashSetAsync();
 
-            var newIdsToAdd = new HashSet<long>();
-            var notFoundNames = new List<string>(); // Lista na gry, których nie udało się znaleźć
+            // ZMIANA: Słownik zamiast HashSet. Klucz: IGDB ID, Wartość: Steam AppId
+            var newGamesMap = new Dictionary<long, int>();
 
-            // Tworzymy mapę (Nazwa -> Gra Steam), żeby łatwo zarządzać tym, co zostało do znalezienia.
+            var notFoundNames = new List<string>();
+
+            // Mapa: Nazwa (wyczyszczona) -> Oryginalny obiekt SteamGame
             var gamesMap = new Dictionary<string, SteamGameDto>();
 
             foreach (var g in steamGames)
@@ -193,32 +194,43 @@ namespace praca_dyplomowa_zesp.Controllers
                 var batchNames = namesToProcess.Skip(i).Take(batchSize).ToList();
                 var namesQueryString = string.Join(",", batchNames.Select(n => $"\"{n}\""));
 
-                // Pytamy o 50 gier na raz (dokładna nazwa + kategoria Main Game)
-                var query = $"fields id, name, category, version_parent; where name = ({namesQueryString}) & category = 0 & version_parent = null; limit 50;";
+                var query = $"fields id, name, category, version_parent, aggregated_rating; where name = ({namesQueryString}) & category = 0 & version_parent = null; limit 50;";
 
                 try
                 {
-                    if (i > 0) await Task.Delay(150); // Małe opóźnienie między batchami
+                    if (i > 0) await Task.Delay(150);
 
                     var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
                     if (!string.IsNullOrEmpty(jsonResponse))
                     {
                         var batchResults = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
-                        if (batchResults != null)
+                        if (batchResults != null && batchResults.Any())
                         {
-                            foreach (var foundGame in batchResults)
-                            {
-                                // Jeśli user nie ma tej gry -> dodajemy do listy "Do dodania"
-                                if (!ownedIgdbIds.Contains(foundGame.Id))
-                                {
-                                    newIdsToAdd.Add(foundGame.Id);
-                                }
+                            var gamesGroupedByName = batchResults
+                                .GroupBy(g => g.Name, StringComparer.OrdinalIgnoreCase);
 
-                                // Usuwamy z mapy "do zrobienia" (IGDB może zwrócić inną wielkość liter, więc szukamy klucza)
-                                var matchedKey = gamesMap.Keys.FirstOrDefault(k => k.Equals(foundGame.Name, StringComparison.OrdinalIgnoreCase));
-                                if (matchedKey != null)
+                            foreach (var group in gamesGroupedByName)
+                            {
+                                // PRIORYTET: Gra z oceną krytyków, FALLBACK: Pierwsza lepsza
+                                var bestCandidate = group.FirstOrDefault(g => g.Aggregated_rating != null)
+                                                    ?? group.FirstOrDefault();
+
+                                if (bestCandidate != null)
                                 {
-                                    gamesMap.Remove(matchedKey);
+                                    // Sprawdzamy czy już nie mamy tej gry (w bazie lub w kolejce do dodania)
+                                    if (!ownedIgdbIds.Contains(bestCandidate.Id) && !newGamesMap.ContainsKey(bestCandidate.Id))
+                                    {
+                                        // Znajdź oryginalny obiekt Steam, aby pobrać AppId
+                                        var matchedKey = gamesMap.Keys.FirstOrDefault(k => k.Equals(bestCandidate.Name, StringComparison.OrdinalIgnoreCase));
+                                        if (matchedKey != null)
+                                        {
+                                            // DODAJEMY DO MAPY (IGDB ID -> STEAM APP ID)
+                                            newGamesMap.Add(bestCandidate.Id, gamesMap[matchedKey].AppId);
+
+                                            // Usuwamy z mapy do przetworzenia, żeby nie szukać w Etapie 2
+                                            gamesMap.Remove(matchedKey);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -231,19 +243,18 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             // --- ETAP 2: Fallback - Pojedyncze wyszukiwanie (Search) ---
-            // Tutaj trafią tylko te gry, których nie udało się znaleźć w Etapie 1
             var remainingGames = gamesMap.Values.ToList();
 
             foreach (var steamGame in remainingGames)
             {
                 var cleanName = CleanSteamGameName(steamGame.Name);
-                var query = $"fields id, name, category, version_parent; search \"{cleanName}\"; where parent_game = null; limit 10;";
+                var query = $"fields id, name, category, version_parent, aggregated_rating; search \"{cleanName}\"; where parent_game = null; limit 10;";
 
                 bool gameFound = false;
 
                 try
                 {
-                    await Task.Delay(250); // Opóźnienie rate-limit
+                    await Task.Delay(250); // Rate limit
 
                     var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
                     if (!string.IsNullOrEmpty(jsonResponse))
@@ -251,8 +262,7 @@ namespace praca_dyplomowa_zesp.Controllers
                         var gamesFromApi = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
                         if (gamesFromApi != null && gamesFromApi.Any())
                         {
-                            // Agresywne filtrowanie w C# (identyczne jak w GamesController)
-                            var foundGame = gamesFromApi.FirstOrDefault(g =>
+                            var validCandidates = gamesFromApi.Where(g =>
                                 g.Category == 0 &&
                                 g.Version_parent == null &&
                                 !string.IsNullOrEmpty(g.Name) &&
@@ -260,14 +270,22 @@ namespace praca_dyplomowa_zesp.Controllers
                                 !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
                                 !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
                                 !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
-                            );
+                            ).ToList();
 
-                            if (foundGame != null)
+                            if (validCandidates.Any())
                             {
-                                gameFound = true;
-                                if (!ownedIgdbIds.Contains(foundGame.Id) && !newIdsToAdd.Contains(foundGame.Id))
+                                // PRIORYTET: Oceny krytyków, FALLBACK: Pierwszy wynik
+                                var bestMatch = validCandidates.FirstOrDefault(g => g.Aggregated_rating != null)
+                                                ?? validCandidates.FirstOrDefault();
+
+                                if (bestMatch != null)
                                 {
-                                    newIdsToAdd.Add(foundGame.Id);
+                                    gameFound = true;
+                                    if (!ownedIgdbIds.Contains(bestMatch.Id) && !newGamesMap.ContainsKey(bestMatch.Id))
+                                    {
+                                        // DODAJEMY DO MAPY (IGDB ID -> STEAM APP ID)
+                                        newGamesMap.Add(bestMatch.Id, steamGame.AppId);
+                                    }
                                 }
                             }
                         }
@@ -278,50 +296,81 @@ namespace praca_dyplomowa_zesp.Controllers
                     Console.WriteLine($"Błąd fallback: {ex.Message}");
                 }
 
-                // Jeśli po wszystkich próbach nadal brak sukcesu -> dodajemy do listy błędów
                 if (!gameFound)
                 {
                     notFoundNames.Add(steamGame.Name);
                 }
             }
 
-            // 3. Zapis do bazy
-            if (newIdsToAdd.Any())
+            // 3. Zapis do bazy + POBIERANIE POSTĘPU (Automatyzacja)
+            if (newGamesMap.Any())
             {
-                var newLibraryEntries = newIdsToAdd.Select(igdbId => new GameInLibrary
+                var newLibraryEntries = new List<GameInLibrary>();
+
+                foreach (var item in newGamesMap)
                 {
-                    UserId = user.Id,
-                    IgdbGameId = igdbId,
-                    DateAddedToLibrary = DateTime.Now,
-                    CurrentUserStoryProgressPercent = 0
-                }).ToList();
+                    long igdbId = item.Key;
+                    int steamAppId = item.Value; // Mamy Steam ID z mapy!
+                    int calculatedPercent = 0;
+
+                    // --- POBIERANIE OSIĄGNIĘĆ ZE STEAM ---
+                    try
+                    {
+                        // To wywołanie może chwilę potrwać dla każdej gry
+                        var achievements = await _steamService.GetGameAchievementsAsync(user.SteamId, steamAppId.ToString());
+
+                        if (achievements != null && achievements.Any())
+                        {
+                            int total = achievements.Count;
+                            int unlocked = achievements.Count(a => a.Achieved == 1);
+
+                            if (total > 0)
+                            {
+                                calculatedPercent = (int)Math.Round((double)unlocked / total * 100);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Ignorujemy błędy API Steam (np. gra nie ma osiągnięć lub profil prywatny),
+                        // żeby nie przerwać importu reszty gier. Wtedy procent zostaje 0.
+                    }
+                    // -------------------------------------
+
+                    newLibraryEntries.Add(new GameInLibrary
+                    {
+                        UserId = user.Id,
+                        IgdbGameId = igdbId,
+                        DateAddedToLibrary = DateTime.Now,
+                        // Ustawiamy od razu wyliczony procent!
+                        CurrentUserStoryProgressPercent = calculatedPercent
+                    });
+                }
 
                 await _context.GamesInLibraries.AddRangeAsync(newLibraryEntries);
                 await _context.SaveChangesAsync();
 
-                TempData["StatusMessage"] = $"Sukces! Dodano {newLibraryEntries.Count} nowych gier do Twojej biblioteki.";
+                TempData["StatusMessage"] = $"Sukces! Dodano {newLibraryEntries.Count} nowych gier. Postęp został zaktualizowany ze Steam.";
             }
             else
             {
-                TempData["StatusMessage"] = "Przetworzono bibliotekę. Nie znaleziono nowych gier do dodania (lub wszystkie wykryte już posiadasz).";
+                TempData["StatusMessage"] = "Przetworzono bibliotekę. Nie znaleziono nowych gier do dodania.";
             }
 
             // 4. Raportowanie braków
             if (notFoundNames.Any())
             {
-                int maxDisplay = 10; // Ile nazw pokazać w komunikacie
+                int maxDisplay = 10;
                 var namesToShow = notFoundNames.Take(maxDisplay);
                 string missingList = string.Join(", ", namesToShow);
 
-                string errorMsg = $"Nie udało się automatycznie dopasować {notFoundNames.Count} gier: {missingList}";
+                string errorMsg = $"Nie udało się znaleźć w bazie IGDB {notFoundNames.Count} gier: {missingList}";
 
                 if (notFoundNames.Count > maxDisplay)
                 {
                     errorMsg += $" ...i {notFoundNames.Count - maxDisplay} innych.";
                 }
 
-                // Wyświetlamy to jako ErrorMessage, aby użytkownik zwrócił na to uwagę
-                // W widoku SteamLibrary obsługa TempData["ErrorMessage"] powinna wyświetlić czerwony alert.
                 TempData["ErrorMessage"] = errorMsg;
             }
 

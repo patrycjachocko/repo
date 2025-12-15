@@ -320,6 +320,15 @@
             </a>
         </div>
 
+        @* --- WSTAWIENIE PARTIALA Z OCENAMI --- *@
+        <div class="mb-4">
+            @if (Model.Ratings != null)
+            {
+                <partial name="_GameRatingPartial" model="Model.Ratings" />
+            }
+        </div>
+        @* ------------------------------------ *@
+
         <dl class="row text-muted">
             <dt class="col-sm-3">Deweloper</dt>
             <dd class="col-sm-9">@(Model.Developer ?? "Nieznany")</dd>

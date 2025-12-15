@@ -5,9 +5,15 @@
 
 <h1>@Model.Name</h1>
 
+<div class="mt-3 mb-4">
+    @if (Model.Ratings != null)
+    {
+        <partial name="_GameRatingPartial" model="Model.Ratings" />
+    }
+</div>
 <div class="row">
     <div class="col-md-4">
-        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid" alt="@Model.Name">
+        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded shadow" alt="@Model.Name">
     </div>
     <div class="col-md-8">
         <h3>Szczegóły Gry</h3>
@@ -40,12 +46,10 @@
                 Przejdź do poradników i wskazówek
             </a>
 
-            @* Przycisk 2: Dodaj do biblioteki (tylko dla zalogowanych) *@
-            @* Zakładamy, że akcja Create w LibraryController jest chroniona [Authorize] *@
+            @* Przycisk 2: Dodaj do biblioteki *@
             @if (User.Identity.IsAuthenticated)
             {
                 <form asp-controller="Library" asp-action="Create" method="post">
-                    @* Używamy formularza, aby wysłać POST z ID gry *@
                     <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
                     <button type="submit" class="btn btn-success">Dodaj do biblioteki</button>
                 </form>

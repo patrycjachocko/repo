@@ -1,0 +1,188 @@
+﻿@model praca_dyplomowa_zesp.Models.ViewModels.GameRatingViewModel
+
+@* --- RZĄD 1: Oceny Zewnętrzne (3 kafelki w jednej linii) --- *@
+<div class="row g-2 mb-2">
+    <div class="col-4">
+        <div class="card bg-dark border-secondary text-center h-100">
+            <div class="card-body p-2 d-flex flex-column justify-content-center">
+                <h6 class="text-muted text-uppercase" style="font-size: 0.65rem; margin-bottom: 2px;">Krytycy (IGDB)</h6>
+                <div class="fs-4 fw-bold text-info">
+                    @(Model.IgdbCriticRating > 0 ? Model.IgdbCriticRating.ToString("0") : "-")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="card bg-dark border-secondary text-center h-100">
+            <div class="card-body p-2 d-flex flex-column justify-content-center">
+                <h6 class="text-muted text-uppercase" style="font-size: 0.65rem; margin-bottom: 2px;">Gracze (IGDB)</h6>
+                <div class="fs-4 fw-bold text-primary">
+                    @(Model.IgdbUserRating > 0 ? Model.IgdbUserRating.ToString("0") : "-")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="card bg-dark border-light text-center h-100 shadow">
+            <div class="card-body p-2 d-flex flex-column justify-content-center">
+                <h6 class="text-white text-uppercase" style="font-size: 0.65rem; margin-bottom: 2px;">Średnia Total</h6>
+                <div class="fs-4 fw-bold text-white">
+                    @(Model.HybridTotalRating > 0 ? Model.HybridTotalRating.ToString("0") : "-")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- RZĄD 2: Społeczność GameHub (1 szeroki, niski pasek) --- *@
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-dark border-warning" style="border-width: 1px;">
+            <div class="card-body p-2 d-flex align-items-center justify-content-between">
+
+                @* LEWA STRONA: Etykieta i Wynik *@
+                <div class="d-flex align-items-center gap-3">
+                    <h6 class="text-warning text-uppercase mb-0" style="font-size: 0.8rem; letter-spacing: 1px;">GameHub</h6>
+                    <div class="d-flex align-items-baseline">
+                        <span class="fw-bold text-warning fs-4 me-1" id="local-avg-display">
+                            @((Model.LocalAverageRating * 10) > 0 ? (Model.LocalAverageRating * 10).ToString("0") : "-")
+                        </span>
+                        <small class="text-muted" style="font-size: 0.7rem;">
+                            (<span id="local-count-display">@Model.LocalRatingCount</span> gł.)
+                        </small>
+                    </div>
+                </div>
+
+                @* PRAWA STRONA: Gwiazdki do głosowania *@
+                <div>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <div class="d-flex flex-column align-items-end">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" id="partialGameId" value="@Model.IgdbGameId" />
+
+                            @* Gwiazdki - ustawiłem mały font, żeby było subtelnie *@
+                            <div id="game-star-container" style="cursor: pointer; font-size: 1rem; color: #444; white-space: nowrap; line-height: 1;">
+                                @for (int i = 1; i <= 10; i++)
+                                {
+                                    <i class="far fa-star game-star" data-value="@i" style="margin-right: 1px;"></i>
+                                }
+                            </div>
+
+                            @* Tekst podpowiedzi (Twoja ocena) *@
+                            <div class="d-flex align-items-center mt-1">
+                                <span id="game-rate-msg" class="text-success fw-bold me-2" style="opacity:0; font-size: 0.7rem;">Zapisano!</span>
+                                <div id="current-hover-rating" class="text-muted small" style="font-size: 0.7rem; min-width: 40px; text-align: right;">
+                                    @(Model.UserPersonalRating > 0 ? Model.UserPersonalRating.ToString("0.0") + "/10" : "Oceń")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <a asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-secondary" style="font-size: 0.7rem; padding: 2px 10px;">Zaloguj, aby ocenić</a>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (User.Identity.IsAuthenticated)
+{
+    <script>
+        (function() {
+            const container = document.getElementById('game-star-container');
+            if (!container) return;
+
+            const stars = container.querySelectorAll('.game-star');
+            const gameId = document.getElementById('partialGameId').value;
+            const msg = document.getElementById('game-rate-msg');
+            const avgDisplay = document.getElementById('local-avg-display');
+            const countDisplay = document.getElementById('local-count-display');
+            const ratingTextDisplay = document.getElementById('current-hover-rating');
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenInput ? tokenInput.value : '';
+
+            let currentRating = @Model.UserPersonalRating.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            function renderStars(value) {
+                stars.forEach((star, index) => {
+                    const starValue = index + 1;
+                    star.className = 'game-star far fa-star';
+                    star.style.color = '#444'; // Ciemniejsze tło gwiazdek
+
+                    // Pełna gwiazdka
+                    if (value >= starValue) {
+                        star.className = 'game-star fas fa-star';
+                        star.style.color = '#ffc107'; // Złoty
+                    }
+                    // Pół gwiazdki
+                    else if (value >= starValue - 0.5) {
+                        star.className = 'game-star fas fa-star-half-alt';
+                        star.style.color = '#ffc107';
+                    }
+                });
+            }
+
+            renderStars(currentRating);
+
+            // Hover
+            stars.forEach((star, index) => {
+                star.addEventListener('mousemove', (e) => {
+                    const rect = star.getBoundingClientRect();
+                    const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
+                    let val = index + 1;
+                    if (isLeftHalf) val -= 0.5;
+
+                    renderStars(val);
+                    if(ratingTextDisplay) ratingTextDisplay.innerText = val.toFixed(1) + "/10";
+                });
+            });
+
+            // Mouse leave
+            container.addEventListener('mouseleave', () => {
+                renderStars(currentRating);
+                if(ratingTextDisplay) {
+                    ratingTextDisplay.innerText = currentRating > 0 ? currentRating.toFixed(1) + "/10" : "Oceń";
+                }
+            });
+
+            // Click
+            stars.forEach((star, index) => {
+                star.addEventListener('click', (e) => {
+                    const rect = star.getBoundingClientRect();
+                    const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
+                    let val = index + 1;
+                    if (isLeftHalf) val -= 0.5;
+
+                    currentRating = val;
+                    renderStars(currentRating);
+
+                    if(ratingTextDisplay) ratingTextDisplay.innerText = val.toFixed(1) + "/10";
+
+                    fetch('/Games/RateGame', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                        body: JSON.stringify({ gameId: parseInt(gameId), ratingValue: val })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            msg.style.opacity = 1;
+                            setTimeout(() => msg.style.opacity = 0, 2000);
+
+                            // Aktualizacja średniej (mnożymy x10, żeby wyświetlać w skali 100)
+                            let avgScale100 = data.newAverage * 10;
+                            avgDisplay.innerText = avgScale100.toFixed(0);
+                            countDisplay.innerText = data.newCount;
+                        }
+                    });
+                });
+            });
+        })();
+    </script>
+}

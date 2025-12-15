@@ -128,8 +128,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 .FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId);
             if (gameFromDb == null) return NotFound();
 
-            // 1. Pobierz dane gry z IGDB
-            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human, websites.url, websites.category, external_games.category, external_games.uid; where id = {gameFromDb.IgdbGameId}; limit 1;";
+            // 1. Pobierz dane gry z IGDB - DODANO rating i aggregated_rating
+            var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human, websites.url, websites.category, external_games.category, external_games.uid, rating, aggregated_rating; where id = {gameFromDb.IgdbGameId}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
 
             ApiGame gameDetailsFromApi = null;
@@ -138,19 +138,36 @@ namespace praca_dyplomowa_zesp.Controllers
                 gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
             }
 
-            // 2. Znajdź Steam AppID
+            // --- LOGIKA OCEN ---
+            var localRates = await _context.GameRates.Where(r => r.IgdbGameId == gameFromDb.IgdbGameId).ToListAsync();
+            double localAvg = localRates.Any() ? localRates.Average(r => r.Value) : 0;
+            int localCount = localRates.Count;
+            double personalRating = 0;
+
+            var myRate = localRates.FirstOrDefault(r => r.UserId == currentUserId);
+            if (myRate != null) personalRating = myRate.Value;
+
+            var ratingsModel = new praca_dyplomowa_zesp.Models.ViewModels.GameRatingViewModel
+            {
+                IgdbGameId = gameFromDb.IgdbGameId,
+                IgdbUserRating = gameDetailsFromApi?.Rating ?? 0,
+                IgdbCriticRating = gameDetailsFromApi?.Aggregated_rating ?? 0,
+                LocalAverageRating = localAvg,
+                LocalRatingCount = localCount,
+                UserPersonalRating = personalRating
+            };
+            // -------------------
+
+            // 2. Znajdź Steam AppID (Reszta logiki bez zmian)
             string steamAppId = null;
 
             if (gameDetailsFromApi != null)
             {
-                // A: External Games
                 if (gameDetailsFromApi.External_games != null)
                 {
                     var steamExternal = gameDetailsFromApi.External_games.FirstOrDefault(e => e.Category == 1);
                     if (steamExternal != null) steamAppId = steamExternal.Uid;
                 }
-
-                // B: Websites
                 if (string.IsNullOrEmpty(steamAppId) && gameDetailsFromApi.Websites != null)
                 {
                     var steamWebsite = gameDetailsFromApi.Websites.FirstOrDefault(w => w.Category == 13);
@@ -162,10 +179,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
 
-            // C: Fallback - Wyszukiwanie po nazwie
             if (string.IsNullOrEmpty(steamAppId) && gameDetailsFromApi != null)
             {
-                Console.WriteLine($"[Library] Brak SteamID w IGDB. Szukam po nazwie: {gameDetailsFromApi.Name}");
                 steamAppId = await _steamService.SearchAppIdAsync(gameDetailsFromApi.Name);
             }
 
@@ -181,14 +196,12 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (steamSchema != null && steamSchema.Any())
                 {
-                    // ZAWSZE pobieramy postęp lokalny
                     var localAchievements = await _context.UserAchievements
                         .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == gameFromDb.IgdbGameId)
                         .ToListAsync();
 
                     if (isSteamConnected)
                     {
-                        // Jeśli Steam połączony, pobieramy też postęp ze Steam
                         var playerAchievements = await _steamService.GetGameAchievementsAsync(user.SteamId, steamAppId);
                         steamUnlockedIds = playerAchievements
                             .Where(pa => pa.Achieved == 1)
@@ -196,7 +209,6 @@ namespace praca_dyplomowa_zesp.Controllers
                             .ToList();
                     }
 
-                    // Łączymy wyniki
                     finalAchievements = steamSchema.Select(schema => new AchievementViewModel
                     {
                         Name = schema.DisplayName,
@@ -204,29 +216,22 @@ namespace praca_dyplomowa_zesp.Controllers
                         IconUrl = schema.Icon,
                         ExternalId = schema.ApiName,
                         IsUnlocked = steamUnlockedIds.Contains(schema.ApiName) ||
-                                     localAchievements.Any(la => la.AchievementExternalId == schema.ApiName && la.IsUnlocked)
+                                    localAchievements.Any(la => la.AchievementExternalId == schema.ApiName && la.IsUnlocked)
                     }).ToList();
                 }
             }
 
             gameFromDb.LastAccessed = DateTime.Now;
-
-            // 2. Inicjalizujemy procenty wartością z bazy (dla manualnych)
             int progressPercent = gameFromDb.CurrentUserStoryProgressPercent;
 
-            // 3. Jeśli są osiągnięcia, przeliczamy procenty automatycznie
             if (finalAchievements.Any())
             {
                 int unlockedCount = finalAchievements.Count(a => a.IsUnlocked);
                 int calculatedPercent = (int)Math.Round((double)unlockedCount / finalAchievements.Count * 100);
-
-                // Aktualizujemy zmienną lokalną i pole w obiekcie
                 progressPercent = calculatedPercent;
                 gameFromDb.CurrentUserStoryProgressPercent = calculatedPercent;
             }
 
-            // 4. ZAPISUJEMY ZMIANY W BAZIE (Zawsze!)
-            // To zapisze zarówno nową datę LastAccessed, jak i ewentualnie zmieniony procent.
             _context.Update(gameFromDb);
             await _context.SaveChangesAsync();
 
@@ -242,13 +247,14 @@ namespace praca_dyplomowa_zesp.Controllers
                 ReleaseDate = gameDetailsFromApi?.Release_dates?.FirstOrDefault()?.Human,
                 DateAddedToLibrary = gameFromDb.DateAddedToLibrary,
                 CurrentUserStoryMission = gameFromDb.CurrentUserStoryMission,
-                CurrentUserStoryProgressPercent = progressPercent, // Teraz zawsze poprawna wartość (z bazy lub z wyliczeń)
+                CurrentUserStoryProgressPercent = progressPercent,
                 Notes = gameFromDb.Notes,
                 Achievements = finalAchievements,
                 IsSteamConnected = isSteamConnected,
                 IsSteamGame = isSteamGame,
                 SteamUnlockedAchievementIds = steamUnlockedIds,
-                ToDoItems = gameFromDb.ToDoItems.ToList()
+                ToDoItems = gameFromDb.ToDoItems.ToList(),
+                Ratings = ratingsModel // <--- PRZYPISANIE OCEN
             };
 
             return View(viewModel);

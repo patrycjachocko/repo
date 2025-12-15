@@ -30,8 +30,6 @@ namespace praca_dyplomowa_zesp.Models.API
         public List<ApiExternalGame> External_games { get; set; }
 
         // --- Pola do logiki przekierowań i sortowania ---
-        [JsonProperty("rating")]
-        public double? Rating { get; set; }
 
         // 0 = Main Game, 1 = DLC, 3 = Bundle, etc.
         [JsonProperty("category")]
@@ -46,6 +44,14 @@ namespace praca_dyplomowa_zesp.Models.API
         // Kolekcje, do których należy gra (np. seria "The Sims")
         [JsonProperty("collections")]
         public List<ApiCollection> Collections { get; set; }
+        [JsonProperty("rating")]
+        public double? Rating { get; set; } // Ocena użytkowników IGDB
+
+        [JsonProperty("aggregated_rating")]
+        public double? Aggregated_rating { get; set; } // Ocena krytyków
+
+        [JsonProperty("total_rating")]
+        public double? Total_rating { get; set; } // Średnia ogólna
     }
 
     public class ApiCover { [JsonProperty("url")] public string Url { get; set; } }
