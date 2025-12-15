@@ -41,5 +41,6 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         public bool IsApproved { get; set; } = false;
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
+        public bool IsDraft { get; set; }
     }
 }

@@ -396,12 +396,10 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (gameId <= 0) return NotFound();
 
-            // ZMIANA: Sprawdzenie Mute przed wejściem na formularz
             var user = await _userManager.GetUserAsync(User);
             if (IsUserMuted(user))
             {
-                TempData["Error"] = $"Twoje konto jest wyciszone do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz tworzyć nowych treści.";
-                // Możesz przekierować do Index gry albo na Profil
+                TempData["Error"] = $"Twoje konto jest wyciszone do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}.";
                 return RedirectToAction("Index", new { gameId = gameId });
             }
 
@@ -412,45 +410,54 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Guide guide, IFormFile? coverImageFile)
+        // Dodano parametr 'action', żeby rozróżnić przyciski
+        public async Task<IActionResult> Create(Guide guide, IFormFile? coverImageFile, string action)
         {
-            // Musimy pobrać usera od razu, żeby sprawdzić mute
             var user = await _userManager.GetUserAsync(User);
 
-            // ZMIANA: Sprawdzenie Mute przy wysyłaniu formularza
             if (IsUserMuted(user))
             {
-                ModelState.AddModelError(string.Empty, $"Twoje konto jest wyciszone do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz opublikować poradnika.");
-                // Jeśli zablokujemy tutaj, musimy pamiętać o ponownym wyświetleniu widoku
+                ModelState.AddModelError(string.Empty, "Twoje konto jest wyciszone.");
                 return View(guide);
             }
-            // Usuwamy walidację dla pól, które uzupełniamy automatycznie
+
             ModelState.Remove("User");
             ModelState.Remove("CoverImage");
 
-            // --- NOWY WARUNEK: Sprawdzenie czy plik istnieje ---
             if (coverImageFile == null || coverImageFile.Length == 0)
             {
-                // Jeśli brak pliku, dodajemy błąd do modelu.
-                // Klucz "CoverImage" posłuży do wyświetlenia komunikatu w widoku.
                 ModelState.AddModelError("CoverImage", "Okładka poradnika jest wymagana!");
             }
 
             if (ModelState.IsValid)
             {
-                guide.UserId = GetCurrentUserId();
+                guide.UserId = user.Id; // Używamy ID z pobranego obiektu user
                 guide.CreatedAt = DateTime.Now;
 
-                if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+                // --- OBSŁUGA AKCJI (DRAFT vs PUBLISH) ---
+                if (action == "draft")
                 {
-                    guide.IsApproved = true; // Admin/Mod publikuje od razu
+                    guide.IsDraft = true;
+                    guide.IsApproved = false; // Szkic nigdy nie jest publiczny
+                    TempData["StatusMessage"] = "Zapisano jako szkic.";
                 }
-                else
+                else // action == "publish"
                 {
-                    guide.IsApproved = false; // Zwykły user czeka na akceptację
-                }
+                    guide.IsDraft = false;
 
-                // Tutaj już wiemy, że plik istnieje, bo przeszliśmy walidację wyżej
+                    // Jeśli admin/mod -> od razu zatwierdzone, w przeciwnym razie -> pending
+                    if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+                    {
+                        guide.IsApproved = true;
+                    }
+                    else
+                    {
+                        guide.IsApproved = false;
+                    }
+                    TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano poradnik!" : "Przesłano do akceptacji.";
+                }
+                // ----------------------------------------
+
                 using (var memoryStream = new MemoryStream())
                 {
                     await coverImageFile.CopyToAsync(memoryStream);
@@ -460,10 +467,11 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 _context.Add(guide);
                 await _context.SaveChangesAsync();
+
+                // Po utworzeniu draftu wracamy do listy, żeby użytkownik go zobaczył
                 return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
             }
 
-            // Jeśli coś poszło nie tak (np. brak pliku), wracamy do formularza
             return View(guide);
         }
 
@@ -477,6 +485,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (guide == null) return NotFound();
 
             var currentUserId = GetCurrentUserId();
+            // Edytować może autor LUB Admin/Mod
             if (guide.UserId != currentUserId && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
             {
                 return Forbid();
@@ -489,11 +498,11 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Guide guide, IFormFile? coverImageFile)
+        // Dodano parametr 'action'
+        public async Task<IActionResult> Edit(int id, Guide guide, IFormFile? coverImageFile, string action)
         {
             if (id != guide.Id) return NotFound();
 
-            // Usuwamy walidację pól, które uzupełniamy ręcznie z bazy
             ModelState.Remove("User");
             ModelState.Remove("CoverImage");
 
@@ -501,32 +510,48 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 try
                 {
-                    // 1. Pobieramy ORYGINAŁ z bazy danych (AsNoTracking, żeby nie blokować kontekstu)
                     var existingGuide = await _context.Guides.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id);
-
                     if (existingGuide == null) return NotFound();
 
-                    // 2. Sprawdzamy uprawnienia: Autor, Admin lub Moderator
                     var currentUserId = GetCurrentUserId();
-                    bool isAuthorized = existingGuide.UserId == currentUserId || User.IsInRole("Admin") || User.IsInRole("Moderator");
+                    bool isAdminOrMod = User.IsInRole("Admin") || User.IsInRole("Moderator");
 
-                    if (!isAuthorized) return Forbid();
+                    if (existingGuide.UserId != currentUserId && !isAdminOrMod) return Forbid();
 
-                    // 3. PRZEPISANIE KLUCZOWYCH DANYCH Z ORYGINAŁU
-                    guide.UserId = existingGuide.UserId;       // Autor się nie zmienia
-                    guide.CreatedAt = existingGuide.CreatedAt; // Data utworzenia się nie zmienia
-                    guide.UpdatedAt = DateTime.Now;            // Data aktualizacji = teraz
-
-                    // --- KLUCZOWA ZMIANA ---
-                    // Zachowujemy status taki, jaki był w bazie.
-                    // Jeśli był zatwierdzony -> zostaje zatwierdzony.
-                    // Jeśli czekał na akceptację -> nadal czeka.
-                    guide.IsApproved = existingGuide.IsApproved;
+                    // Przepisanie danych
+                    guide.UserId = existingGuide.UserId;
+                    guide.CreatedAt = existingGuide.CreatedAt;
+                    guide.UpdatedAt = DateTime.Now;
                     guide.IsDeleted = existingGuide.IsDeleted;
                     guide.DeletedAt = existingGuide.DeletedAt;
-                    // -----------------------
 
-                    // 4. Obsługa zdjęcia (jeśli wgrano nowe - podmień, jeśli nie - zostaw stare)
+                    // --- OBSŁUGA AKCJI (DRAFT vs PUBLISH) ---
+                    if (action == "draft")
+                    {
+                        // Zmieniamy na szkic (lub pozostaje szkicem)
+                        guide.IsDraft = true;
+                        guide.IsApproved = false;
+                        TempData["StatusMessage"] = "Zaktualizowano szkic.";
+                    }
+                    else // action == "publish"
+                    {
+                        guide.IsDraft = false;
+
+                        // Jeśli to był szkic -> sprawdzamy uprawnienia do publikacji
+                        if (existingGuide.IsDraft)
+                        {
+                            guide.IsApproved = isAdminOrMod; // Admin od razu, user -> pending
+                            TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano!" : "Przesłano do akceptacji.";
+                        }
+                        else
+                        {
+                            // Jeśli już był opublikowany/oczekujący -> zachowujemy status (lub resetujemy do pending przy dużej edycji - tu zachowujemy)
+                            guide.IsApproved = existingGuide.IsApproved;
+                            TempData["StatusMessage"] = "Zapisano zmiany.";
+                        }
+                    }
+                    // ----------------------------------------
+
                     if (coverImageFile != null && coverImageFile.Length > 0)
                     {
                         using (var memoryStream = new MemoryStream())
@@ -542,7 +567,6 @@ namespace praca_dyplomowa_zesp.Controllers
                         guide.CoverImageContentType = existingGuide.CoverImageContentType;
                     }
 
-                    // 5. Zapis zmian
                     _context.Update(guide);
                     await _context.SaveChangesAsync();
                 }
@@ -552,21 +576,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     else throw;
                 }
 
-                // Przekierowanie:
-                // Jeśli post jest zatwierdzony lub użytkownik to admin/mod -> do widoku szczegółów
-                if (guide.IsDeleted)
-                {
-                    return RedirectToAction("Index", "Admin"); // Wracamy do panelu admina (do kosza)
-                }
-                if (guide.IsApproved || User.IsInRole("Admin") || User.IsInRole("Moderator"))
-                {
-                    return RedirectToAction(nameof(Details), new { id = guide.Id });
-                }
-                else
-                {
-                    // Jeśli post nadal wisi jako oczekujący (i edytował go zwykły user), wracamy do listy (gdzie zobaczy go jako "pending")
-                    return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
-                }
+                return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
             }
             return View(guide);
         }
@@ -608,9 +618,24 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
 
                 long gameId = guide.IgdbGameId;
-                guide.IsDeleted = true;
-                guide.DeletedAt = DateTime.Now;
-                _context.Update(guide);
+
+                // --- ZMIANA LOGIKI USUWANIA ---
+                if (guide.IsDraft)
+                {
+                    // Drafty usuwamy PERMANENTNIE
+                    _context.Guides.Remove(guide);
+                    TempData["StatusMessage"] = "Szkic został usunięty.";
+                }
+                else
+                {
+                    // Opublikowane/Oczekujące trafiają do KOSZA (Soft Delete)
+                    guide.IsDeleted = true;
+                    guide.DeletedAt = DateTime.Now;
+                    _context.Update(guide);
+                    TempData["StatusMessage"] = "Poradnik przeniesiony do kosza.";
+                }
+                // ------------------------------
+
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index), new { gameId = gameId });
             }

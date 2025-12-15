@@ -25,21 +25,18 @@
                         </div>
 
                         <div class="form-group mb-4">
-                            <label asp-for="Description" class="form-label fw-bold">Krótki wstęp (widoczny na liście)</label>
-                            <textarea asp-for="Description" class="form-control bg-secondary text-white border-0" rows="3" placeholder="O czym jest ten poradnik? Zachęć do czytania..."></textarea>
+                            <label asp-for="Description" class="form-label fw-bold">Krótki wstęp</label>
+                            <textarea asp-for="Description" class="form-control bg-secondary text-white border-0" rows="3"></textarea>
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
 
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Zdjęcie okładkowe (wymagane)</label>
-
                             <input type="file" id="coverImageInput" name="coverImageFile" class="form-control bg-secondary text-white border-0" accept="image/*" required onchange="previewFile()" />
                             <span asp-validation-for="CoverImage" class="text-danger"></span>
-
                             <div id="imagePreviewContainer" class="mt-3 position-relative d-none" style="width: fit-content;">
-                                <img id="imagePreview" src="#" alt="Podgląd okładki" style="max-height: 200px; border-radius: 8px; border: 1px solid #6c757d;" />
-
-                                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" aria-label="Close" onclick="clearImage()"></button>
+                                <img id="imagePreview" src="#" alt="Podgląd" style="max-height: 200px; border-radius: 8px; border: 1px solid #6c757d;" />
+                                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" onclick="clearImage()"></button>
                             </div>
                         </div>
 
@@ -49,9 +46,21 @@
                             <span asp-validation-for="Content" class="text-danger"></span>
                         </div>
 
-                        <div class="d-flex justify-content-between pt-3">
-                            <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-light px-4">Anuluj</a>
-                            <button type="submit" class="btn btn-primary px-5 fw-bold">Opublikuj poradnik</button>
+                        @* --- PRZYCISKI AKCJI --- *@
+                        <div class="d-flex justify-content-between pt-3 align-items-center">
+                            <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-link text-muted text-decoration-none">Anuluj</a>
+
+                            <div class="d-flex gap-2">
+                                @* Przycisk Draft *@
+                                <button type="submit" name="action" value="draft" class="btn btn-secondary px-4">
+                                    <i class="fas fa-save me-2"></i> Zapisz jako szkic
+                                </button>
+
+                                @* Przycisk Publish *@
+                                <button type="submit" name="action" value="publish" class="btn btn-primary px-4 fw-bold">
+                                    <i class="fas fa-paper-plane me-2"></i> Opublikuj
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -61,32 +70,21 @@
 </div>
 
 <script>
-    // Obsługa podglądu i usuwania zdjęcia
     function previewFile() {
         const previewContainer = document.getElementById('imagePreviewContainer');
         const previewImage = document.getElementById('imagePreview');
         const fileInput = document.getElementById('coverImageInput');
         const file = fileInput.files[0];
-
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
-                previewImage.src = e.target.result;
-                previewContainer.classList.remove('d-none');
-            }
+            reader.onload = function(e) { previewImage.src = e.target.result; previewContainer.classList.remove('d-none'); }
             reader.readAsDataURL(file);
         }
     }
-
     function clearImage() {
-        const fileInput = document.getElementById('coverImageInput');
-        const previewContainer = document.getElementById('imagePreviewContainer');
-
-        fileInput.value = ""; // Czyści input
-        previewContainer.classList.add('d-none'); // Ukrywa podgląd
+        document.getElementById('coverImageInput').value = "";
+        document.getElementById('imagePreviewContainer').classList.add('d-none');
     }
-
-    // TinyMCE Init
     document.addEventListener("DOMContentLoaded", function() {
         tinymce.init({
             selector: '#guide-editor',
@@ -94,6 +92,8 @@
             toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
             height: 600,
             menubar: false,
+            skin: "oxide-dark",
+            content_css: "dark",
             image_title: true,
             automatic_uploads: true,
             file_picker_types: 'image',

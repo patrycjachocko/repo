@@ -32,6 +32,7 @@
         </div>
     </div>
 
+    @* --- PANEL FILTROWANIA (Bez zmian) --- *@
     <div class="card bg-dark border-secondary mb-4">
         <div class="card-body">
             <form asp-action="Index" method="get" class="row g-3 align-items-center">
@@ -65,38 +66,43 @@
             {
                 var avgRating = guide.Rates != null && guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0;
 
-                // --- NOWA LOGIKA STATUSÓW ---
-                bool isDeleted = guide.IsDeleted;       // Czy w koszu?
-                bool isPending = !guide.IsApproved;     // Czy oczekuje?
+                // --- LOGIKA STATUSÓW ---
+                bool isDeleted = guide.IsDeleted;
+                bool isDraft = guide.IsDraft;
+                bool isPending = !guide.IsApproved && !isDraft && !isDeleted;
 
-                // Klasa CSS zależna od statusu (Deleted ma priorytet nad Pending)
-                string cardClass = isDeleted ? "guide-card-deleted" : (isPending ? "guide-card-pending" : "");
+                string cardClass = "";
+                if (isDeleted) cardClass = "guide-card-deleted";
+                else if (isDraft) cardClass = "guide-card-draft"; // Nowa klasa
+                else if (isPending) cardClass = "guide-card-pending";
 
-                // Sprawdzenie uprawnień do edycji/usuwania (Autor, Admin, Mod)
                 bool canManage = User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName;
+
+                // Jeśli to szkic/pending/delete innego usera (i nie jestem adminem), to kontroler powinien to odfiltrować,
+                // ale dla bezpieczeństwa można dodać if (displayCondition) { ... }
 
                 <div class="col">
                     <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect @cardClass">
 
-                        @* --- BADGE DLA STATUSÓW --- *@
+                        @* --- BADGE --- *@
                         @if (isDeleted)
                         {
-                            <div class="status-badge badge-deleted">
-                                <i class="fas fa-trash-alt"></i> Usunięty (Kosz)
-                            </div>
+                            <div class="status-badge badge-deleted"><i class="fas fa-trash-alt"></i> KOSZ</div>
+                        }
+                        else if (isDraft)
+                        {
+                            <div class="status-badge badge-draft"><i class="fas fa-pencil-ruler"></i> SZKIC</div>
                         }
                         else if (isPending)
                         {
-                            <div class="status-badge badge-pending">
-                                <i class="fas fa-lock"></i> Oczekujący
-                            </div>
+                            <div class="status-badge badge-pending"><i class="fas fa-lock"></i> OCZEKUJE</div>
                         }
 
                         <div style="height: 200px; overflow: hidden; background-color: #2c2c35; display: flex; align-items: center; justify-content: center; position: relative;">
                             @if (guide.CoverImage != null)
                             {
                                 <img src="data:@guide.CoverImageContentType;base64,@Convert.ToBase64String(guide.CoverImage)"
-                                     class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;"
+                                     class="card-img-top" style="width: 100%; height: 100%; object-fit: cover; @(isDraft ? "filter: grayscale(100%);" : "")"
                                      alt="@guide.Title">
                             }
                             else
@@ -120,20 +126,15 @@
                             <div class="mt-3 d-flex justify-content-between">
                                 <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-outline-light flex-grow-1 stretched-link">Czytaj dalej</a>
 
-                                @* --- PRZYCISKI EDYCJI I USUWANIA --- *@
                                 @if (canManage)
                                 {
                                     <div class="d-flex" style="z-index: 5; position: relative;">
                                         <a asp-action="Edit" asp-route-id="@guide.Id" class="btn btn-outline-warning ms-2" title="Edytuj">
                                             <i class="fas fa-edit"></i>
                                         </a>
-
-                                        @if (!isDeleted)
-                                        {
-                                            <a asp-action="Delete" asp-route-id="@guide.Id" class="btn btn-outline-danger ms-1" title="Usuń">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </a>
-                                        }
+                                        <a asp-action="Delete" asp-route-id="@guide.Id" class="btn btn-outline-danger ms-1" title="Usuń">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
                                     </div>
                                 }
                             </div>
@@ -146,9 +147,8 @@
     else
     {
         <div class="text-center py-5">
-            <div class="mb-3"><i class="fas fa-ghost fa-3x text-muted"></i></div>
             <h3 class="text-muted">Pusto tu...</h3>
-            <p class="text-secondary">Brak poradników spełniających kryteria.</p>
+            <p class="text-secondary">Brak poradników.</p>
         </div>
     }
 </div>
@@ -164,20 +164,29 @@
             border-color: var(--bs-primary) !important;
         }
 
-    /* --- Styl dla oczekujących (ŻÓŁTY) --- */
+    /* SZKIC: Szary, Półprzezroczysty */
+    .guide-card-draft {
+        opacity: 0.7;
+        border: 2px dashed #adb5bd !important; /* Szara ramka przerywana */
+        background-color: #212529 !important;
+    }
+
+        .guide-card-draft:hover {
+            opacity: 1;
+        }
+    /* Po najechaniu pełna widoczność */
+
     .guide-card-pending {
         opacity: 0.85;
         border: 2px dashed #ffc107 !important;
     }
 
-    /* --- Styl dla usuniętych (CZERWONY) --- */
     .guide-card-deleted {
-        opacity: 0.7; /* Bardziej wyblakły */
+        opacity: 0.7;
         border: 2px dashed #dc3545 !important;
-        background-color: #2a1515 !important; /* Lekko czerwonawe tło */
+        background-color: #2a1515 !important;
     }
 
-    /* --- Badges --- */
     .status-badge {
         position: absolute;
         top: 10px;
@@ -192,13 +201,19 @@
     }
 
     .badge-pending {
-        background-color: #ffc107; /* Żółty */
+        background-color: #ffc107;
     }
 
     .badge-deleted {
-        background-color: #dc3545; /* Czerwony */
+        background-color: #dc3545;
         color: white;
     }
+
+    .badge-draft {
+        background-color: #adb5bd;
+        color: #212529;
+    }
+    /* Szary */
 </style>
 
 @section Scripts {

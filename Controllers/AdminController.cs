@@ -35,7 +35,7 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 SearchString = searchString,
                 Users = new List<AdminUserDto>(),
-                PendingGuides = new List<Guide>(), // Inicjalizacja pustej listy
+                PendingGuides = new List<Guide>(),
                 DeletedGuides = new List<Guide>(),
                 Tickets = new List<Ticket>()
             };
@@ -76,16 +76,17 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
 
-            // 2. POSTY - Pobieramy zawsze (dla Admina i Moderatora)
-            // Logika bez zmian
+            // 2. POSTY DO AKCEPTACJI
+            // ZMIANA: Dodano warunek && !g.IsDraft -> Drafty nie trafiają do kolejki
             var pendingGuides = await _context.Guides
                 .Include(g => g.User)
-                .Where(g => !g.IsApproved && !g.IsDeleted)
+                .Where(g => !g.IsApproved && !g.IsDeleted && !g.IsDraft)
                 .OrderBy(g => g.CreatedAt)
                 .ToListAsync();
 
             model.PendingGuides = pendingGuides;
 
+            // 3. POSTY USUNIĘTE (Kosz)
             var deletedGuides = await _context.Guides
                 .Include(g => g.User)
                 .Where(g => g.IsDeleted)
@@ -94,10 +95,11 @@ namespace praca_dyplomowa_zesp.Controllers
 
             model.DeletedGuides = deletedGuides;
 
+            // 4. ZGŁOSZENIA (Tickety)
             var tickets = await _context.Tickets
-            .Include(t => t.User) // Ważne, żeby widzieć kto napisał
-            .OrderByDescending(t => t.CreatedAt) // Najnowsze na górze
-            .ToListAsync();
+                .Include(t => t.User)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
 
             model.Tickets = tickets;
 
