@@ -228,13 +228,26 @@
                                         </td>
                                         <td>@user.Login</td>
                                         <td>
-                                            @foreach (var role in user.Roles)
-                                            {
-                                                if (role == "Admin") { <span class="badge badge-role-admin me-1">Admin</span> }
-                                                else if (role == "Moderator") { <span class="badge badge-role-mod me-1">Mod</span> }
-                                                else { <span class="badge badge-role-user me-1">User</span> }
-                                            }
-                                        </td>
+    @{
+        // Jeśli jest Adminem, pokaż odznakę Admina
+        if (user.Roles.Contains("Admin")) 
+        { 
+            <span class="badge badge-role-admin me-1">Admin</span> 
+        }
+        
+        // Jeśli jest Moderatorem, pokaż odznakę Moda
+        if (user.Roles.Contains("Moderator")) 
+        { 
+            <span class="badge badge-role-mod me-1">Mod</span> 
+        }
+        
+        // Pokaż "User" TYLKO wtedy, gdy nie jest ani Adminem, ani Moderatorem
+        if (!user.Roles.Contains("Admin") && !user.Roles.Contains("Moderator"))
+        {
+            <span class="badge badge-role-user me-1">User</span>
+        }
+    }
+</td>
                                         <td>
                                             @if (user.IsLockedOut) { <span class="text-danger" title="Zbanowany do @user.LockoutEnd"><span class="status-dot status-banned"></span> BAN</span> }
                                             else if (user.IsMuted) { <span class="text-warning" title="Wyciszony do @user.MuteEnd"><span class="status-dot status-muted"></span> MUTE</span> }
