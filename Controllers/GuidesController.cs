@@ -103,14 +103,16 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Include(g => g.User)
                 .Include(g => g.Rates)
                 .Where(g => g.IgdbGameId == gameId)
-                // ZMIANA: Najpierw wykluczamy wszystkie usunięte z tego widoku (User ich nie widzi, Admin ma od tego Panel Admina)
-                .Where(g => g.IsDeleted == false)
+                // UWAGA: Usunąłem globalne filtrowanie .Where(g => g.IsDeleted == false),
+                // teraz obsługujemy to w szczegółowych warunkach poniżej.
                 .Where(g =>
-                    // 1. PUBLICZNE: Musi być zatwierdzony
-                    (g.IsApproved == true) ||
-                    // 2. AUTOR: Widzi swoje (nawet jeśli oczekują na akceptację, ale NIE usunięte - patrz wyżej)
-                    (g.UserId == currentUserId) ||
-                    // 3. WŁADZA: Widzi wszystkie oczekujące
+                    // 1. PUBLICZNE: Zatwierdzone i NIE usunięte
+                    (g.IsApproved == true && g.IsDeleted == false) ||
+
+                    // 2. AUTOR: Widzi swoje (szkice, oczekujące, odrzucone), ale NIE te w koszu (kosz tylko dla admina)
+                    (g.UserId == currentUserId && g.IsDeleted == false) ||
+
+                    // 3. WŁADZA: Widzi WSZYSTKO (oczekujące, odrzucone) ORAZ te w KOSZU
                     (canSeeAllPending == true)
                 )
                 .AsQueryable();
@@ -130,6 +132,24 @@ namespace praca_dyplomowa_zesp.Controllers
             // 3. SORTOWANIE W PAMIĘCI
             switch (sortOrder)
             {
+                // --- NOWA OPCJA: MOJE PORADNIKI ---
+                case "mine":
+                    if (currentUserId != Guid.Empty)
+                    {
+                        guidesFromDb = guidesFromDb
+                            // Sortujemy tak, że jeśli UserId == currentUserId (true), to jest na górze
+                            .OrderByDescending(g => g.UserId == currentUserId)
+                            .ThenByDescending(g => g.CreatedAt) // Reszta po dacie
+                            .ToList();
+                    }
+                    else
+                    {
+                        // Fallback dla niezalogowanego (chociaż widok nie pozwoli, to warto zabezpieczyć)
+                        guidesFromDb = guidesFromDb.OrderByDescending(g => g.CreatedAt).ToList();
+                    }
+                    break;
+                // ----------------------------------
+
                 case "rating_desc":
                     guidesFromDb = guidesFromDb
                         .OrderByDescending(g => g.Rates.Any() ? g.Rates.Average(r => r.Value) : 0)
@@ -173,10 +193,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Include(c => c.Reactions) // Reakcje dla głównego komentarza
                 .Include(c => c.Replies)
                     .ThenInclude(r => r.Author) // Autor odpowiedzi
-                                                // --- BRAKOWAŁO TEGO FRAGMENTU: ---
                 .Include(c => c.Replies)
-                    .ThenInclude(r => r.Reactions) // <--- TO JEST KLUCZOWE: Reakcje dla odpowiedzi
-                                                   // ---------------------------------
+                    .ThenInclude(r => r.Reactions) // Reakcje dla odpowiedzi
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
@@ -208,7 +226,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         // --- AKCJE DLA OCEN I KOMENTARZY ---
 
-        // 1. Podmień metodę RateGuide na tę wersję:
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -272,7 +289,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var user = await _userManager.GetUserAsync(User);
 
-            // ZMIANA: Sprawdzenie Mute przy komentarzach
+            // Sprawdzenie Mute przy komentarzach
             if (IsUserMuted(user))
             {
                 TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz dodawać komentarzy.";
@@ -302,7 +319,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var user = await _userManager.GetUserAsync(User);
 
-            // ZMIANA: Sprawdzenie Mute przy odpowiedziach
+            // Sprawdzenie Mute przy odpowiedziach
             if (IsUserMuted(user))
             {
                 TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz odpowiadać.";
@@ -331,7 +348,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await _userManager.GetUserAsync(User);
 
             // Sprawdzenie czy użytkownik nie ma mute
-            if (IsUserMuted(user)) return Forbid(); // Lub przekierowanie z komunikatem
+            if (IsUserMuted(user)) return Forbid();
 
             Reaction existingReaction = null;
 
@@ -388,7 +405,7 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction("Details", new { id = guideId, section = "comments" });
         }
 
-        // --- POZOSTAŁE METODY (Create, Edit, Delete) - BEZ ZMIAN ---
+        // --- CRUD METODY ---
 
         // GET: Create
         [Authorize]
@@ -410,7 +427,6 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        // Dodano parametr 'action', żeby rozróżnić przyciski
         public async Task<IActionResult> Create(Guide guide, IFormFile? coverImageFile, string action)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -431,14 +447,14 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (ModelState.IsValid)
             {
-                guide.UserId = user.Id; // Używamy ID z pobranego obiektu user
+                guide.UserId = user.Id;
                 guide.CreatedAt = DateTime.Now;
 
                 // --- OBSŁUGA AKCJI (DRAFT vs PUBLISH) ---
                 if (action == "draft")
                 {
                     guide.IsDraft = true;
-                    guide.IsApproved = false; // Szkic nigdy nie jest publiczny
+                    guide.IsApproved = false;
                     TempData["StatusMessage"] = "Zapisano jako szkic.";
                 }
                 else // action == "publish"
@@ -468,7 +484,6 @@ namespace praca_dyplomowa_zesp.Controllers
                 _context.Add(guide);
                 await _context.SaveChangesAsync();
 
-                // Po utworzeniu draftu wracamy do listy, żeby użytkownik go zobaczył
                 return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
             }
 
@@ -498,7 +513,6 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        // Dodano parametr 'action'
         public async Task<IActionResult> Edit(int id, Guide guide, IFormFile? coverImageFile, string action)
         {
             if (id != guide.Id) return NotFound();
@@ -528,24 +542,32 @@ namespace praca_dyplomowa_zesp.Controllers
                     // --- OBSŁUGA AKCJI (DRAFT vs PUBLISH) ---
                     if (action == "draft")
                     {
-                        // Zmieniamy na szkic (lub pozostaje szkicem)
                         guide.IsDraft = true;
                         guide.IsApproved = false;
+
+                        // Jeśli był odrzucony, zachowujemy status, żeby autor wiedział co poprawia
+                        guide.IsRejected = existingGuide.IsRejected;
+                        guide.RejectionReason = existingGuide.RejectionReason;
+
                         TempData["StatusMessage"] = "Zaktualizowano szkic.";
                     }
                     else // action == "publish"
                     {
                         guide.IsDraft = false;
 
-                        // Jeśli to był szkic -> sprawdzamy uprawnienia do publikacji
-                        if (existingGuide.IsDraft)
+                        // RESETUJEMY ODRZUCENIE - teraz trafia znów do weryfikacji
+                        guide.IsRejected = false;
+                        guide.RejectionReason = null;
+
+                        // Jeśli to był szkic lub odrzucony -> sprawdzamy uprawnienia do publikacji
+                        if (existingGuide.IsDraft || existingGuide.IsRejected)
                         {
                             guide.IsApproved = isAdminOrMod; // Admin od razu, user -> pending
-                            TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano!" : "Przesłano do akceptacji.";
+                            TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano!" : "Przesłano do ponownej akceptacji.";
                         }
                         else
                         {
-                            // Jeśli już był opublikowany/oczekujący -> zachowujemy status (lub resetujemy do pending przy dużej edycji - tu zachowujemy)
+                            // Jeśli już był opublikowany/oczekujący -> zachowujemy status
                             guide.IsApproved = existingGuide.IsApproved;
                             TempData["StatusMessage"] = "Zapisano zmiany.";
                         }
@@ -620,19 +642,22 @@ namespace praca_dyplomowa_zesp.Controllers
                 long gameId = guide.IgdbGameId;
 
                 // --- ZMIANA LOGIKI USUWANIA ---
-                if (guide.IsDraft)
+                // Zasada: Tylko ZATWIERDZONE (opublikowane) trafiają do kosza (Soft Delete).
+                // Wszystko co "w toku" lub "robocze" (Szkic, Oczekujący, Odrzucony) usuwamy PERMANENTNIE (Hard Delete).
+
+                if (guide.IsApproved)
                 {
-                    // Drafty usuwamy PERMANENTNIE
-                    _context.Guides.Remove(guide);
-                    TempData["StatusMessage"] = "Szkic został usunięty.";
-                }
-                else
-                {
-                    // Opublikowane/Oczekujące trafiają do KOSZA (Soft Delete)
+                    // Soft Delete (Do kosza)
                     guide.IsDeleted = true;
                     guide.DeletedAt = DateTime.Now;
                     _context.Update(guide);
                     TempData["StatusMessage"] = "Poradnik przeniesiony do kosza.";
+                }
+                else
+                {
+                    // Hard Delete (Trwałe usunięcie)
+                    _context.Guides.Remove(guide);
+                    TempData["StatusMessage"] = "Poradnik został trwale usunięty.";
                 }
                 // ------------------------------
 
@@ -651,40 +676,59 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (guide == null) return NotFound();
 
-            // Używamy tego samego modelu co w Details, ale wypełniamy tylko to co potrzebne
             var viewModel = new GuideDetailsViewModel
             {
                 Guide = guide,
                 AverageRating = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0
-                // Komentarze nie są potrzebne w PDF, więc ich nie pobieramy
             };
 
-            // Zwracamy widok "DetailsPdf" jako plik PDF
-            // FileName ustala nazwę pliku przy pobieraniu
             return new ViewAsPdf("DetailsPdf", viewModel)
             {
                 FileName = $"Poradnik_{guide.Title}.pdf",
                 PageSize = Rotativa.AspNetCore.Options.Size.A4,
                 PageOrientation = Rotativa.AspNetCore.Options.Orientation.Portrait,
-                // Opcjonalnie: marginesy
                 PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 10, 10)
             };
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Moderator")] // Tylko dla władzy
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> ApproveGuide(int id)
         {
             var guide = await _context.Guides.FindAsync(id);
             if (guide == null) return NotFound();
 
             guide.IsApproved = true;
+            guide.IsRejected = false; // Na wszelki wypadek czyścimy flagę odrzucenia
+            guide.RejectionReason = null;
+
             _context.Update(guide);
             await _context.SaveChangesAsync();
 
-            // Wróć tam, skąd przyszedłeś (np. do panelu admina)
             return Redirect(Request.Headers["Referer"].ToString());
         }
+
+        // --- NOWA METODA: ODRZUCANIE PORADNIKA ---
+        [HttpPost]
+        [Authorize(Roles = "Admin,Moderator")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectGuide(int id, string reason)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide == null) return NotFound();
+
+            // Ustawiamy statusy
+            guide.IsApproved = false;
+            guide.IsRejected = true;
+            guide.RejectionReason = reason;
+
+            _context.Update(guide);
+            await _context.SaveChangesAsync();
+
+            TempData["StatusMessage"] = "Poradnik został odrzucony i zwrócony do autora.";
+            return RedirectToAction("Details", new { id = id });
+        }
+        // -----------------------------------------
 
         [HttpPost]
         [Authorize]
@@ -695,7 +739,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (comment == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
-            if (comment.UserId != user.Id) return Forbid(); // Tylko autor może edytować
+            if (comment.UserId != user.Id) return Forbid();
 
             if (IsUserMuted(user))
             {
@@ -704,8 +748,6 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             comment.Content = content;
-            // Opcjonalnie: comment.UpdatedAt = DateTime.Now; (jeśli dodasz takie pole)
-
             _context.Update(comment);
             await _context.SaveChangesAsync();
 
@@ -721,20 +763,16 @@ namespace praca_dyplomowa_zesp.Controllers
             if (comment == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
-
-            // Logika uprawnień: Autor LUB Admin LUB Moderator
             bool canDelete = comment.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
 
             if (!canDelete) return Forbid();
 
-            _context.Comments.Remove(comment); // Kaskadowo usunie odpowiedzi dzięki konfiguracji w DbContext
+            _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();
 
             TempData["Success"] = "Komentarz został usunięty.";
             return RedirectToAction("Details", new { id = guideId });
         }
-
-        // --- NOWE METODY: EDYCJA I USUWANIE ODPOWIEDZI ---
 
         [HttpPost]
         [Authorize]

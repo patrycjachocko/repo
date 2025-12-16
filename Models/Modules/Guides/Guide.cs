@@ -42,5 +42,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
         public bool IsDraft { get; set; }
+        public bool IsRejected { get; set; } = false; // Nowa flaga
+        public string? RejectionReason { get; set; } // Powód odrzucenia
     }
 }

@@ -15,24 +15,36 @@
                 <a asp-action="Create" asp-route-gameId="@Model.IgdbGameId" class="btn btn-success btn-lg">
                     <i class="fas fa-plus"></i> Napisz poradnik
                 </a>
-            }
 
-            @if (Model.IsInLibrary)
-            {
-                <button class="btn btn-outline-success btn-lg disabled"><i class="fas fa-check"></i> W bibliotece</button>
+                @if (Model.IsInLibrary)
+                {
+                    <button class="btn btn-outline-success btn-lg disabled"><i class="fas fa-check"></i> W bibliotece</button>
+                }
+                else
+                {
+                    <form asp-controller="Library" asp-action="Create" method="post">
+                        <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
+                        <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                        <button type="submit" class="btn btn-outline-primary btn-lg">Dodaj do biblioteki</button>
+                    </form>
+                }
             }
-            else if (User.Identity.IsAuthenticated)
+            else
             {
-                <form asp-controller="Library" asp-action="Create" method="post">
-                    <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
-                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                    <button type="submit" class="btn btn-outline-primary btn-lg">Dodaj do biblioteki</button>
-                </form>
+                @* --- KOMUNIKAT DLA NIEZALOGOWANYCH --- *@
+                <div class="alert alert-dark text-white d-flex align-items-center mb-0 px-4 py-2 border-secondary" role="alert">
+                    <i class="fas fa-info-circle me-3 fs-4 text-primary"></i>
+                    <div>
+                        <strong>Chcesz dołączyć do dyskusji?</strong><br />
+                        <a asp-controller="Account" asp-action="Login" class="text-primary fw-bold text-decoration-none">Zaloguj się</a>,
+                        aby dodawać gry do biblioteki i pisać poradniki!
+                    </div>
+                </div>
             }
         </div>
     </div>
 
-    @* --- PANEL FILTROWANIA (Bez zmian) --- *@
+    @* --- PANEL FILTROWANIA --- *@
     <div class="card bg-dark border-secondary mb-4">
         <div class="card-body">
             <form asp-action="Index" method="get" class="row g-3 align-items-center">
@@ -46,9 +58,14 @@
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-secondary border-secondary text-white"><i class="fas fa-sort"></i></span>
-                        <select name="sortOrder" class="form-select bg-dark text-white border-secondary">
+                        <select name="sortOrder" class="form-select bg-dark text-white border-secondary" onchange="this.form.submit()">
                             <!option value="newest" @(ViewData["CurrentSort"] as string == "newest" ? "selected" : "")>Najnowsze</!option>
                             <!option value="rating_desc" @(ViewData["CurrentSort"] as string == "rating_desc" ? "selected" : "")>Najlepiej oceniane</!option>
+
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                <!option value="mine" @(ViewData["CurrentSort"] as string == "mine" ? "selected" : "")>Moje poradniki na górze</!option>
+                            }
                         </select>
                     </div>
                 </div>
@@ -69,17 +86,16 @@
                 // --- LOGIKA STATUSÓW ---
                 bool isDeleted = guide.IsDeleted;
                 bool isDraft = guide.IsDraft;
-                bool isPending = !guide.IsApproved && !isDraft && !isDeleted;
+                bool isRejected = guide.IsRejected;
+                bool isPending = !guide.IsApproved && !isDraft && !isDeleted && !isRejected;
 
                 string cardClass = "";
                 if (isDeleted) cardClass = "guide-card-deleted";
-                else if (isDraft) cardClass = "guide-card-draft"; // Nowa klasa
+                else if (isDraft) cardClass = "guide-card-draft";
+                else if (isRejected) cardClass = "guide-card-rejected";
                 else if (isPending) cardClass = "guide-card-pending";
 
                 bool canManage = User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName;
-
-                // Jeśli to szkic/pending/delete innego usera (i nie jestem adminem), to kontroler powinien to odfiltrować,
-                // ale dla bezpieczeństwa można dodać if (displayCondition) { ... }
 
                 <div class="col">
                     <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect @cardClass">
@@ -93,6 +109,10 @@
                         {
                             <div class="status-badge badge-draft"><i class="fas fa-pencil-ruler"></i> SZKIC</div>
                         }
+                        else if (isRejected)
+                        {
+                            <div class="status-badge badge-rejected"><i class="fas fa-times-circle"></i> ODRZUCONY</div>
+                        }
                         else if (isPending)
                         {
                             <div class="status-badge badge-pending"><i class="fas fa-lock"></i> OCZEKUJE</div>
@@ -102,7 +122,7 @@
                             @if (guide.CoverImage != null)
                             {
                                 <img src="data:@guide.CoverImageContentType;base64,@Convert.ToBase64String(guide.CoverImage)"
-                                     class="card-img-top" style="width: 100%; height: 100%; object-fit: cover; @(isDraft ? "filter: grayscale(100%);" : "")"
+                                     class="card-img-top" style="width: 100%; height: 100%; object-fit: cover; @(isDraft || isRejected || isDeleted ? "filter: grayscale(100%);" : "")"
                                      alt="@guide.Title">
                             }
                             else
@@ -122,6 +142,13 @@
                                 @guide.CreatedAt.ToString("dd.MM.yyyy")
                             </p>
                             <p class="card-text flex-grow-1 text-truncate" style="max-height: 3em;">@guide.Description</p>
+
+                            @if (isRejected && canManage)
+                            {
+                                <div class="alert alert-danger py-1 px-2 small mb-2 text-center" style="background-color: #4a1c1c; border-color: #842029; color: #ea868f;">
+                                    <i class="fas fa-exclamation-triangle"></i> Wymaga poprawy
+                                </div>
+                            }
 
                             <div class="mt-3 d-flex justify-content-between">
                                 <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-outline-light flex-grow-1 stretched-link">Czytaj dalej</a>
@@ -164,34 +191,59 @@
             border-color: var(--bs-primary) !important;
         }
 
-    /* SZKIC: Szary, Półprzezroczysty */
+    /* --- STYLIZACJA KART --- */
+
+    /* SZKIC: Szary */
     .guide-card-draft {
-        opacity: 0.7;
-        border: 2px dashed #adb5bd !important; /* Szara ramka przerywana */
+        opacity: 0.9;
+        border: 2px dashed #adb5bd !important;
         background-color: #212529 !important;
     }
 
         .guide-card-draft:hover {
             opacity: 1;
         }
-    /* Po najechaniu pełna widoczność */
 
+    /* ODRZUCONY: Fioletowy (Indigo) */
+    .guide-card-rejected {
+        opacity: 0.9;
+        border: 2px dashed #6f42c1 !important;
+        background-color: #2a2035 !important;
+    }
+
+        .guide-card-rejected:hover {
+            opacity: 1;
+        }
+
+    /* OCZEKUJĄCY: Żółty (Warning) */
     .guide-card-pending {
-        opacity: 0.85;
+        opacity: 0.9;
         border: 2px dashed #ffc107 !important;
+        background-color: #2b2505 !important;
     }
 
+        .guide-card-pending:hover {
+            opacity: 1;
+        }
+
+    /* KOSZ: Czerwony (Danger) */
     .guide-card-deleted {
-        opacity: 0.7;
+        opacity: 0.7; /* Bardziej przeźroczysty */
         border: 2px dashed #dc3545 !important;
-        background-color: #2a1515 !important;
+        background-color: #2c0b0e !important;
     }
 
+        .guide-card-deleted:hover {
+            opacity: 1;
+        }
+
+
+    /* --- BADGE --- */
     .status-badge {
         position: absolute;
         top: 10px;
         left: 10px;
-        color: #000;
+        color: #fff;
         font-weight: bold;
         padding: 5px 12px;
         border-radius: 20px;
@@ -202,18 +254,21 @@
 
     .badge-pending {
         background-color: #ffc107;
+        color: #000;
     }
 
     .badge-deleted {
         background-color: #dc3545;
-        color: white;
     }
 
     .badge-draft {
         background-color: #adb5bd;
         color: #212529;
     }
-    /* Szary */
+
+    .badge-rejected {
+        background-color: #6f42c1;
+    }
 </style>
 
 @section Scripts {

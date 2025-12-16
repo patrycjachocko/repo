@@ -77,10 +77,10 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             // 2. POSTY DO AKCEPTACJI
-            // ZMIANA: Dodano warunek && !g.IsDraft -> Drafty nie trafiają do kolejki
+            // ZMIANA: Dodano && !g.IsRejected -> Odrzucone znikają z tej listy
             var pendingGuides = await _context.Guides
                 .Include(g => g.User)
-                .Where(g => !g.IsApproved && !g.IsDeleted && !g.IsDraft)
+                .Where(g => !g.IsApproved && !g.IsDeleted && !g.IsDraft && !g.IsRejected)
                 .OrderBy(g => g.CreatedAt)
                 .ToListAsync();
 
