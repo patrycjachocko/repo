@@ -365,7 +365,7 @@
                                         </td>
                                         <td>@item.User?.UserName</td>
                                         <td>@item.DeletedAt?.ToString("dd.MM.yyyy HH:mm")</td>
-                                        <td>@(isOld ? "> 30 dni" : $"{Math.Floor(daysInTrash)} dni")</td>
+                                        <td>@(isOld ? "> 25 dni" : $"{Math.Floor(daysInTrash)} dni")</td>
                                         <td>
                                             <div class="action-btn-group">
                                                 <form asp-action="RestoreGuide" asp-route-id="@item.Id" method="post" style="display:inline;">
