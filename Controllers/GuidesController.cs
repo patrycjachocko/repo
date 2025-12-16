@@ -817,5 +817,25 @@ namespace praca_dyplomowa_zesp.Controllers
             TempData["Success"] = "Odpowiedź została usunięta.";
             return RedirectToAction("Details", new { id = guideId });
         }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> DeletePermanently(int id)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide != null)
+            {
+                long gameId = guide.IgdbGameId; // Zapamiętujemy ID gry, żeby wiedzieć gdzie wrócić
+
+                _context.Guides.Remove(guide); // Twarde usunięcie
+                await _context.SaveChangesAsync();
+
+                TempData["StatusMessage"] = "Poradnik został usunięty permanentnie.";
+
+                // WRACAMY DO LISTY PORADNIKÓW GRY (a nie do Admina)
+                return RedirectToAction(nameof(Index), new { gameId = gameId });
+            }
+            return RedirectToAction("Index", "Games");
+        }
     }
 }

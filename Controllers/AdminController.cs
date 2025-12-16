@@ -123,26 +123,33 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction(nameof(Index)); // Wracamy do panelu (zakładka powinna się przełączyć JS-em lub zostać na głównej)
         }
 
+        // W pliku Controllers/AdminController.cs
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RejectGuide(int id)
+        public async Task<IActionResult> RejectGuide(int id, string reason) // Dodano parametr reason
         {
             var guide = await _context.Guides.FindAsync(id);
             if (guide == null) return NotFound();
 
-            // ZMIANA: Zamiast usuwać (Remove), przenosimy do kosza (Soft Delete)
-            guide.IsDeleted = true;
-            guide.DeletedAt = DateTime.Now;
+            // ZMIANA LOGIKI:
+            // Zamiast usuwać (IsDeleted = true), oznaczamy jako Odrzucony (IsRejected = true).
+            // Dzięki temu użytkownik zobaczy powód i będzie mógł poprawić poradnik.
 
-            // Zostawiamy IsApproved = false, więc po ewentualnym przywróceniu 
-            // z kosza nadal będzie "Oczekujący", a nie od razu "Publiczny".
+            guide.IsRejected = true;       // Ustawiamy flagę odrzucenia
+            guide.RejectionReason = reason; // Zapisujemy powód wpisany w modalu
+            guide.IsApproved = false;      // Dla pewności
+
+            // Upewniamy się, że NIE jest w koszu (jeśli wcześniej tam trafił przez pomyłkę)
+            guide.IsDeleted = false;
+            guide.DeletedAt = null;
 
             _context.Update(guide);
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = $"Odrzucono poradnik: {guide.Title} (trafił do kosza)";
+            TempData["Success"] = $"Odrzucono poradnik: {guide.Title} (z powodem: {reason})";
 
-            // Powrót do widoku, z którego przyszliśmy (np. Details lub Index)
+            // Powrót do widoku
             var referer = Request.Headers["Referer"].ToString();
             if (!string.IsNullOrEmpty(referer)) return Redirect(referer);
 

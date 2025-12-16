@@ -1,11 +1,12 @@
-using System.Globalization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data;
-using praca_dyplomowa_zesp.Models.Users;
 using praca_dyplomowa_zesp;
 using praca_dyplomowa_zesp.Models.API;
+using praca_dyplomowa_zesp.Models.Users;
+using praca_dyplomowa_zesp.Services;
 using Rotativa.AspNetCore;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddHostedService<TrashCleanupService>();
 
 // --- KONFIGURACJA ZEWNÊTRZNYCH API ---
 

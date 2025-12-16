@@ -93,26 +93,6 @@
                     <p class="mb-0 small">Został usunięty lub przeniesiony do archiwum. Jest widoczny tylko dla administracji.</p>
                 </div>
             </div>
-
-            @if (isAdminOrMod)
-            {
-                <hr class="border-danger my-3">
-                <div class="d-flex gap-3 justify-content-end">
-                    <form asp-controller="Admin" asp-action="RestoreGuide" method="post">
-                        <input type="hidden" name="id" value="@Model.Guide.Id" />
-                        <button type="submit" class="btn btn-warning btn-sm">
-                            <i class="fas fa-trash-restore"></i> Przywróć z kosza
-                        </button>
-                    </form>
-
-                    <form asp-controller="Admin" asp-action="DeletePermanently" method="post" onsubmit="return confirm('Czy na pewno chcesz trwale usunąć ten poradnik? Ta operacja jest NIEODWRACALNA.');">
-                        <input type="hidden" name="id" value="@Model.Guide.Id" />
-                        <button type="submit" class="btn btn-dark btn-sm text-danger border-danger">
-                            <i class="fas fa-times"></i> Usuń na zawsze
-                        </button>
-                    </form>
-                </div>
-            }
         </div>
     }
 
@@ -163,15 +143,45 @@
             }
         </div>
 
-        @* Przyciski Edycji/Usuwania dla Autora *@
-        @if (!Model.Guide.IsDeleted && (isAuthor || isAdminOrMod))
+        @* Przyciski Edycji/Usuwania/Przywracania *@
+        @* Pokaż panel, jeśli: (nie jest usunięty I (jest autorem LUB adminem)) LUB (jest usunięty I jest adminem) *@
+        @if ((!Model.Guide.IsDeleted && (isAuthor || isAdminOrMod)) || (Model.Guide.IsDeleted && isAdminOrMod))
         {
             <div class="card-footer border-secondary p-3 d-flex justify-content-end gap-2">
-                <a asp-action="Edit" asp-route-id="@Model.Guide.Id" class="btn btn-warning"><i class="fas fa-edit"></i> Edytuj</a>
 
-                <form asp-action="Delete" method="post" asp-route-id="@Model.Guide.Id" onsubmit="return confirm('@(Model.Guide.IsApproved ? "Czy przenieść do kosza?" : "To usunięcie będzie PERMANENTNE. Kontynuować?")');">
-                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Usuń</button>
-                </form>
+                @* 1. EDYCJA (Zawsze dostępna dla uprawnionych) *@
+                <a asp-action="Edit" asp-route-id="@Model.Guide.Id" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edytuj
+                </a>
+
+                @* 2. LOGIKA PRZYCISKÓW USUWANIA / PRZYWRACANIA *@
+                @if (Model.Guide.IsDeleted)
+                {
+                    @* JEŚLI W KOSZU: Pokaż przycisk PRZYWRÓĆ *@
+                    <form asp-controller="Admin" asp-action="RestoreGuide" method="post">
+                        <input type="hidden" name="id" value="@Model.Guide.Id" />
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-trash-restore"></i> Przywróć
+                        </button>
+                    </form>
+
+                    @* JEŚLI W KOSZU: Pokaż przycisk USUŃ PERMANENTNIE *@
+                    <form asp-controller="Guides" asp-action="DeletePermanently" method="post" onsubmit="return confirm('To usunięcie będzie PERMANENTNE i nieodwracalne. Kontynuować?');">
+                        <input type="hidden" name="id" value="@Model.Guide.Id" />
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-times"></i> Usuń na zawsze
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    @* JEŚLI AKTYWNY: Pokaż przycisk USUŃ (Do kosza) *@
+                    <form asp-action="Delete" method="post" asp-route-id="@Model.Guide.Id" onsubmit="return confirm('@(Model.Guide.IsApproved ? "Czy przenieść do kosza?" : "Czy usunąć?")');">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Usuń
+                        </button>
+                    </form>
+                }
             </div>
         }
     </div>
