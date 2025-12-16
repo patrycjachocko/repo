@@ -98,7 +98,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (showCritic && !showUser) sortField = "aggregated_rating";
             else if (showUser && !showCritic) sortField = "rating";
 
-            if (!string.IsNullOrEmpty(safeSearch) && mode == "browse")
+            if (!string.IsNullOrEmpty(safeSearch)) // USUNIĘTO: && mode == "browse"
             {
                 query = $"{fields}; search \"{safeSearch}\"; {baseFilter} & cover.url != null; limit 100; offset {offset};";
             }

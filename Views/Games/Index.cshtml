@@ -1,33 +1,43 @@
 ﻿@model praca_dyplomowa_zesp.Models.Modules.Games.GameBrowserViewModel
 @{
-    ViewData["Title"] = ViewData["Title"] ?? "Przeglądaj Gry";
+    // Dynamiczny tytuł strony
+    ViewData["Title"] = Model.Mode == "guides" ? "Baza Poradników" : "Przeglądaj Gry";
 }
 
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>@ViewData["Title"]</h1>
+        <div>
+            <h1>@ViewData["Title"]</h1>
+            @if (Model.Mode == "guides")
+            {
+                <p class="text-muted lead fs-6">Wybierz grę, aby znaleźć pomoc lub podzielić się wiedzą.</p>
+            }
+        </div>
     </div>
 
-    @* PANEL FILTRÓW I WYSZUKIWANIA *@
-    @if (Model.Mode == "browse")
-    {
-        <div class="card bg-dark border-secondary mb-4">
-            <div class="card-body py-3">
-                <form asp-action="Index" method="get" class="row g-3 align-items-center">
-                    <input type="hidden" name="mode" value="browse" />
+    @* --- PANEL FILTRÓW I WYSZUKIWANIA --- *@
 
-                    @* --- FLAGA FILTROWANIA (Ważne!) --- *@
+    <div class="card bg-dark border-secondary mb-4">
+        <div class="card-body py-3">
+            <form asp-action="Index" method="get" class="row g-3 align-items-center justify-content-center">
+                <input type="hidden" name="mode" value="@Model.Mode" />
+
+                @* Wyszukiwanie działa w obu trybach, więc input jest wspólny *@
+                @* Dla Guides centrujemy (col-md-8), dla Browse dzielimy (col-md-5) *@
+                <div class="@(Model.Mode == "guides" ? "col-md-8" : "col-md-5")">
+                    <div class="input-group">
+                        <input type="text" name="searchString" class="form-control bg-dark text-white border-secondary"
+                               placeholder="@(Model.Mode == "guides" ? "Wpisz tytuł gry, której szukasz..." : "Szukaj gry...")"
+                               value="@Model.SearchString" />
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+
+                @* --- OPCJE FILTRÓW (TYLKO DLA TRYBU BROWSE) --- *@
+                @if (Model.Mode == "browse")
+                {
                     <input type="hidden" name="isFiltered" value="true" />
 
-                    @* --- WYSZUKIWARKA --- *@
-                    <div class="col-md-5">
-                        <div class="input-group">
-                            <input type="text" name="searchString" class="form-control bg-dark text-white border-secondary" placeholder="Szukaj gry..." value="@Model.SearchString" />
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
-                        </div>
-                    </div>
-
-                    @* --- CHECKBOXY --- *@
                     <div class="col-md-7">
                         <div class="d-flex gap-3 justify-content-md-end align-items-center flex-wrap">
                             <span class="text-muted small text-uppercase fw-bold">Licz ocenę z:</span>
@@ -51,20 +61,20 @@
                             </div>
                         </div>
                     </div>
+                }
 
-                    @* Ukryty input, aby resetować paginację przy zmianie filtrów *@
-                    <input type="hidden" name="page" value="1" />
-                </form>
-            </div>
+                @* Ukryty input, aby resetować paginację przy zmianie filtrów *@
+                <input type="hidden" name="page" value="1" />
+            </form>
         </div>
-    }
+    </div>
 
+    @* --- LISTA GIER --- *@
     <div class="row">
         @if (Model.Games.Any())
         {
             @foreach (var game in Model.Games)
             {
-                @* --- ZMIANA TUTAJ: Klasy Bootstrap dla układu 2 -> 4 -> 6 --- *@
                 <div class="col-6 col-md-3 col-xl-2 mb-4">
 
                     @if (Model.Mode == "guides")
@@ -97,15 +107,14 @@
         <ul class="pagination justify-content-center">
             @{
                 var prevDisabled = Model.CurrentPage > 1 ? "" : "disabled";
-                var nextDisabled = Model.Games.Count == 50 ? "" : "disabled";
+                var nextDisabled = Model.Games.Count == 60 ? "" : "disabled"; // Zmieniłem 50 na 60 zgodnie z Twoim kontrolerem (PageSize = 60)
 
-                // Helper do generowania URL z parametrami - DODANO isFiltered
                 string GetPageUrl(int pageNum) => Url.Action("Index", new
                 {
                     page = pageNum,
                     searchString = Model.SearchString,
                     mode = Model.Mode,
-                    isFiltered = true, // Ważne! Żeby zachować stan filtrów
+                    isFiltered = true,
                     showUser = Model.ShowIgdbUser,
                     showCritic = Model.ShowIgdbCritic,
                     showLocal = Model.ShowLocal
@@ -138,7 +147,8 @@
                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
                      alt="@game.Name">
 
-                @if (game.Total_rating != null && game.Total_rating > 0)
+                @* WARUNEK: Pokazuj ocenę TYLKO jeśli NIE jest to tryb guides *@
+                @if (Model.Mode != "guides" && game.Total_rating != null && game.Total_rating > 0)
                 {
                     double rating = (double)game.Total_rating;
                     string badgeColor = rating >= 75 ? "bg-success" : (rating >= 50 ? "bg-warning text-dark" : "bg-danger");
