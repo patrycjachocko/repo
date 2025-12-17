@@ -57,7 +57,6 @@
                         <div class="form-group mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label asp-for="Content" class="form-label fw-bold mb-0">Treść</label>
-                                @* --- PRZYCISK MAPY --- *@
                                 <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#mapsModal" onclick="resetModal()">
                                     <i class="fas fa-map"></i> Wstaw interaktywną mapę
                                 </button>
@@ -66,7 +65,6 @@
                             <span asp-validation-for="Content" class="text-danger"></span>
                         </div>
 
-                        @* --- PRZYCISKI AKCJI --- *@
                         <div class="d-flex justify-content-between pt-3 align-items-center">
                             <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link text-muted text-decoration-none">Anuluj</a>
 
@@ -113,26 +111,36 @@
                             </div>
                         </form>
                     </div>
-
                     <div class="input-group mb-3">
                         <span class="input-group-text bg-secondary border-secondary text-white"><i class="fas fa-search"></i></span>
                         <input type="text" class="form-control bg-dark text-white border-secondary" id="mapSearch" placeholder="Szukaj mapy..." onkeyup="filterMaps()">
                     </div>
-
                     <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3" id="mapsListContainer"></div>
                 </div>
 
-                <div id="step-draw-map" class="d-none" style="height: 70vh; display: flex; flex-direction: column;">
+                <div id="step-draw-map" class="d-none" style="height: 75vh; display: flex; flex-direction: column;">
                     <div class="bg-secondary p-2 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold"><i class="fas fa-pencil-alt"></i> Tryb edycji: <span id="drawingMapName"></span></span>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fw-bold"><i class="fas fa-pencil-alt"></i> Edycja: <span id="drawingMapName"></span></span>
+
+                            <div class="input-group input-group-sm" style="width: auto;">
+                                <span class="input-group-text border-secondary bg-dark text-white">Kolor rysowania:</span>
+                                <input type="color" class="form-control form-control-color bg-dark border-secondary" id="drawingColor" value="#ff0000" title="Wybierz kolor">
+                            </div>
+                        </div>
+
                         <div>
-                            <small class="text-white me-3"><i class="fas fa-info-circle"></i> Dodaj punkty i linie, a następnie zatwierdź.</small>
+                            <small class="text-white me-3 d-none d-md-inline"><i class="fas fa-info-circle"></i> Wybierz kolor, a potem narzędzie po lewej.</small>
                             <button class="btn btn-sm btn-light" onclick="backToSelect()"><i class="fas fa-arrow-left"></i> Wróć</button>
                         </div>
                     </div>
+
                     <div id="editorMap" style="flex-grow: 1; width: 100%; background: #222;"></div>
+
                     <div class="p-3 border-top border-secondary text-end bg-dark">
-                        <button class="btn btn-primary btn-lg" onclick="finishAndInsert()"><i class="fas fa-check"></i> Zatwierdź i wstaw do tekstu</button>
+                        <button class="btn btn-primary btn-lg" onclick="finishAndInsert()">
+                            <i class="fas fa-check"></i> Zatwierdź i wstaw
+                        </button>
                     </div>
                 </div>
 
@@ -146,9 +154,11 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
+    <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+
     <script>
         function previewFile() {
-            const previewContainer = document.getElementById('newImagePreviewContainer');
+            const previewContainer = document.getElementById('imagePreviewContainer');
             const previewImage = document.getElementById('imagePreview');
             const fileInput = document.getElementById('coverImageInput');
             const file = fileInput.files[0];
@@ -163,7 +173,7 @@
             document.getElementById('newImagePreviewContainer').classList.add('d-none');
         }
 
-        // Pomocnik do naprawiania ścieżek URL (dodaje slash na początku jeśli go brak)
+        // Fix URL
         function fixUrl(url) {
             if (!url) return '';
             if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -181,11 +191,9 @@
                 skin: "oxide-dark",
                 content_css: "dark",
                 automatic_uploads: true,
-                // --- BARDZO WAŻNE USTAWIENIA DLA ŚCIEŻEK ---
                 convert_urls: false,
                 relative_urls: false,
                 remove_script_host: false,
-                // -------------------------------------------
                 file_picker_types: 'image',
                 file_picker_callback: function (cb, value, meta) {
                     var input = document.createElement('input');
@@ -204,7 +212,7 @@
                     };
                     input.click();
                 },
-                extended_valid_elements : 'img[class|src|border|alt|title|width|height|style|data-geojson|data-map-name]'
+                extended_valid_elements : 'img[class|src|border|alt|title|width|height|style|data-geojson|data-map-name|data-origin-src]'
             });
         });
 
@@ -213,6 +221,7 @@
         var editorMap = null;
         var drawnItems = null;
         var currentMapData = null;
+        var screenshoter = null;
 
         function resetModal() {
             $('#step-select-map').removeClass('d-none');
@@ -230,9 +239,7 @@
                     return;
                 }
                 data.forEach(function (map) {
-                    // Upewniamy się, że URL jest poprawny
                     var safeUrl = fixUrl(map.imageUrl);
-
                     var html = `
                         <div class="col">
                             <div class="card h-100 bg-secondary border-0 text-white shadow-sm map-hover"
@@ -273,7 +280,7 @@
             $('#step-select-map').addClass('d-none');
             $('#step-draw-map').removeClass('d-none');
             $('#drawingMapName').text(name);
-            setTimeout(initEditorMap, 200);
+            setTimeout(initEditorMap, 300);
         }
 
         function backToSelect() {
@@ -288,8 +295,14 @@
             }
             editorMap = L.map('editorMap', {
                 crs: L.CRS.Simple,
-                minZoom: -2, maxZoom: 2, zoomSnap: 0.25
+                minZoom: -2, maxZoom: 4, zoomSnap: 0.25,
+                preferCanvas: true
             });
+
+            screenshoter = L.simpleMapScreenshoter({
+                hidden: true,
+                mimeType: 'image/png'
+            }).addTo(editorMap);
 
             var img = new Image();
             img.src = currentMapData.url;
@@ -312,18 +325,32 @@
 
                 var drawControl = new L.Control.Draw({
                     draw: {
-                        polyline: { shapeOptions: { color: '#f35757', weight: 4 } },
-                        polygon: { shapeOptions: { color: '#bada55' } },
-                        marker: true,
-                        circle: false, circlemarker: false,
-                        rectangle: { shapeOptions: { color: '#007bff' } }
+                        polyline: { shapeOptions: { weight: 4 } },
+                        polygon: { shapeOptions: { weight: 2 } },
+                        rectangle: { shapeOptions: { weight: 2 } },
+                        circle: { shapeOptions: { weight: 2 } },
+                        marker: false,
+                        circlemarker: true
                     },
                     edit: { featureGroup: drawnItems }
                 });
                 editorMap.addControl(drawControl);
 
                 editorMap.on(L.Draw.Event.CREATED, function (e) {
-                    drawnItems.addLayer(e.layer);
+                    var layer = e.layer;
+                    var color = document.getElementById('drawingColor').value;
+
+                    if (layer.setStyle) {
+                        layer.setStyle({ color: color, fillColor: color, fillOpacity: 0.5 });
+                    }
+
+                    if (!layer.feature) {
+                        layer.feature = layer.toGeoJSON();
+                    }
+                    layer.feature.properties = layer.feature.properties || {};
+                    layer.feature.properties.color = color;
+
+                    drawnItems.addLayer(layer);
                 });
             };
         }
@@ -333,25 +360,35 @@
             var jsonString = JSON.stringify(geoJsonData);
             var safeJson = jsonString.replace(/"/g, '&quot;');
 
-            var htmlToInsert = `
-                <div class="interactive-map-wrapper my-3 text-center">
-                    <img src="${currentMapData.url}"
-                         class="img-fluid rounded border border-secondary interactive-map-source"
-                         alt="Mapa: ${currentMapData.name}"
-                         data-map-name="${currentMapData.name}"
-                         data-geojson="${safeJson}"
-                         style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-                    <p class="text-muted small mt-1 text-info">
-                        <i class="fas fa-check-circle"></i> Mapa "${currentMapData.name}" z narysowanymi elementami (widoczne po opublikowaniu)
-                    </p>
-                </div>
-                <p>&nbsp;</p>
-            `;
-            tinymce.activeEditor.insertContent(htmlToInsert);
+            screenshoter.takeScreen('blob').then(blob => {
+                var reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = function() {
+                    var base64data = reader.result;
 
-            var modalEl = document.getElementById('mapsModal');
-            var modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
+                    var htmlToInsert = `
+                        <div class="interactive-map-wrapper my-3 text-center">
+                            <img src="${base64data}"
+                                 data-origin-src="${currentMapData.url}"
+                                 data-geojson="${safeJson}"
+                                 data-map-name="${currentMapData.name}"
+                                 class="img-fluid rounded border border-secondary interactive-map-source"
+                                 style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+                            <p class="text-muted small mt-1 text-info">
+                                <i class="fas fa-map-marked-alt"></i> Mapa: ${currentMapData.name} (Interaktywna po publikacji)
+                            </p>
+                        </div>
+                        <p>&nbsp;</p>
+                    `;
+                    tinymce.activeEditor.insertContent(htmlToInsert);
+
+                    var modalEl = document.getElementById('mapsModal');
+                    var modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                }
+            }).catch(e => {
+               alert('Błąd generowania podglądu: ' + e);
+            });
         }
     </script>
     <style>

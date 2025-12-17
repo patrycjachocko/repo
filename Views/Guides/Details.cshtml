@@ -413,8 +413,6 @@
 
 @section Scripts {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
-
-    @* Leaflet JS *@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
@@ -458,17 +456,19 @@
             var mapImages = document.querySelectorAll('img.interactive-map-source');
 
             mapImages.forEach(function(img) {
-                // Pobieramy surowy URL i go naprawiamy
-                var rawUrl = img.getAttribute('src');
+                // Pobieramy surowy URL i go naprawiamy (dla data-origin-src)
+                var rawUrl = img.getAttribute('data-origin-src') || img.getAttribute('src');
                 var imageUrl = fixUrl(rawUrl);
 
                 var geoJsonRaw = img.getAttribute('data-geojson');
                 if (!geoJsonRaw) return;
 
+                // 1. Tworzymy DIV zamiast IMG
                 var mapContainer = document.createElement('div');
                 var mapId = 'map-' + Math.floor(Math.random() * 1000000);
                 mapContainer.id = mapId;
                 mapContainer.style.width = "100%";
+                // WAŻNE: Dajemy tymczasową wysokość, aby Leaflet nie renderował się do 0px
                 mapContainer.style.height = "500px";
                 mapContainer.style.background = "#222";
                 mapContainer.style.borderRadius = "8px";
@@ -477,14 +477,16 @@
 
                 img.parentNode.replaceChild(mapContainer, img);
 
+                // 2. Inicjujemy mapę
                 var map = L.map(mapId, {
                     crs: L.CRS.Simple,
-                    minZoom: -5, maxZoom: 2, zoomSnap: 0.25,
+                    minZoom: -5, maxZoom: 4, zoomSnap: 0.25,
                     scrollWheelZoom: false
                 });
                 map.on('focus', () => { map.scrollWheelZoom.enable(); });
                 map.on('blur', () => { map.scrollWheelZoom.disable(); });
 
+                // 3. Ładujemy obrazek, aby poznać wymiary
                 var imageObj = new Image();
                 imageObj.src = imageUrl;
 
@@ -498,12 +500,13 @@
                     var w = this.width;
                     var h = this.height;
 
+                    // Dopasuj wysokość kontenera do proporcji obrazka
                     var containerWidth = mapContainer.clientWidth;
                     if(w > 0) {
                         var ratio = h / w;
                         var newHeight = containerWidth * ratio;
                         mapContainer.style.height = newHeight + "px";
-                        map.invalidateSize();
+                        map.invalidateSize(); // Kluczowe: odśwież rozmiar mapy
                     }
 
                     var southWest = map.unproject([0, h], map.getMaxZoom() - 1);
@@ -517,15 +520,32 @@
                     map.setMinZoom(fitZoom);
                     map.setMaxBounds(bounds);
 
+                    // Rysuj elementy z GeoJSON
                     if (geoJsonRaw) {
                         try {
                             var geoJsonData = JSON.parse(geoJsonRaw);
                             L.geoJSON(geoJsonData, {
                                 style: function (feature) {
-                                    return { color: feature.properties.color || '#ffcc00', weight: 3 };
+                                    // Pobieramy kolor z properties
+                                    var color = feature.properties && feature.properties.color ? feature.properties.color : '#ffcc00';
+                                    return {
+                                        color: color,
+                                        fillColor: color,
+                                        weight: 4,
+                                        fillOpacity: 0.5
+                                    };
                                 },
                                 pointToLayer: function (feature, latlng) {
-                                    return L.marker(latlng);
+                                    var color = feature.properties && feature.properties.color ? feature.properties.color : '#ffcc00';
+                                    // Używamy CircleMarker zamiast domyślnej pinezki, żeby łatwo kolorować
+                                    return L.circleMarker(latlng, {
+                                        radius: 8,
+                                        fillColor: color,
+                                        color: "#fff",
+                                        weight: 2,
+                                        opacity: 1,
+                                        fillOpacity: 0.8
+                                    });
                                 },
                                 onEachFeature: function (feature, layer) {
                                     if (feature.properties && feature.properties.popupContent) {

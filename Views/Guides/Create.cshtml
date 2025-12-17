@@ -78,6 +78,8 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
+
+                @* WIDOK 1: WYBÓR *@
                 <div id="step-select-map" class="p-3">
                     <div class="mb-4 p-3 border border-secondary rounded bg-secondary bg-opacity-10">
                         <h6><i class="fas fa-plus-circle"></i> Dodaj nową mapę</h6>
@@ -102,19 +104,34 @@
                     <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3" id="mapsListContainer"></div>
                 </div>
 
-                <div id="step-draw-map" class="d-none" style="height: 70vh; display: flex; flex-direction: column;">
+                @* WIDOK 2: EDYCJA *@
+                <div id="step-draw-map" class="d-none" style="height: 75vh; display: flex; flex-direction: column;">
                     <div class="bg-secondary p-2 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold"><i class="fas fa-pencil-alt"></i> Tryb edycji: <span id="drawingMapName"></span></span>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fw-bold"><i class="fas fa-pencil-alt"></i> Edycja: <span id="drawingMapName"></span></span>
+
+                            @* --- WYBIERAK KOLORÓW --- *@
+                            <div class="input-group input-group-sm" style="width: auto;">
+                                <span class="input-group-text border-secondary bg-dark text-white">Kolor rysowania:</span>
+                                <input type="color" class="form-control form-control-color bg-dark border-secondary" id="drawingColor" value="#ff0000" title="Wybierz kolor">
+                            </div>
+                        </div>
+
                         <div>
-                            <small class="text-white me-3"><i class="fas fa-info-circle"></i> Dodaj punkty i linie, a następnie zatwierdź.</small>
+                            <small class="text-white me-3 d-none d-md-inline"><i class="fas fa-info-circle"></i> Wybierz kolor, a potem narzędzie po lewej.</small>
                             <button class="btn btn-sm btn-light" onclick="backToSelect()"><i class="fas fa-arrow-left"></i> Wróć</button>
                         </div>
                     </div>
+
                     <div id="editorMap" style="flex-grow: 1; width: 100%; background: #222;"></div>
+
                     <div class="p-3 border-top border-secondary text-end bg-dark">
-                        <button class="btn btn-primary btn-lg" onclick="finishAndInsert()"><i class="fas fa-check"></i> Zatwierdź i wstaw do tekstu</button>
+                        <button class="btn btn-primary btn-lg" onclick="finishAndInsert()">
+                            <i class="fas fa-check"></i> Zatwierdź i wstaw
+                        </button>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -124,6 +141,9 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    @* --- PLUGIN DO ROBIENIA SCREENSHOTÓW MAPY (Dla podglądu w edytorze) --- *@
+    <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
 
     <script>
         function previewFile() {
@@ -142,7 +162,7 @@
             document.getElementById('imagePreviewContainer').classList.add('d-none');
         }
 
-        // Pomocnik do naprawiania ścieżek URL (dodaje slash na początku jeśli go brak)
+        // Fix URL
         function fixUrl(url) {
             if (!url) return '';
             if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -160,11 +180,9 @@
                 skin: "oxide-dark",
                 content_css: "dark",
                 automatic_uploads: true,
-                // --- BARDZO WAŻNE USTAWIENIA DLA ŚCIEŻEK ---
                 convert_urls: false,
                 relative_urls: false,
                 remove_script_host: false,
-                // -------------------------------------------
                 file_picker_types: 'image',
                 file_picker_callback: function (cb, value, meta) {
                     var input = document.createElement('input');
@@ -183,7 +201,8 @@
                     };
                     input.click();
                 },
-                extended_valid_elements : 'img[class|src|border|alt|title|width|height|style|data-geojson|data-map-name]'
+                // Zezwalamy na atrybuty data-origin-src (oryginalna mapa)
+                extended_valid_elements : 'img[class|src|border|alt|title|width|height|style|data-geojson|data-map-name|data-origin-src]'
             });
         });
 
@@ -192,6 +211,7 @@
         var editorMap = null;
         var drawnItems = null;
         var currentMapData = null;
+        var screenshoter = null;
 
         function resetModal() {
             $('#step-select-map').removeClass('d-none');
@@ -209,9 +229,7 @@
                     return;
                 }
                 data.forEach(function (map) {
-                    // Upewniamy się, że URL jest poprawny
                     var safeUrl = fixUrl(map.imageUrl);
-
                     var html = `
                         <div class="col">
                             <div class="card h-100 bg-secondary border-0 text-white shadow-sm map-hover"
@@ -252,7 +270,7 @@
             $('#step-select-map').addClass('d-none');
             $('#step-draw-map').removeClass('d-none');
             $('#drawingMapName').text(name);
-            setTimeout(initEditorMap, 200);
+            setTimeout(initEditorMap, 300);
         }
 
         function backToSelect() {
@@ -267,8 +285,15 @@
             }
             editorMap = L.map('editorMap', {
                 crs: L.CRS.Simple,
-                minZoom: -2, maxZoom: 2, zoomSnap: 0.25
+                minZoom: -2, maxZoom: 4, zoomSnap: 0.25,
+                preferCanvas: true
             });
+
+            // Inicjalizacja Screenshotera
+            screenshoter = L.simpleMapScreenshoter({
+                hidden: true,
+                mimeType: 'image/png'
+            }).addTo(editorMap);
 
             var img = new Image();
             img.src = currentMapData.url;
@@ -291,18 +316,34 @@
 
                 var drawControl = new L.Control.Draw({
                     draw: {
-                        polyline: { shapeOptions: { color: '#f35757', weight: 4 } },
-                        polygon: { shapeOptions: { color: '#bada55' } },
-                        marker: true,
-                        circle: false, circlemarker: false,
-                        rectangle: { shapeOptions: { color: '#007bff' } }
+                        polyline: { shapeOptions: { weight: 4 } },
+                        polygon: { shapeOptions: { weight: 2 } },
+                        rectangle: { shapeOptions: { weight: 2 } },
+                        circle: { shapeOptions: { weight: 2 } },
+                        marker: false,
+                        circlemarker: true
                     },
                     edit: { featureGroup: drawnItems }
                 });
                 editorMap.addControl(drawControl);
 
                 editorMap.on(L.Draw.Event.CREATED, function (e) {
-                    drawnItems.addLayer(e.layer);
+                    var layer = e.layer;
+                    var color = document.getElementById('drawingColor').value; // Pobierz kolor
+
+                    // Stylizuj jeśli się da
+                    if (layer.setStyle) {
+                        layer.setStyle({ color: color, fillColor: color, fillOpacity: 0.5 });
+                    }
+
+                    // Zapisz kolor w GeoJSON
+                    if (!layer.feature) {
+                        layer.feature = layer.toGeoJSON();
+                    }
+                    layer.feature.properties = layer.feature.properties || {};
+                    layer.feature.properties.color = color;
+
+                    drawnItems.addLayer(layer);
                 });
             };
         }
@@ -312,27 +353,38 @@
             var jsonString = JSON.stringify(geoJsonData);
             var safeJson = jsonString.replace(/"/g, '&quot;');
 
-            // Wstawiamy obrazek z ZABEZPIECZONYM URL
-            // TinyMCE nie widzi wektorów, więc informujemy usera tekstem.
-            var htmlToInsert = `
-                <div class="interactive-map-wrapper my-3 text-center">
-                    <img src="${currentMapData.url}"
-                         class="img-fluid rounded border border-secondary interactive-map-source"
-                         alt="Mapa: ${currentMapData.name}"
-                         data-map-name="${currentMapData.name}"
-                         data-geojson="${safeJson}"
-                         style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-                    <p class="text-muted small mt-1 text-info">
-                        <i class="fas fa-check-circle"></i> Mapa "${currentMapData.name}" z narysowanymi elementami (widoczne po opublikowaniu)
-                    </p>
-                </div>
-                <p>&nbsp;</p>
-            `;
-            tinymce.activeEditor.insertContent(htmlToInsert);
+            // 1. Zrób screenshota mapy
+            screenshoter.takeScreen('blob').then(blob => {
+                var reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = function() {
+                    var base64data = reader.result;
 
-            var modalEl = document.getElementById('mapsModal');
-            var modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
+                    // 2. Wstaw obrazek BASE64 do edytora (widoczny z rysunkami)
+                    // Zapisz oryginalny URL w data-origin-src (dla Details)
+                    var htmlToInsert = `
+                        <div class="interactive-map-wrapper my-3 text-center">
+                            <img src="${base64data}"
+                                 data-origin-src="${currentMapData.url}"
+                                 data-geojson="${safeJson}"
+                                 data-map-name="${currentMapData.name}"
+                                 class="img-fluid rounded border border-secondary interactive-map-source"
+                                 style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+                            <p class="text-muted small mt-1 text-info">
+                                <i class="fas fa-map-marked-alt"></i> Mapa: ${currentMapData.name} (Interaktywna po publikacji)
+                            </p>
+                        </div>
+                        <p>&nbsp;</p>
+                    `;
+                    tinymce.activeEditor.insertContent(htmlToInsert);
+
+                    var modalEl = document.getElementById('mapsModal');
+                    var modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                }
+            }).catch(e => {
+               alert('Błąd generowania podglądu: ' + e);
+            });
         }
     </script>
     <style>
