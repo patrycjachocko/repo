@@ -55,7 +55,13 @@
                         </div>
 
                         <div class="form-group mb-4">
-                            <label asp-for="Content" class="form-label fw-bold">Treść</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label asp-for="Content" class="form-label fw-bold mb-0">Treść</label>
+                                @* --- PRZYCISK MAPY --- *@
+                                <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#mapsModal" onclick="resetModal()">
+                                    <i class="fas fa-map"></i> Wstaw interaktywną mapę
+                                </button>
+                            </div>
                             <textarea asp-for="Content" id="guide-editor"></textarea>
                             <span asp-validation-for="Content" class="text-danger"></span>
                         </div>
@@ -65,12 +71,9 @@
                             <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link text-muted text-decoration-none">Anuluj</a>
 
                             <div class="d-flex gap-2">
-                                @* Zapisz jako szkic *@
                                 <button type="submit" name="action" value="draft" class="btn btn-secondary px-4">
                                     <i class="fas fa-save me-2"></i> @(isDraft ? "Zapisz szkic" : "Cofnij do szkicu")
                                 </button>
-
-                                @* Opublikuj *@
                                 <button type="submit" name="action" value="publish" class="btn btn-warning px-4 fw-bold text-dark">
                                     <i class="fas fa-check me-2"></i> @(isDraft ? "Opublikuj" : "Zapisz zmiany")
                                 </button>
@@ -83,57 +86,279 @@
     </div>
 </div>
 
-<script>
-    function previewFile() {
-        const previewContainer = document.getElementById('newImagePreviewContainer');
-        const previewImage = document.getElementById('imagePreview');
-        const fileInput = document.getElementById('coverImageInput');
-        const file = fileInput.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) { previewImage.src = e.target.result; previewContainer.classList.remove('d-none'); }
-            reader.readAsDataURL(file);
-        }
-    }
-    function clearNewImage() {
-        document.getElementById('coverImageInput').value = "";
-        document.getElementById('newImagePreviewContainer').classList.add('d-none');
-    }
-    document.addEventListener("DOMContentLoaded", function() {
-        tinymce.init({
-            selector: '#guide-editor',
-            plugins: 'anchor autolink charmap emoticons image link lists media searchreplace table visualblocks wordcount',
-            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
-            height: 600,
-            menubar: false,
-            skin: "oxide-dark",
-            content_css: "dark",
-            automatic_uploads: true,
-            file_picker_types: 'image',
-            file_picker_callback: function (cb, value, meta) {
-                var input = document.createElement('input');
-                input.setAttribute('type', 'file'); input.setAttribute('accept', 'image/*');
-                input.onchange = function () {
-                    var file = this.files[0]; var reader = new FileReader();
-                    reader.onload = function () {
-                        var id = 'blobid' + (new Date()).getTime();
-                        var blobCache =  tinymce.activeEditor.editorUpload.blobCache;
-                        var base64 = reader.result.split(',')[1];
-                        var blobInfo = blobCache.create(id, file, base64);
-                        blobCache.add(blobInfo);
-                        cb(blobInfo.blobUri(), { title: file.name });
-                    };
-                    reader.readAsDataURL(file);
-                };
-                input.click();
-            }
-        });
-    });
-</script>
+@* --- MODAL MAPY --- *@
+<div class="modal fade" id="mapsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Menedżer Map</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+
+                <div id="step-select-map" class="p-3">
+                    <div class="mb-4 p-3 border border-secondary rounded bg-secondary bg-opacity-10">
+                        <h6><i class="fas fa-plus-circle"></i> Dodaj nową mapę</h6>
+                        <form id="uploadMapForm" enctype="multipart/form-data">
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control bg-dark text-white border-secondary" id="newMapName" placeholder="Nazwa mapy (np. Velen)" required>
+                                </div>
+                                <div class="col-md-5">
+                                    <input type="file" class="form-control bg-dark text-white border-secondary" id="newMapFile" accept="image/*" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-success w-100">Dodaj</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-secondary border-secondary text-white"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" id="mapSearch" placeholder="Szukaj mapy..." onkeyup="filterMaps()">
+                    </div>
+
+                    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3" id="mapsListContainer"></div>
+                </div>
+
+                <div id="step-draw-map" class="d-none" style="height: 70vh; display: flex; flex-direction: column;">
+                    <div class="bg-secondary p-2 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold"><i class="fas fa-pencil-alt"></i> Tryb edycji: <span id="drawingMapName"></span></span>
+                        <div>
+                            <small class="text-white me-3"><i class="fas fa-info-circle"></i> Dodaj punkty i linie, a następnie zatwierdź.</small>
+                            <button class="btn btn-sm btn-light" onclick="backToSelect()"><i class="fas fa-arrow-left"></i> Wróć</button>
+                        </div>
+                    </div>
+                    <div id="editorMap" style="flex-grow: 1; width: 100%; background: #222;"></div>
+                    <div class="p-3 border-top border-secondary text-end bg-dark">
+                        <button class="btn btn-primary btn-lg" onclick="finishAndInsert()"><i class="fas fa-check"></i> Zatwierdź i wstaw do tekstu</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
+    <script>
+        function previewFile() {
+            const previewContainer = document.getElementById('newImagePreviewContainer');
+            const previewImage = document.getElementById('imagePreview');
+            const fileInput = document.getElementById('coverImageInput');
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) { previewImage.src = e.target.result; previewContainer.classList.remove('d-none'); }
+                reader.readAsDataURL(file);
+            }
+        }
+        function clearNewImage() {
+            document.getElementById('coverImageInput').value = "";
+            document.getElementById('newImagePreviewContainer').classList.add('d-none');
+        }
+
+        // Pomocnik do naprawiania ścieżek URL (dodaje slash na początku jeśli go brak)
+        function fixUrl(url) {
+            if (!url) return '';
+            if (url.startsWith('http') || url.startsWith('data:')) return url;
+            if (!url.startsWith('/')) return '/' + url;
+            return url;
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            tinymce.init({
+                selector: '#guide-editor',
+                plugins: 'anchor autolink charmap emoticons image link lists media searchreplace table visualblocks wordcount',
+                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+                height: 600,
+                menubar: false,
+                skin: "oxide-dark",
+                content_css: "dark",
+                automatic_uploads: true,
+                // --- BARDZO WAŻNE USTAWIENIA DLA ŚCIEŻEK ---
+                convert_urls: false,
+                relative_urls: false,
+                remove_script_host: false,
+                // -------------------------------------------
+                file_picker_types: 'image',
+                file_picker_callback: function (cb, value, meta) {
+                    var input = document.createElement('input');
+                    input.setAttribute('type', 'file'); input.setAttribute('accept', 'image/*');
+                    input.onchange = function () {
+                        var file = this.files[0]; var reader = new FileReader();
+                        reader.onload = function () {
+                            var id = 'blobid' + (new Date()).getTime();
+                            var blobCache = tinymce.activeEditor.editorUpload.blobCache;
+                            var base64 = reader.result.split(',')[1];
+                            var blobInfo = blobCache.create(id, file, base64);
+                            blobCache.add(blobInfo);
+                            cb(blobInfo.blobUri(), { title: file.name });
+                        };
+                        reader.readAsDataURL(file);
+                    };
+                    input.click();
+                },
+                extended_valid_elements : 'img[class|src|border|alt|title|width|height|style|data-geojson|data-map-name]'
+            });
+        });
+
+        // --- MAPY ---
+        var gameId = @Model.IgdbGameId;
+        var editorMap = null;
+        var drawnItems = null;
+        var currentMapData = null;
+
+        function resetModal() {
+            $('#step-select-map').removeClass('d-none');
+            $('#step-draw-map').addClass('d-none');
+            loadMaps();
+        }
+
+        function loadMaps() {
+            var search = $('#mapSearch').val();
+            $.get('/Maps/GetMapsForGame', { gameId: gameId, searchString: search }, function (data) {
+                var container = $('#mapsListContainer');
+                container.empty();
+                if (data.length === 0) {
+                    container.html('<div class="col-12 text-center text-muted py-4">Brak map. Dodaj pierwszą!</div>');
+                    return;
+                }
+                data.forEach(function (map) {
+                    // Upewniamy się, że URL jest poprawny
+                    var safeUrl = fixUrl(map.imageUrl);
+
+                    var html = `
+                        <div class="col">
+                            <div class="card h-100 bg-secondary border-0 text-white shadow-sm map-hover"
+                                 onclick="startEditingMap('${safeUrl}', '${map.name}')" style="cursor: pointer;">
+                                <div style="height: 150px; overflow: hidden;">
+                                    <img src="${safeUrl}" class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <div class="card-body p-2 text-center">
+                                    <span class="fw-bold small">${map.name}</span>
+                                </div>
+                                <div class="card-footer p-1 text-center bg-primary border-0">
+                                    <small><i class="fas fa-paint-brush"></i> Wybierz i Rysuj</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.append(html);
+                });
+            });
+        }
+        function filterMaps() { loadMaps(); }
+
+        $('#uploadMapForm').on('submit', function (e) {
+            e.preventDefault();
+            var formData = new FormData();
+            formData.append('gameId', gameId);
+            formData.append('name', $('#newMapName').val());
+            formData.append('file', $('#newMapFile')[0].files[0]);
+            $.ajax({
+                url: '/Maps/UploadMap', type: 'POST', data: formData, processData: false, contentType: false,
+                success: function (response) { $('#uploadMapForm')[0].reset(); loadMaps(); },
+                error: function () { alert('Błąd podczas dodawania mapy.'); }
+            });
+        });
+
+        function startEditingMap(url, name) {
+            currentMapData = { url: url, name: name };
+            $('#step-select-map').addClass('d-none');
+            $('#step-draw-map').removeClass('d-none');
+            $('#drawingMapName').text(name);
+            setTimeout(initEditorMap, 200);
+        }
+
+        function backToSelect() {
+            $('#step-draw-map').addClass('d-none');
+            $('#step-select-map').removeClass('d-none');
+        }
+
+        function initEditorMap() {
+            if (editorMap) {
+                editorMap.remove();
+                editorMap = null;
+            }
+            editorMap = L.map('editorMap', {
+                crs: L.CRS.Simple,
+                minZoom: -2, maxZoom: 2, zoomSnap: 0.25
+            });
+
+            var img = new Image();
+            img.src = currentMapData.url;
+            img.onload = function() {
+                var w = this.width;
+                var h = this.height;
+                var southWest = editorMap.unproject([0, h], editorMap.getMaxZoom() - 1);
+                var northEast = editorMap.unproject([w, 0], editorMap.getMaxZoom() - 1);
+                var bounds = new L.LatLngBounds(southWest, northEast);
+
+                L.imageOverlay(currentMapData.url, bounds).addTo(editorMap);
+                editorMap.fitBounds(bounds);
+
+                var fitZoom = editorMap.getBoundsZoom(bounds);
+                editorMap.setMinZoom(fitZoom);
+                editorMap.setMaxBounds(bounds);
+
+                drawnItems = new L.FeatureGroup();
+                editorMap.addLayer(drawnItems);
+
+                var drawControl = new L.Control.Draw({
+                    draw: {
+                        polyline: { shapeOptions: { color: '#f35757', weight: 4 } },
+                        polygon: { shapeOptions: { color: '#bada55' } },
+                        marker: true,
+                        circle: false, circlemarker: false,
+                        rectangle: { shapeOptions: { color: '#007bff' } }
+                    },
+                    edit: { featureGroup: drawnItems }
+                });
+                editorMap.addControl(drawControl);
+
+                editorMap.on(L.Draw.Event.CREATED, function (e) {
+                    drawnItems.addLayer(e.layer);
+                });
+            };
+        }
+
+        function finishAndInsert() {
+            var geoJsonData = drawnItems.toGeoJSON();
+            var jsonString = JSON.stringify(geoJsonData);
+            var safeJson = jsonString.replace(/"/g, '&quot;');
+
+            var htmlToInsert = `
+                <div class="interactive-map-wrapper my-3 text-center">
+                    <img src="${currentMapData.url}"
+                         class="img-fluid rounded border border-secondary interactive-map-source"
+                         alt="Mapa: ${currentMapData.name}"
+                         data-map-name="${currentMapData.name}"
+                         data-geojson="${safeJson}"
+                         style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+                    <p class="text-muted small mt-1 text-info">
+                        <i class="fas fa-check-circle"></i> Mapa "${currentMapData.name}" z narysowanymi elementami (widoczne po opublikowaniu)
+                    </p>
+                </div>
+                <p>&nbsp;</p>
+            `;
+            tinymce.activeEditor.insertContent(htmlToInsert);
+
+            var modalEl = document.getElementById('mapsModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+        }
+    </script>
+    <style>
+        .map-hover:hover {
+            transform: scale(1.02);
+            transition: transform 0.2s;
+            border: 2px solid #0d6efd !important;
+        }
+    </style>
 }

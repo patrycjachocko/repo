@@ -39,6 +39,7 @@ namespace praca_dyplomowa.Data
         public DbSet<TicketMessage> TicketMessages { get; set; } = null!;
         public DbSet<TicketAttachment> TicketAttachments { get; set; } = null!;
         public DbSet<GameRate> GameRates { get; set; } = null!;
+        public DbSet<GameMap> GameMaps { get; set; } = null!;
 
 
 
