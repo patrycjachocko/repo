@@ -58,9 +58,10 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label asp-for="Content" class="form-label fw-bold mb-0">Treść</label>
                                 <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#mapsModal" onclick="resetModal()">
-                                    <i class="fas fa-map"></i> Wstaw interaktywną mapę
+                                    <i class="fas fa-map"></i> Wstaw nową mapę
                                 </button>
                             </div>
+                            @* USUNIĘTO ALERT Z INSTRUKCJĄ *@
                             <textarea asp-for="Content" id="guide-editor"></textarea>
                             <span asp-validation-for="Content" class="text-danger"></span>
                         </div>
@@ -94,6 +95,7 @@
             </div>
             <div class="modal-body p-0">
 
+                @* WIDOK 1: WYBÓR *@
                 <div id="step-select-map" class="p-3">
                     <div class="mb-4 p-3 border border-secondary rounded bg-secondary bg-opacity-10">
                         <h6><i class="fas fa-plus-circle"></i> Dodaj nową mapę</h6>
@@ -118,19 +120,23 @@
                     <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3" id="mapsListContainer"></div>
                 </div>
 
+                @* WIDOK 2: EDYCJA *@
                 <div id="step-draw-map" class="d-none" style="height: 75vh; display: flex; flex-direction: column;">
                     <div class="bg-secondary p-2 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-3">
                             <span class="fw-bold"><i class="fas fa-pencil-alt"></i> Edycja: <span id="drawingMapName"></span></span>
 
-                            <div class="input-group input-group-sm" style="width: auto;">
-                                <span class="input-group-text border-secondary bg-dark text-white">Kolor rysowania:</span>
-                                <input type="color" class="form-control form-control-color bg-dark border-secondary" id="drawingColor" value="#ff0000" title="Wybierz kolor">
+                            @* --- WYBIERAK KOLORÓW (POPRAWIONY STYL) --- *@
+                            <div class="d-flex align-items-center">
+                                <span class="me-2 text-white">Kolor:</span>
+                                <input type="color" class="form-control form-control-color bg-dark border-secondary p-1"
+                                       id="drawingColor" value="#dc3545" title="Wybierz kolor"
+                                       style="width: 50px; height: 35px; cursor: pointer;">
                             </div>
                         </div>
 
                         <div>
-                            <small class="text-white me-3 d-none d-md-inline"><i class="fas fa-info-circle"></i> Wybierz kolor, a potem narzędzie po lewej.</small>
+                            <small class="text-white me-3 d-none d-md-inline"><i class="fas fa-info-circle"></i> Wybierz kolor, a potem pinezkę lub linię.</small>
                             <button class="btn btn-sm btn-light" onclick="backToSelect()"><i class="fas fa-arrow-left"></i> Wróć</button>
                         </div>
                     </div>
@@ -153,7 +159,6 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-
     <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
 
     <script>
@@ -168,9 +173,9 @@
                 reader.readAsDataURL(file);
             }
         }
-        function clearNewImage() {
+        function clearImage() {
             document.getElementById('coverImageInput').value = "";
-            document.getElementById('newImagePreviewContainer').classList.add('d-none');
+            document.getElementById('imagePreviewContainer').classList.add('d-none');
         }
 
         // Fix URL
@@ -180,6 +185,13 @@
             if (!url.startsWith('/')) return '/' + url;
             return url;
         }
+
+        var gameId = @Model.IgdbGameId;
+        var editorMap = null;
+        var drawnItems = null;
+        var currentMapData = null;
+        var screenshoter = null;
+        var editingNode = null;
 
         document.addEventListener("DOMContentLoaded", function() {
             tinymce.init({
@@ -212,21 +224,48 @@
                     };
                     input.click();
                 },
-                extended_valid_elements : 'img[class|src|border|alt|title|width|height|style|data-geojson|data-map-name|data-origin-src]'
+                extended_valid_elements : 'img[class|src|border|alt|title|width|height|style|data-geojson|data-map-name|data-origin-src]',
+                setup: function (editor) {
+                    editor.on('dblclick', function (e) {
+                        var target = e.target;
+                        if (target.nodeName === 'IMG' && target.classList.contains('interactive-map-source')) {
+                            editExistingMap(target);
+                        }
+                    });
+                }
             });
         });
 
-        // --- MAPY ---
-        var gameId = @Model.IgdbGameId;
-        var editorMap = null;
-        var drawnItems = null;
-        var currentMapData = null;
-        var screenshoter = null;
-
         function resetModal() {
+            editingNode = null;
             $('#step-select-map').removeClass('d-none');
             $('#step-draw-map').addClass('d-none');
             loadMaps();
+        }
+
+        function editExistingMap(imgNode) {
+            editingNode = imgNode;
+            var originSrc = imgNode.getAttribute('data-origin-src');
+            var mapName = imgNode.getAttribute('data-map-name');
+            var geoJsonStr = imgNode.getAttribute('data-geojson');
+
+            if (!originSrc) {
+                alert("Błąd: Nie można odczytać źródła mapy.");
+                return;
+            }
+
+            currentMapData = { url: fixUrl(originSrc), name: mapName };
+
+            var modal = new bootstrap.Modal(document.getElementById('mapsModal'));
+            modal.show();
+
+            $('#step-select-map').addClass('d-none');
+            $('#step-draw-map').removeClass('d-none');
+            $('#drawingMapName').text(mapName);
+
+            setTimeout(function() {
+                initEditorMap(geoJsonStr);
+            }, 300);
         }
 
         function loadMaps() {
@@ -280,7 +319,7 @@
             $('#step-select-map').addClass('d-none');
             $('#step-draw-map').removeClass('d-none');
             $('#drawingMapName').text(name);
-            setTimeout(initEditorMap, 300);
+            setTimeout(function() { initEditorMap(null); }, 300);
         }
 
         function backToSelect() {
@@ -288,7 +327,17 @@
             $('#step-select-map').removeClass('d-none');
         }
 
-        function initEditorMap() {
+        function getPinIcon(color) {
+            return L.divIcon({
+                className: 'custom-pin-icon',
+                html: `<i class="fas fa-map-marker-alt fa-3x" style="color: ${color}; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);"></i>`,
+                iconSize: [30, 42],
+                iconAnchor: [15, 42],
+                popupAnchor: [0, -45]
+            });
+        }
+
+        function initEditorMap(initialGeoJson) {
             if (editorMap) {
                 editorMap.remove();
                 editorMap = null;
@@ -323,14 +372,38 @@
                 drawnItems = new L.FeatureGroup();
                 editorMap.addLayer(drawnItems);
 
+                if (initialGeoJson) {
+                    try {
+                        var geoData = JSON.parse(initialGeoJson);
+                        L.geoJSON(geoData, {
+                            pointToLayer: function (feature, latlng) {
+                                var color = feature.properties.color || '#dc3545';
+                                var marker = L.marker(latlng, { icon: getPinIcon(color) });
+                                if (feature.properties.note) marker.bindPopup(feature.properties.note);
+                                return marker;
+                            },
+                            style: function (feature) {
+                                var color = feature.properties.color || '#dc3545';
+                                return { color: color, fillColor: color, fillOpacity: 0.5, weight: 4 };
+                            },
+                            onEachFeature: function (feature, layer) {
+                                layer.feature = feature;
+                                drawnItems.addLayer(layer);
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Błąd ładowania GeoJSON: ", e);
+                    }
+                }
+
                 var drawControl = new L.Control.Draw({
                     draw: {
                         polyline: { shapeOptions: { weight: 4 } },
                         polygon: { shapeOptions: { weight: 2 } },
                         rectangle: { shapeOptions: { weight: 2 } },
-                        circle: { shapeOptions: { weight: 2 } },
-                        marker: false,
-                        circlemarker: true
+                        circle: false,
+                        circlemarker: false,
+                        marker: true
                     },
                     edit: { featureGroup: drawnItems }
                 });
@@ -338,9 +411,16 @@
 
                 editorMap.on(L.Draw.Event.CREATED, function (e) {
                     var layer = e.layer;
+                    var type = e.layerType;
                     var color = document.getElementById('drawingColor').value;
+                    var note = "";
 
-                    if (layer.setStyle) {
+                    if (type === 'marker') {
+                        layer.setIcon(getPinIcon(color));
+                        note = prompt("Podaj opis dla tego punktu (opcjonalnie):", "");
+                        if(note) layer.bindPopup(note);
+                    }
+                    else if (layer.setStyle) {
                         layer.setStyle({ color: color, fillColor: color, fillOpacity: 0.5 });
                     }
 
@@ -349,6 +429,7 @@
                     }
                     layer.feature.properties = layer.feature.properties || {};
                     layer.feature.properties.color = color;
+                    layer.feature.properties.note = note;
 
                     drawnItems.addLayer(layer);
                 });
@@ -366,21 +447,26 @@
                 reader.onloadend = function() {
                     var base64data = reader.result;
 
-                    var htmlToInsert = `
-                        <div class="interactive-map-wrapper my-3 text-center">
-                            <img src="${base64data}"
+                    var imgHtml = `<img src="${base64data}"
                                  data-origin-src="${currentMapData.url}"
                                  data-geojson="${safeJson}"
                                  data-map-name="${currentMapData.name}"
                                  class="img-fluid rounded border border-secondary interactive-map-source"
-                                 style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-                            <p class="text-muted small mt-1 text-info">
-                                <i class="fas fa-map-marked-alt"></i> Mapa: ${currentMapData.name} (Interaktywna po publikacji)
-                            </p>
+                                 style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />`;
+
+                    var wrapperHtml = `
+                        <div class="interactive-map-wrapper my-3 text-center">
+                            ${imgHtml}
                         </div>
                         <p>&nbsp;</p>
                     `;
-                    tinymce.activeEditor.insertContent(htmlToInsert);
+
+                    if (editingNode) {
+                        tinymce.activeEditor.selection.select(editingNode);
+                        tinymce.activeEditor.insertContent(wrapperHtml);
+                    } else {
+                        tinymce.activeEditor.insertContent(wrapperHtml);
+                    }
 
                     var modalEl = document.getElementById('mapsModal');
                     var modal = bootstrap.Modal.getInstance(modalEl);
@@ -391,11 +477,28 @@
             });
         }
     </script>
+
     <style>
         .map-hover:hover {
             transform: scale(1.02);
             transition: transform 0.2s;
             border: 2px solid #0d6efd !important;
+        }
+
+        .custom-pin-icon {
+            background: transparent !important;
+            border: none !important;
+            text-align: center;
+            line-height: 42px;
+            width: 30px !important;
+            margin-left: -15px !important;
+            margin-top: -42px !important;
+        }
+
+        .leaflet-marker-icon.leaflet-edit-marker-selected {
+            border: 2px dashed rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            box-sizing: content-box;
         }
     </style>
 }

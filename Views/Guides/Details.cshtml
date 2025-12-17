@@ -436,6 +436,17 @@
         .leaflet-popup-tip {
             background: #333;
         }
+
+        /* CSS FIX: Poprawa wyrównania pinezki */
+        .custom-pin-icon {
+            background: transparent !important;
+            border: none !important;
+            text-align: center;
+            line-height: 42px; /* Wysokość ikony */
+            width: 30px !important; /* Szerokość */
+            margin-left: -15px !important; /* Centrowanie w poziomie (połowa szerokości) */
+            margin-top: -42px !important; /* Zakotwiczenie na dole (wysokość) */
+        }
     </style>
 
     <script>
@@ -456,19 +467,18 @@
             var mapImages = document.querySelectorAll('img.interactive-map-source');
 
             mapImages.forEach(function(img) {
-                // Pobieramy surowy URL i go naprawiamy (dla data-origin-src)
+                // Pobieramy dane mapy
                 var rawUrl = img.getAttribute('data-origin-src') || img.getAttribute('src');
                 var imageUrl = fixUrl(rawUrl);
-
                 var geoJsonRaw = img.getAttribute('data-geojson');
+
                 if (!geoJsonRaw) return;
 
-                // 1. Tworzymy DIV zamiast IMG
+                // 1. Tworzymy kontener DIV
                 var mapContainer = document.createElement('div');
                 var mapId = 'map-' + Math.floor(Math.random() * 1000000);
                 mapContainer.id = mapId;
                 mapContainer.style.width = "100%";
-                // WAŻNE: Dajemy tymczasową wysokość, aby Leaflet nie renderował się do 0px
                 mapContainer.style.height = "500px";
                 mapContainer.style.background = "#222";
                 mapContainer.style.borderRadius = "8px";
@@ -477,7 +487,7 @@
 
                 img.parentNode.replaceChild(mapContainer, img);
 
-                // 2. Inicjujemy mapę
+                // 2. Inicjalizacja Leaflet
                 var map = L.map(mapId, {
                     crs: L.CRS.Simple,
                     minZoom: -5, maxZoom: 4, zoomSnap: 0.25,
@@ -486,11 +496,10 @@
                 map.on('focus', () => { map.scrollWheelZoom.enable(); });
                 map.on('blur', () => { map.scrollWheelZoom.disable(); });
 
-                // 3. Ładujemy obrazek, aby poznać wymiary
+                // 3. Ładowanie obrazka
                 var imageObj = new Image();
                 imageObj.src = imageUrl;
 
-                // Logowanie błędu, jeśli obrazek się nie załaduje
                 imageObj.onerror = function() {
                     console.error("Nie udało się załadować obrazka mapy: " + imageUrl);
                     mapContainer.innerHTML = '<div class="text-center text-danger p-5">Błąd ładowania mapy.<br>Sprawdź ścieżkę do pliku.</div>';
@@ -500,13 +509,12 @@
                     var w = this.width;
                     var h = this.height;
 
-                    // Dopasuj wysokość kontenera do proporcji obrazka
                     var containerWidth = mapContainer.clientWidth;
                     if(w > 0) {
                         var ratio = h / w;
                         var newHeight = containerWidth * ratio;
                         mapContainer.style.height = newHeight + "px";
-                        map.invalidateSize(); // Kluczowe: odśwież rozmiar mapy
+                        map.invalidateSize();
                     }
 
                     var southWest = map.unproject([0, h], map.getMaxZoom() - 1);
@@ -520,13 +528,12 @@
                     map.setMinZoom(fitZoom);
                     map.setMaxBounds(bounds);
 
-                    // Rysuj elementy z GeoJSON
+                    // 4. Rysowanie elementów z GeoJSON
                     if (geoJsonRaw) {
                         try {
                             var geoJsonData = JSON.parse(geoJsonRaw);
                             L.geoJSON(geoJsonData, {
                                 style: function (feature) {
-                                    // Pobieramy kolor z properties
                                     var color = feature.properties && feature.properties.color ? feature.properties.color : '#ffcc00';
                                     return {
                                         color: color,
@@ -536,20 +543,27 @@
                                     };
                                 },
                                 pointToLayer: function (feature, latlng) {
-                                    var color = feature.properties && feature.properties.color ? feature.properties.color : '#ffcc00';
-                                    // Używamy CircleMarker zamiast domyślnej pinezki, żeby łatwo kolorować
-                                    return L.circleMarker(latlng, {
-                                        radius: 8,
-                                        fillColor: color,
-                                        color: "#fff",
-                                        weight: 2,
-                                        opacity: 1,
-                                        fillOpacity: 0.8
+                                    var color = feature.properties && feature.properties.color ? feature.properties.color : '#dc3545';
+
+                                    // Używamy naszej Customowej Pinezki
+                                    return L.marker(latlng, {
+                                        icon: L.divIcon({
+                                            className: 'custom-pin-icon',
+                                            html: `<i class="fas fa-map-marker-alt fa-3x" style="color: ${color}; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);"></i>`,
+                                            iconSize: [30, 42],
+                                            iconAnchor: [15, 42],
+                                            popupAnchor: [0, -45]
+                                        })
                                     });
                                 },
                                 onEachFeature: function (feature, layer) {
-                                    if (feature.properties && feature.properties.popupContent) {
-                                        layer.bindPopup(feature.properties.popupContent);
+                                    // Tooltip (dymek) po najechaniu, jeśli jest opis
+                                    if (feature.properties && feature.properties.note) {
+                                        layer.bindTooltip(feature.properties.note, {
+                                            permanent: false,
+                                            direction: 'top',
+                                            className: 'bg-dark text-white border-0 shadow px-2 py-1'
+                                        });
                                     }
                                 }
                             }).addTo(map);

@@ -22,5 +22,6 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         public User? UploadedBy { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public bool IsDeleted { get; set; } = false;
     }
 }
