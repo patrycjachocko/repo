@@ -229,9 +229,9 @@
                     <h5 class="mb-0 text-dark fw-bold"><i class="fas fa-lightbulb text-warning"></i> Szybkie Tipy</h5>
 
                     @* --- PLUSIK DO DODAWANIA --- *@
-                        <button class="btn btn-success btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px;" data-bs-toggle="modal" data-bs-target="#addTipModal" title="Dodaj wskazówkę">
-                            <i class="fas fa-plus"></i>
-                        </button>
+                    <button class="btn btn-success btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px;" data-bs-toggle="modal" data-bs-target="#addTipModal" title="Dodaj wskazówkę">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
 
                 @* Lista Tipów *@
@@ -244,7 +244,14 @@
                     }
                     else
                     {
-                        @foreach (var tip in Model.Tips)
+                        @* --- LOGIKA SORTOWANIA TIPÓW (ZMIANA TUTAJ) --- *@
+                        @* Sortujemy: 1. Wynik (Likes - Dislikes) malejąco, 2. Data utworzenia malejąco *@
+                        var sortedTips = Model.Tips
+                        .OrderByDescending(t => (t.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0) - (t.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0))
+                        .ThenByDescending(t => t.CreatedAt)
+                        .ToList();
+
+                        @foreach (var tip in sortedTips)
                         {
                             // --- LOGIKA REAKCJI ---
                             int likes = tip.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
