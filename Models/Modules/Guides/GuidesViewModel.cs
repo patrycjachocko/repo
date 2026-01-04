@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
-using praca_dyplomowa_zesp.Models.Modules.Guides;
+﻿using praca_dyplomowa_zesp.Models.Modules.Guides;
+using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
+using System.Collections.Generic;
 
 namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {
@@ -11,5 +12,6 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
 
         // Lista poradników
         public List<Guide> Guides { get; set; } = new List<Guide>();
+        public IEnumerable<Tip> Tips { get; set; } = new List<Tip>();
     }
 }

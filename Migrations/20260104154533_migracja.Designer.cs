@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251217225056_migracja")]
+    [Migration("20260104154533_migracja")]
     partial class migracja
     {
         /// <inheritdoc />
@@ -326,6 +326,9 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Property<Guid?>("ReplyId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("TipId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
@@ -337,6 +340,8 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.HasIndex("CommentId");
 
                     b.HasIndex("ReplyId");
+
+                    b.HasIndex("TipId");
 
                     b.HasIndex("UserId");
 
@@ -447,32 +452,23 @@ namespace praca_dyplomowa_zesp.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Author")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Content")
                         .IsRequired()
+                        .HasMaxLength(280)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Likes")
+                    b.Property<long>("IgdbGameId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Tags")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Version")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Tips");
                 });
@@ -862,6 +858,10 @@ namespace praca_dyplomowa_zesp.Migrations
                         .HasForeignKey("ReplyId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("praca_dyplomowa_zesp.Models.Modules.Guides.Tips.Tip", "Tip")
+                        .WithMany("Reactions")
+                        .HasForeignKey("TipId");
+
                     b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -871,6 +871,8 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Navigation("Comment");
 
                     b.Navigation("Reply");
+
+                    b.Navigation("Tip");
 
                     b.Navigation("User");
                 });
@@ -885,6 +887,17 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.Guide", b =>
+                {
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.Tips.Tip", b =>
                 {
                     b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
                         .WithMany()
@@ -969,6 +982,11 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Navigation("Comments");
 
                     b.Navigation("Rates");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.Tips.Tip", b =>
+                {
+                    b.Navigation("Reactions");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Ticket", b =>

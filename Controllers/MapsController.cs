@@ -44,15 +44,14 @@ namespace praca_dyplomowa_zesp.Controllers
             return Json(maps);
         }
 
-        // 2. Dla Admina/Moderatora (wszystkie mapy do zarządzania)
+        // 2. Dla Admina/Moderatora (wszystkie mapy do zarządzania, ale bez usuniętych)
         [HttpGet]
         [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetMapsForManager(long gameId)
         {
             var maps = await _context.GameMaps
-                .Where(m => m.IgdbGameId == gameId)
-                .OrderBy(m => m.IsDeleted) // Najpierw aktywne
-                .ThenByDescending(m => m.Id)
+                .Where(m => m.IgdbGameId == gameId && !m.IsDeleted) // Filtrujemy usunięte
+                .OrderByDescending(m => m.Id)
                 .Select(m => new
                 {
                     m.Id,
@@ -81,7 +80,7 @@ namespace praca_dyplomowa_zesp.Controllers
             return Ok(new { success = true });
         }
 
-        // 4. Usuwanie/Przywracanie (Soft Delete)
+        // 4. Usuwanie (Soft Delete + Zmiana nazwy)
         [HttpPost]
         [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> ToggleMapStatus(int id)
@@ -89,11 +88,20 @@ namespace praca_dyplomowa_zesp.Controllers
             var map = await _context.GameMaps.FindAsync(id);
             if (map == null) return NotFound();
 
-            // Odwracamy status (jak było false to true, jak true to false)
-            map.IsDeleted = !map.IsDeleted;
+            // 1. Ustawiamy flagę usunięcia
+            map.IsDeleted = true;
+
+            // 2. Zmieniamy nazwę, aby było widać w bazie, że usunięta
+            // Dodajemy też timestamp (ticks), żeby nazwa była na 100% unikalna
+            // (np. "[DELETED] Dust2_63832123")
+            if (!map.Name.StartsWith("[DELETED]"))
+            {
+                map.Name = $"[DELETED] {map.Name}_{DateTime.Now.Ticks}";
+            }
+
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, isDeleted = map.IsDeleted });
+            return Ok(new { success = true, isDeleted = true });
         }
 
         // 5. Upload nowej mapy

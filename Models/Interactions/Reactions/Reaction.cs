@@ -1,5 +1,6 @@
 ﻿using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
+using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using praca_dyplomowa_zesp.Models.Users;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -25,5 +26,8 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Reactions
         public Guid? ReplyId { get; set; }
         [ForeignKey("ReplyId")]
         public virtual Reply? Reply { get; set; }
+        public int? TipId { get; set; }
+        [ForeignKey("TipId")]
+        public virtual Tip? Tip { get; set; }
     }
 }

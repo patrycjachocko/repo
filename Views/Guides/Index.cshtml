@@ -1,10 +1,21 @@
-﻿@model praca_dyplomowa_zesp.Models.Modules.Guides.GuidesViewModel
+﻿@using praca_dyplomowa_zesp.Models.Interactions.Reactions
+@using Microsoft.AspNetCore.Identity
+@using praca_dyplomowa_zesp.Models.Users
+@inject UserManager<User> UserManager
+@model praca_dyplomowa_zesp.Models.Modules.Guides.GuidesViewModel
+
 @{
     ViewData["Title"] = $"{Model.GameName} - Poradniki";
     bool canManageMaps = User.IsInRole("Admin") || User.IsInRole("Moderator");
+
+    // Pobieramy ID aktualnie zalogowanego użytkownika
+    var user = await UserManager.GetUserAsync(User);
+    var currentUserId = user?.Id ?? Guid.Empty;
 }
 
 <div class="container mt-4">
+
+    @* --- NAGŁÓWEK (BEZ ZMIAN) --- *@
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
         <div>
             <h1 class="display-5 fw-bold text-primary">@Model.GameName</h1>
@@ -39,7 +50,6 @@
             }
             else
             {
-                @* --- KOMUNIKAT DLA NIEZALOGOWANYCH --- *@
                 <div class="alert alert-dark text-white d-flex align-items-center mb-0 px-4 py-2 border-secondary" role="alert">
                     <i class="fas fa-info-circle me-3 fs-4 text-primary"></i>
                     <div>
@@ -52,7 +62,7 @@
         </div>
     </div>
 
-    @* --- PANEL FILTROWANIA --- *@
+    @* --- PANEL FILTROWANIA (BEZ ZMIAN) --- *@
     <div class="card bg-dark border-secondary mb-4">
         <div class="card-body">
             <form asp-action="Index" method="get" class="row g-3 align-items-center">
@@ -84,127 +94,314 @@
         </div>
     </div>
 
-    @if (Model.Guides.Any())
-    {
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            @foreach (var guide in Model.Guides)
+    @* --- UKŁAD GŁÓWNY (Row) --- *@
+    <div class="row">
+
+        @* LEWA KOLUMNA: PORADNIKI (75% szerokości) *@
+        <div class="col-lg-9">
+            @if (Model.Guides.Any())
             {
-                var avgRating = guide.Rates != null && guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0;
+                <div class="row row-cols-1 row-cols-md-2 g-4">
+                    @foreach (var guide in Model.Guides)
+                    {
+                        var avgRating = guide.Rates != null && guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0;
 
-                // --- LOGIKA STATUSÓW ---
-                bool isDeleted = guide.IsDeleted;
-                bool isDraft = guide.IsDraft;
-                bool isRejected = guide.IsRejected;
-                bool isPending = !guide.IsApproved && !isDraft && !isDeleted && !isRejected;
+                        // --- LOGIKA STATUSÓW ---
+                        bool isDeleted = guide.IsDeleted;
+                        bool isDraft = guide.IsDraft;
+                        bool isRejected = guide.IsRejected;
+                        bool isPending = !guide.IsApproved && !isDraft && !isDeleted && !isRejected;
 
-                string cardClass = "";
-                if (isDeleted) cardClass = "guide-card-deleted";
-                else if (isDraft) cardClass = "guide-card-draft";
-                else if (isRejected) cardClass = "guide-card-rejected";
-                else if (isPending) cardClass = "guide-card-pending";
+                        string cardClass = "";
+                        if (isDeleted) cardClass = "guide-card-deleted";
+                        else if (isDraft) cardClass = "guide-card-draft";
+                        else if (isRejected) cardClass = "guide-card-rejected";
+                        else if (isPending) cardClass = "guide-card-pending";
 
-                bool canManage = User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName;
+                        bool canManage = User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName;
 
-                <div class="col">
-                    <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect @cardClass">
+                        <div class="col">
+                            <div class="card h-100 bg-dark text-white border-secondary shadow-lg hover-effect @cardClass">
 
-                        @* --- BADGE --- *@
-                        @if (isDeleted)
-                        {
-                            <div class="status-badge badge-deleted"><i class="fas fa-trash-alt"></i> KOSZ</div>
-                        }
-                        else if (isDraft)
-                        {
-                            <div class="status-badge badge-draft"><i class="fas fa-pencil-ruler"></i> SZKIC</div>
-                        }
-                        else if (isRejected)
-                        {
-                            <div class="status-badge badge-rejected"><i class="fas fa-times-circle"></i> ODRZUCONY</div>
-                        }
-                        else if (isPending)
-                        {
-                            <div class="status-badge badge-pending"><i class="fas fa-lock"></i> OCZEKUJE</div>
-                        }
-
-                        <div style="height: 200px; overflow: hidden; background-color: #2c2c35; display: flex; align-items: center; justify-content: center; position: relative;">
-                            @if (guide.CoverImage != null)
-                            {
-                                <img src="data:@guide.CoverImageContentType;base64,@Convert.ToBase64String(guide.CoverImage)"
-                                     class="card-img-top" style="width: 100%; height: 100%; object-fit: cover; @(isDraft || isRejected || isDeleted ? "filter: grayscale(100%);" : "")"
-                                     alt="@guide.Title">
-                            }
-                            else
-                            {
-                                <i class="fas fa-book-open fa-4x text-secondary"></i>
-                            }
-
-                            <div class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark fs-6 shadow">
-                                <i class="fas fa-star"></i> @avgRating.ToString("0.0")
-                            </div>
-                        </div>
-
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-primary fw-bold">@guide.Title</h5>
-                            <p class="card-text text-muted small mb-3">
-                                Autor: <span class="text-white">@guide.User?.UserName</span> |
-                                @guide.CreatedAt.ToString("dd.MM.yyyy")
-                            </p>
-                            <p class="card-text flex-grow-1 text-truncate" style="max-height: 3em;">@guide.Description</p>
-
-                            @if (isRejected && canManage)
-                            {
-                                <div class="alert alert-danger py-1 px-2 small mb-2 text-center" style="background-color: #4a1c1c; border-color: #842029; color: #ea868f;">
-                                    <i class="fas fa-exclamation-triangle"></i> Wymaga poprawy
-                                </div>
-                            }
-
-                            <div class="mt-3 d-flex gap-2">
-                                <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-outline-light flex-grow-1 stretched-link">
-                                    Czytaj dalej
-                                </a>
-
-                                @if (canManage)
+                                @if (isDeleted)
                                 {
-                                    <div class="d-flex gap-2" style="position: relative; z-index: 10;">
-                                        <a asp-action="Edit" asp-route-id="@guide.Id" class="btn btn-outline-warning" title="Edytuj" style="min-width: 42px;">
-                                            <i class="fas fa-edit"></i>
+                                    <div class="status-badge badge-deleted"><i class="fas fa-trash-alt"></i> KOSZ</div>
+                                }
+                                else if (isDraft)
+                                {
+
+                                    <div class="status-badge badge-draft"><i class="fas fa-pencil-ruler"></i> SZKIC</div>
+                                }
+                                else if (isRejected)
+                                {
+
+                                    <div class="status-badge badge-rejected"><i class="fas fa-times-circle"></i> ODRZUCONY</div>
+                                }
+                                else if (isPending)
+                                {
+
+                                    <div class="status-badge badge-pending"><i class="fas fa-lock"></i> OCZEKUJE</div>
+                                }
+
+                                <div style="height: 200px; overflow: hidden; background-color: #2c2c35; display: flex; align-items: center; justify-content: center; position: relative;">
+                                    @if (guide.CoverImage != null)
+                                    {
+                                        <img src="data:@guide.CoverImageContentType;base64,@Convert.ToBase64String(guide.CoverImage)"
+                                             class="card-img-top" style="width: 100%; height: 100%; object-fit: cover; @(isDraft || isRejected || isDeleted ? "filter: grayscale(100%);" : "")"
+                                             alt="@guide.Title">
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-book-open fa-4x text-secondary"></i>
+                                    }
+
+                                    <div class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark fs-6 shadow">
+                                        <i class="fas fa-star"></i> @avgRating.ToString("0.0")
+                                    </div>
+                                </div>
+
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title text-primary fw-bold">@guide.Title</h5>
+                                    <p class="card-text text-muted small mb-3">
+                                        Autor: <span class="text-white">@guide.User?.UserName</span> |
+                                        @guide.CreatedAt.ToString("dd.MM.yyyy")
+                                    </p>
+                                    <p class="card-text flex-grow-1 text-truncate" style="max-height: 3em;">@guide.Description</p>
+
+                                    @if (isRejected && canManage)
+                                    {
+                                        <div class="alert alert-danger py-1 px-2 small mb-2 text-center" style="background-color: #4a1c1c; border-color: #842029; color: #ea868f;">
+                                            <i class="fas fa-exclamation-triangle"></i> Wymaga poprawy
+                                        </div>
+                                    }
+
+                                    <div class="mt-3 d-flex gap-2">
+                                        <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-outline-light flex-grow-1 stretched-link">
+                                            Czytaj dalej
                                         </a>
 
-                                        @if (guide.IsDeleted)
+                                        @if (canManage)
                                         {
-                                            <form asp-action="DeletePermanently" asp-route-id="@guide.Id" method="post" onsubmit="return confirm('To usunięcie jest NIEODWRACALNE. Kontynuować?');" class="d-flex">
-                                                <button type="submit" class="btn btn-danger" title="Usuń na zawsze" style="min-width: 42px;">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </form>
-                                        }
-                                        else
-                                        {
-                                            <a asp-action="Delete" asp-route-id="@guide.Id" class="btn btn-outline-danger" title="Usuń do kosza" style="min-width: 42px;">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
+                                            <div class="d-flex gap-2" style="position: relative; z-index: 10;">
+                                                <a asp-action="Edit" asp-route-id="@guide.Id" class="btn btn-outline-warning" title="Edytuj" style="min-width: 42px;">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+
+                                                @if (guide.IsDeleted)
+                                                {
+                                                    <form asp-action="DeletePermanently" asp-route-id="@guide.Id" method="post" onsubmit="return confirm('To usunięcie jest NIEODWRACALNE. Kontynuować?');" class="d-flex">
+                                                        <button type="submit" class="btn btn-danger" title="Usuń na zawsze" style="min-width: 42px;">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                                else
+                                                {
+                                                    <a asp-action="Delete" asp-route-id="@guide.Id" class="btn btn-outline-danger" title="Usuń do kosza" style="min-width: 42px;">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                }
+                                            </div>
                                         }
                                     </div>
-                                }
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <h3 class="text-muted">Pusto tu...</h3>
+                    <p class="text-secondary">Brak poradników.</p>
                 </div>
             }
         </div>
-    }
-    else
-    {
-        <div class="text-center py-5">
-            <h3 class="text-muted">Pusto tu...</h3>
-            <p class="text-secondary">Brak poradników.</p>
+
+        @* PRAWA KOLUMNA: TIPY (ZMIENIONY WYGLĄD NA JASNY) *@
+        <div class="col-lg-3">
+            @* Sticky: Przykleja się przy przewijaniu *@
+            <div class="sticky-top" style="top: 20px; z-index: 1;">
+
+                @* Nagłówek Tipów - Ciemny tekst *@
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h5 class="mb-0 text-dark fw-bold"><i class="fas fa-lightbulb text-warning"></i> Szybkie Tipy</h5>
+
+                    @* --- PLUSIK DO DODAWANIA --- *@
+                        <button class="btn btn-success btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px;" data-bs-toggle="modal" data-bs-target="#addTipModal" title="Dodaj wskazówkę">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                </div>
+
+                @* Lista Tipów *@
+                <div class="d-flex flex-column gap-3">
+                    @if (Model.Tips == null || !Model.Tips.Any())
+                    {
+                        <div class="alert alert-light text-center text-muted border border-dashed">
+                            <small>Brak wskazówek. Dodaj pierwszą!</small>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var tip in Model.Tips)
+                        {
+                            // --- LOGIKA REAKCJI ---
+                            int likes = tip.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
+                            int dislikes = tip.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
+                            int score = likes - dislikes;
+
+                            bool userLiked = currentUserId != Guid.Empty && (tip.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like) ?? false);
+                            bool userDisliked = currentUserId != Guid.Empty && (tip.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike) ?? false);
+
+                            bool canEditTip = currentUserId != Guid.Empty && (tip.UserId == currentUserId || canManageMaps);
+
+                            // Karta w jasnym stylu (bg-light, text-dark)
+                            <div class="card bg-light border-0 shadow-sm">
+                                <div class="card-body p-3">
+                                    @* Treść *@
+                                    <p class="card-text mb-2 small text-dark" style="white-space: pre-wrap; font-weight: 500;" id="tip-content-@tip.Id">@tip.Content</p>
+
+                                    <div class="d-flex justify-content-between align-items-end">
+                                        @* Info o autorze *@
+                                        <div>
+                                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                                <i class="fas fa-user-circle"></i> @tip.User?.UserName
+                                            </small>
+                                            <small class="text-muted" style="font-size: 0.7rem;">
+                                                @tip.CreatedAt.ToString("dd.MM.yyyy")
+                                            </small>
+                                        </div>
+
+                                        @* Łapki (Like/Dislike) *@
+                                        <div class="d-flex gap-2 align-items-center">
+                                            @* Like *@
+                                            <form asp-action="ToggleTipReaction" method="post" class="d-inline">
+                                                <input type="hidden" name="tipId" value="@tip.Id" />
+                                                <input type="hidden" name="isUpvote" value="true" />
+                                                <button type="submit" class="btn btn-sm p-0 @(userLiked ? "text-success" : "text-secondary")" title="Pomocne">
+                                                    <i class="@(userLiked ? "fas" : "far") fa-thumbs-up"></i>
+                                                </button>
+                                            </form>
+
+                                            <span class="small fw-bold @(score > 0 ? "text-success" : (score < 0 ? "text-danger" : "text-muted"))">
+                                                @score
+                                            </span>
+
+                                            @* Dislike *@
+                                            <form asp-action="ToggleTipReaction" method="post" class="d-inline">
+                                                <input type="hidden" name="tipId" value="@tip.Id" />
+                                                <input type="hidden" name="isUpvote" value="false" />
+                                                <button type="submit" class="btn btn-sm p-0 @(userDisliked ? "text-danger" : "text-secondary")" title="Słabe">
+                                                    <i class="@(userDisliked ? "fas" : "far") fa-thumbs-down"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    @* Edycja/Usuwanie *@
+                                    @if (canEditTip)
+                                    {
+                                        <div class="mt-2 pt-2 border-top d-flex justify-content-end gap-2">
+                                            <button class="btn btn-sm btn-link text-warning p-0" onclick="openEditTipModal(@tip.Id)">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-link text-danger p-0" onclick="openDeleteTipModal(@tip.Id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+            </div>
         </div>
-    }
+
+    </div> @* Koniec Row *@
+
+</div>
+
+@* --- MODAL: DODAJ TIP --- *@
+<div class="modal fade" id="addTipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-white text-dark">
+            @* Jasne tło modala *@
+            <div class="modal-header">
+                <h5 class="modal-title">Dodaj szybką wskazówkę</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="AddTip" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="gameId" value="@Model.IgdbGameId" />
+                    <div class="mb-3">
+                        <label class="form-label">Treść (max 300 znaków)</label>
+                        <textarea name="content" class="form-control" rows="3" maxlength="300" required
+                                  placeholder="Np. Pamiętaj, żeby zawsze przeładować broń przed wejściem do pokoju..."></textarea>
+                        <div class="form-text text-muted text-end">Max 300 znaków</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">Dodaj</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* --- MODAL: EDYTUJ TIP --- *@
+<div class="modal fade" id="editTipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-white text-dark">
+            <div class="modal-header">
+                <h5 class="modal-title">Edytuj wskazówkę</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="EditTip" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="editTipId" />
+                    <div class="mb-3">
+                        <label class="form-label">Treść</label>
+                        <textarea name="content" id="editTipContent" class="form-control" rows="3" maxlength="280" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* --- MODAL: USUŃ TIP (HARD DELETE) --- *@
+<div class="modal fade" id="deleteTipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-white text-dark">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Usuń wskazówkę</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Czy na pewno chcesz <strong>permanentnie</strong> usunąć tę wskazówkę? Tej operacji nie można cofnąć.</p>
+            </div>
+            <div class="modal-footer">
+                <form asp-action="DeleteTip" method="post">
+                    <input type="hidden" name="id" id="deleteTipId" />
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-danger">Usuń na zawsze</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 @if (canManageMaps)
 {
-    @* --- MODAL MANAGER MAP (ADMIN/MOD) --- *@
+    @* --- MODAL MANAGER MAP (BEZ ZMIAN) --- *@
     <div class="modal fade" id="mapManagerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content bg-dark text-white border-secondary">
@@ -242,6 +439,22 @@
         <script>
             var gameId = @Model.IgdbGameId;
 
+            // --- SKRYPTY DLA TIPÓW ---
+            function openEditTipModal(id) {
+                var content = document.getElementById('tip-content-' + id).innerText;
+                document.getElementById('editTipId').value = id;
+                document.getElementById('editTipContent').value = content;
+                var modal = new bootstrap.Modal(document.getElementById('editTipModal'));
+                modal.show();
+            }
+
+            function openDeleteTipModal(id) {
+                document.getElementById('deleteTipId').value = id;
+                var modal = new bootstrap.Modal(document.getElementById('deleteTipModal'));
+                modal.show();
+            }
+
+            // --- SKRYPTY DLA MAP ---
             function openMapManager() {
                 var modal = new bootstrap.Modal(document.getElementById('mapManagerModal'));
                 loadManagerMaps();
@@ -297,7 +510,6 @@
                 $.post('/Maps/RenameMap', { id: id, newName: newName }, function (res) {
                     if (res.success) {
                         // Opcjonalnie: Pokaż toast
-                        // alert("Zmieniono nazwę!");
                     } else {
                         alert("Błąd zmiany nazwy.");
                     }
@@ -322,6 +534,23 @@ else
 {
     @section Scripts {
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
+        <script>
+            // --- SKRYPTY DLA TIPÓW (Dla zwykłych userów) ---
+            function openEditTipModal(id) {
+                var content = document.getElementById('tip-content-' + id).innerText;
+                document.getElementById('editTipId').value = id;
+                document.getElementById('editTipContent').value = content;
+                var modal = new bootstrap.Modal(document.getElementById('editTipModal'));
+                modal.show();
+            }
+
+            function openDeleteTipModal(id) {
+                document.getElementById('deleteTipId').value = id;
+                var modal = new bootstrap.Modal(document.getElementById('deleteTipModal'));
+                modal.show();
+            }
+        </script>
     }
 }
 

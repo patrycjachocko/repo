@@ -16,6 +16,7 @@ using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
+using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using Rotativa.AspNetCore;
 
 namespace praca_dyplomowa_zesp.Controllers
@@ -43,6 +44,8 @@ namespace praca_dyplomowa_zesp.Controllers
 
         private bool IsUserMuted(User user)
         {
+            // Zabezpieczenie przed nullem
+            if (user == null) return false;
             // Jeśli BanEnd ma wartość i ta data jest w przyszłości -> użytkownik jest wyciszony
             return user.BanEnd.HasValue && user.BanEnd.Value > DateTimeOffset.Now;
         }
@@ -103,8 +106,6 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Include(g => g.User)
                 .Include(g => g.Rates)
                 .Where(g => g.IgdbGameId == gameId)
-                // UWAGA: Usunąłem globalne filtrowanie .Where(g => g.IsDeleted == false),
-                // teraz obsługujemy to w szczegółowych warunkach poniżej.
                 .Where(g =>
                     // 1. PUBLICZNE: Zatwierdzone i NIE usunięte
                     (g.IsApproved == true && g.IsDeleted == false) ||
@@ -132,23 +133,19 @@ namespace praca_dyplomowa_zesp.Controllers
             // 3. SORTOWANIE W PAMIĘCI
             switch (sortOrder)
             {
-                // --- NOWA OPCJA: MOJE PORADNIKI ---
                 case "mine":
                     if (currentUserId != Guid.Empty)
                     {
                         guidesFromDb = guidesFromDb
-                            // Sortujemy tak, że jeśli UserId == currentUserId (true), to jest na górze
                             .OrderByDescending(g => g.UserId == currentUserId)
-                            .ThenByDescending(g => g.CreatedAt) // Reszta po dacie
+                            .ThenByDescending(g => g.CreatedAt)
                             .ToList();
                     }
                     else
                     {
-                        // Fallback dla niezalogowanego (chociaż widok nie pozwoli, to warto zabezpieczyć)
                         guidesFromDb = guidesFromDb.OrderByDescending(g => g.CreatedAt).ToList();
                     }
                     break;
-                // ----------------------------------
 
                 case "rating_desc":
                     guidesFromDb = guidesFromDb
@@ -163,16 +160,179 @@ namespace praca_dyplomowa_zesp.Controllers
                     break;
             }
 
+            // --- 2. POBIERANIE TIPÓW ---
+            var tipsFromDb = await _context.Tips
+                .Include(t => t.User)
+                .Include(t => t.Reactions) // WAŻNE: Dodane Include dla reakcji
+                .Where(t => t.IgdbGameId == gameId)
+                .OrderByDescending(t => t.CreatedAt)
+                .Take(20) // Zwiększyłem limit
+                .ToListAsync();
+            // -----------------------------------
+
             var viewModel = new GuidesViewModel
             {
                 IgdbGameId = gameId,
                 GameName = gameDetailsFromApi.Name ?? "Brak nazwy",
                 IsInLibrary = isInLibrary,
-                Guides = guidesFromDb
+                Guides = guidesFromDb,
+                Tips = tipsFromDb
             };
 
             return View(viewModel);
         }
+
+        // --- OBSŁUGA TIPÓW (ADD, EDIT, DELETE, REACTIONS) ---
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddTip(long gameId, string content)
+        {
+            if (string.IsNullOrWhiteSpace(content)) return RedirectToAction("Index", new { gameId = gameId });
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Przekierowanie do logowania
+
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}.";
+                return RedirectToAction("Index", new { gameId = gameId });
+            }
+
+            var tip = new Tip
+            {
+                IgdbGameId = gameId,
+                UserId = user.Id,
+                Content = content,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Tips.Add(tip);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Dodano wskazówkę!";
+            return RedirectToAction("Index", new { gameId = gameId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditTip(int id, string content)
+        {
+            var tip = await _context.Tips.FindAsync(id);
+            if (tip == null) return NotFound();
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge();
+
+            // Sprawdzenie uprawnień: Autor lub Admin/Moderator
+            bool canEdit = tip.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
+
+            if (!canEdit) return Forbid();
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = "Jesteś wyciszony.";
+                return RedirectToAction("Index", new { gameId = tip.IgdbGameId });
+            }
+
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                tip.Content = content;
+                _context.Update(tip);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Zaktualizowano wskazówkę.";
+            }
+
+            return RedirectToAction("Index", new { gameId = tip.IgdbGameId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteTip(int id)
+        {
+            var tip = await _context.Tips
+                .Include(t => t.Reactions) // WAŻNE: Najpierw pobierz reakcje, żeby usunąć je kaskadowo
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (tip == null) return NotFound();
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge();
+
+            // Sprawdzenie uprawnień: Autor lub Admin/Moderator
+            bool canDelete = tip.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
+
+            if (!canDelete) return Forbid();
+
+            long gameId = tip.IgdbGameId;
+
+            // Usuń powiązane reakcje (jeśli SQLite nie ma włączonego Cascade Delete w bazie)
+            if (tip.Reactions != null && tip.Reactions.Any())
+            {
+                _context.Reactions.RemoveRange(tip.Reactions);
+            }
+
+            // HARD DELETE (Permanentne usunięcie Tipa)
+            _context.Tips.Remove(tip);
+            await _context.SaveChangesAsync();
+
+            TempData["StatusMessage"] = "Wskazówka została usunięta.";
+            return RedirectToAction("Index", new { gameId = gameId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleTipReaction(int tipId, bool isUpvote)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Przekierowanie do logowania
+
+            if (IsUserMuted(user)) return Forbid();
+
+            var tip = await _context.Tips.FindAsync(tipId);
+            if (tip == null) return NotFound();
+
+            var existingReaction = await _context.Reactions
+                .FirstOrDefaultAsync(r => r.TipId == tipId && r.UserId == user.Id);
+
+            var targetType = isUpvote ? ReactionType.Like : ReactionType.Dislike;
+
+            if (existingReaction != null)
+            {
+                // Jeśli użytkownik klika to samo co już ma -> usuwamy (toggle off)
+                if (existingReaction.Type == targetType)
+                {
+                    _context.Reactions.Remove(existingReaction);
+                }
+                // Jeśli zmienia zdanie -> aktualizujemy
+                else
+                {
+                    existingReaction.Type = targetType;
+                    _context.Update(existingReaction);
+                }
+            }
+            else
+            {
+                // Nowa reakcja
+                var reaction = new Reaction
+                {
+                    UserId = user.Id,
+                    TipId = tipId,
+                    Type = targetType
+                };
+                _context.Reactions.Add(reaction);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Wracamy do widoku
+            return RedirectToAction("Index", new { gameId = tip.IgdbGameId });
+        }
+
+        // ----------------------------------------
 
         // GET: Guides/Details/5
         public async Task<IActionResult> Details(int? id)
@@ -242,6 +402,9 @@ namespace praca_dyplomowa_zesp.Controllers
             ratingValue = Math.Round(ratingValue * 2, MidpointRounding.AwayFromZero) / 2;
 
             var user = await _userManager.GetUserAsync(User);
+            // Zabezpieczenie przed nullem
+            if (user == null) return Challenge();
+
             var guide = await _context.Guides.Include(g => g.Rates).FirstOrDefaultAsync(g => g.Id == request.GuideId);
 
             if (guide == null) return NotFound();
@@ -288,6 +451,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (string.IsNullOrWhiteSpace(content)) return RedirectToAction("Details", new { id = guideId });
 
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
 
             // Sprawdzenie Mute przy komentarzach
             if (IsUserMuted(user))
@@ -318,6 +482,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (string.IsNullOrWhiteSpace(content)) return RedirectToAction("Details", new { id = guideId });
 
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
 
             // Sprawdzenie Mute przy odpowiedziach
             if (IsUserMuted(user))
@@ -346,6 +511,7 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> ToggleReaction(Guid? commentId, Guid? replyId, int guideId, bool isUpvote)
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
 
             // Sprawdzenie czy użytkownik nie ma mute
             if (IsUserMuted(user)) return Forbid();
@@ -414,6 +580,8 @@ namespace praca_dyplomowa_zesp.Controllers
             if (gameId <= 0) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
+
             if (IsUserMuted(user))
             {
                 TempData["Error"] = $"Twoje konto jest wyciszone do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}.";
@@ -430,6 +598,7 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> Create(Guide guide, IFormFile? coverImageFile, string action)
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
 
             if (IsUserMuted(user))
             {
@@ -739,6 +908,8 @@ namespace praca_dyplomowa_zesp.Controllers
             if (comment == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
+
             if (comment.UserId != user.Id) return Forbid();
 
             if (IsUserMuted(user))
@@ -763,6 +934,8 @@ namespace praca_dyplomowa_zesp.Controllers
             if (comment == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
+
             bool canDelete = comment.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
 
             if (!canDelete) return Forbid();
@@ -783,6 +956,8 @@ namespace praca_dyplomowa_zesp.Controllers
             if (reply == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
+
             if (reply.UserId != user.Id) return Forbid();
 
             if (IsUserMuted(user))
@@ -807,6 +982,8 @@ namespace praca_dyplomowa_zesp.Controllers
             if (reply == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge(); // Zabezpieczenie
+
             bool canDelete = reply.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
 
             if (!canDelete) return Forbid();

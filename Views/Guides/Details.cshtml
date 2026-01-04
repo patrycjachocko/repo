@@ -256,6 +256,12 @@
                 var userLikedComment = comment.Reactions.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like);
                 var userDislikedComment = comment.Reactions.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike);
 
+                // --- OBLICZANIE WYNIKU DLA KOMENTARZA ---
+                var likesCount = comment.Reactions.Count(r => r.Type == ReactionType.Like);
+                var dislikesCount = comment.Reactions.Count(r => r.Type == ReactionType.Dislike);
+                var commentScore = likesCount - dislikesCount;
+                var scoreColorClass = commentScore > 0 ? "text-success" : (commentScore < 0 ? "text-danger" : "text-muted");
+
                 <div class="card bg-dark border-secondary mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -296,20 +302,32 @@
                                 </form>
                             </div>
                         }
-                        <div class="d-flex align-items-center gap-3 mt-3">
+
+                        <div class="d-flex align-items-center gap-2 mt-3">
                             <form asp-action="ToggleReaction" method="post" class="d-inline">
                                 <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" /> <input type="hidden" name="isUpvote" value="true" />
-                                <button class="btn btn-link p-0 text-decoration-none action-btn @(userLikedComment ? "text-success" : "text-muted")"><i class="fas fa-thumbs-up"></i> @comment.Reactions.Count(r => r.Type == ReactionType.Like)</button>
+                                <button class="btn btn-link p-0 text-decoration-none action-btn @(userLikedComment ? "text-success" : "text-muted")">
+                                    <i class="fas fa-thumbs-up"></i>
+                                </button>
                             </form>
+
+                            <span class="fw-bold @scoreColorClass" style="min-width: 20px; text-align: center; font-size: 1.1em;">
+                                @commentScore
+                            </span>
+
                             <form asp-action="ToggleReaction" method="post" class="d-inline">
                                 <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" /> <input type="hidden" name="isUpvote" value="false" />
-                                <button class="btn btn-link p-0 text-decoration-none action-btn @(userDislikedComment ? "text-danger" : "text-muted")"><i class="fas fa-thumbs-down"></i> @comment.Reactions.Count(r => r.Type == ReactionType.Dislike)</button>
+                                <button class="btn btn-link p-0 text-decoration-none action-btn @(userDislikedComment ? "text-danger" : "text-muted")">
+                                    <i class="fas fa-thumbs-down"></i>
+                                </button>
                             </form>
+
                             @if (User.Identity.IsAuthenticated)
                             {
-                                <button class="btn btn-link p-0 text-decoration-none text-muted action-btn" onclick="document.getElementById('reply-form-@comment.Id').classList.toggle('d-none')"><i class="fas fa-reply"></i> Odpowiedz</button>
+                                <button class="btn btn-link p-0 text-decoration-none text-muted action-btn ms-2" onclick="document.getElementById('reply-form-@comment.Id').classList.toggle('d-none')"><i class="fas fa-reply"></i> Odpowiedz</button>
                             }
                         </div>
+
                         <div id="reply-form-@comment.Id" class="mt-3 d-none border-top border-secondary pt-3">
                             <form asp-action="AddReply" method="post">
                                 <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" />
@@ -323,8 +341,13 @@
                                 {
                                     var isReplyAuthor = User.Identity.IsAuthenticated && reply.Author.UserName == User.Identity.Name;
                                     var canManageReply = isReplyAuthor || isAdminOrMod;
+
+                                    // --- OBLICZANIE WYNIKU DLA ODPOWIEDZI ---
                                     var replyLikes = reply.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
                                     var replyDislikes = reply.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
+                                    var replyScore = replyLikes - replyDislikes;
+                                    var replyScoreColor = replyScore > 0 ? "text-success" : (replyScore < 0 ? "text-danger" : "text-muted");
+
                                     var userLikedReply = reply.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like) ?? false;
                                     var userDislikedReply = reply.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike) ?? false;
 
@@ -355,9 +378,25 @@
                                                 </form>
                                             </div>
                                         }
+
                                         <div class="d-flex align-items-center gap-2">
-                                            <form asp-action="ToggleReaction" method="post" class="d-inline"><input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="true" /><button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userLikedReply ? "text-success" : "text-muted")" style="font-size: 0.8rem;"><i class="fas fa-thumbs-up"></i> @replyLikes</button></form>
-                                            <form asp-action="ToggleReaction" method="post" class="d-inline"><input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="false" /><button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userDislikedReply ? "text-danger" : "text-muted")" style="font-size: 0.8rem;"><i class="fas fa-thumbs-down"></i> @replyDislikes</button></form>
+                                            <form asp-action="ToggleReaction" method="post" class="d-inline">
+                                                <input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="true" />
+                                                <button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userLikedReply ? "text-success" : "text-muted")" style="font-size: 0.8rem;">
+                                                    <i class="fas fa-thumbs-up"></i>
+                                                </button>
+                                            </form>
+
+                                            <span class="@replyScoreColor small fw-bold" style="min-width: 15px; text-align: center;">
+                                                @replyScore
+                                            </span>
+
+                                            <form asp-action="ToggleReaction" method="post" class="d-inline">
+                                                <input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="false" />
+                                                <button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userDislikedReply ? "text-danger" : "text-muted")" style="font-size: 0.8rem;">
+                                                    <i class="fas fa-thumbs-down"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 }

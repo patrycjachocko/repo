@@ -64,25 +64,6 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tips",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Content = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Author = table.Column<string>(type: "TEXT", nullable: false),
-                    Category = table.Column<string>(type: "TEXT", nullable: false),
-                    Likes = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tags = table.Column<string>(type: "TEXT", nullable: false),
-                    Version = table.Column<string>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Tips", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -318,6 +299,28 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Tips",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Content = table.Column<string>(type: "TEXT", maxLength: 280, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IgdbGameId = table.Column<long>(type: "INTEGER", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tips", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tips_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserAchievements",
                 columns: table => new
                 {
@@ -500,7 +503,8 @@ namespace praca_dyplomowa_zesp.Migrations
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     CommentId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ReplyId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    ReplyId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    TipId = table.Column<int>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -523,6 +527,11 @@ namespace praca_dyplomowa_zesp.Migrations
                         principalTable: "Replies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Reactions_Tips_TipId",
+                        column: x => x.TipId,
+                        principalTable: "Tips",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -618,6 +627,11 @@ namespace praca_dyplomowa_zesp.Migrations
                 column: "ReplyId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Reactions_TipId",
+                table: "Reactions",
+                column: "TipId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Reactions_UserId",
                 table: "Reactions",
                 column: "UserId");
@@ -650,6 +664,11 @@ namespace praca_dyplomowa_zesp.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Tickets_UserId",
                 table: "Tickets",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tips_UserId",
+                table: "Tips",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -697,9 +716,6 @@ namespace praca_dyplomowa_zesp.Migrations
                 name: "TicketAttachments");
 
             migrationBuilder.DropTable(
-                name: "Tips");
-
-            migrationBuilder.DropTable(
                 name: "ToDoItems");
 
             migrationBuilder.DropTable(
@@ -710,6 +726,9 @@ namespace praca_dyplomowa_zesp.Migrations
 
             migrationBuilder.DropTable(
                 name: "Replies");
+
+            migrationBuilder.DropTable(
+                name: "Tips");
 
             migrationBuilder.DropTable(
                 name: "TicketMessages");
