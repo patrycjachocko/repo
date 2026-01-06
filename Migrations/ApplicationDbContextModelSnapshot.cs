@@ -641,21 +641,11 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Property<string>("BanReason")
                         .HasColumnType("TEXT");
 
-                    b.Property<byte[]>("Banner")
-                        .HasColumnType("BLOB");
-
-                    b.Property<string>("BannerContentType")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")

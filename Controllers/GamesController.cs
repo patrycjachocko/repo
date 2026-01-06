@@ -10,35 +10,8 @@ using praca_dyplomowa_zesp.Models.API;
 using Microsoft.AspNetCore.Identity;
 using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
-using praca_dyplomowa_zesp.Models.Interactions.Reactions; // Potrzebne do ReactionType
-
-namespace praca_dyplomowa_zesp.Models.Modules.Games
-{
-    public class GameBrowserViewModel
-    {
-        public List<ApiGame> Games { get; set; } = new List<ApiGame>();
-        public int CurrentPage { get; set; } = 1;
-        public string? SearchString { get; set; }
-        public string Mode { get; set; } = "browse";
-        public bool ShowIgdbUser { get; set; } = true;   // Gracze IGDB
-        public bool ShowIgdbCritic { get; set; } = true; // Krytycy IGDB
-        public bool ShowLocal { get; set; } = true;      // Twoja społeczność
-    }
-
-    public class GameDetailViewModel
-    {
-        public long IgdbGameId { get; set; }
-        public string Name { get; set; }
-        public string? CoverUrl { get; set; }
-        public List<string> Genres { get; set; } = new List<string>();
-        public string? Developer { get; set; }
-        public string? ReleaseDate { get; set; }
-        public ViewModels.GameRatingViewModel Ratings { get; set; }
-
-        // NOWE: Lista topowych recenzji do wyświetlenia
-        public List<GameReview> TopReviews { get; set; } = new List<GameReview>();
-    }
-}
+using praca_dyplomowa_zesp.Models.Interactions.Reactions;
+using praca_dyplomowa_zesp.Models.Modules.Games;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

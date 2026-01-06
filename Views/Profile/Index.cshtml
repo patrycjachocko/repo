@@ -3,176 +3,208 @@
 
 @{
     ViewData["Title"] = "Mój Profil";
+    // Sprawdzamy czy to admin, żeby ukryć usuwanie konta
+    bool isAdmin = User.IsInRole("Admin");
 }
 
-<div class="container">
-    <h1>@ViewData["Title"]</h1>
+<div class="container py-5">
 
+    @* --- KOMUNIKATY --- *@
     @if (ViewData["StatusMessage"] != null)
     {
-        <div class="alert alert-success">@ViewData["StatusMessage"]</div>
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @ViewData["StatusMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     }
     @if (ViewData["ErrorMessage"] != null)
     {
-        <div class="alert alert-danger">@ViewData["ErrorMessage"]</div>
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @ViewData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     }
 
-    <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header">Twoje dane</div>
-                <div class="card-body">
+    <div class="row justify-content-center">
 
-                    <div class="mb-3">
-                        <img src="@Url.Action("GetBanner", "Profile", new { id = Model.UserId })"
-                             alt="Baner"
-                             class="img-fluid rounded"
-                             style="max-height: 100px; width: 100%; object-fit: cover;" />
-                    </div>
-
-                    <div class="text-center mb-3">
+        @* --- LEWA KOLUMNA: DANE UŻYTKOWNIKA --- *@
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body py-5">
+                    @* Avatar *@
+                    <div class="position-relative d-inline-block mb-3">
                         <img src="@Url.Action("GetAvatar", "Profile", new { id = Model.UserId })"
                              alt="Avatar"
-                             class="img-thumbnail"
-                             style="max-width: 150px;" />
+                             class="rounded-circle shadow-sm border border-3 border-light"
+                             style="width: 150px; height: 150px; object-fit: cover;" />
+
+                        @* Przycisk zmiany avatara (jako mała ikonka) *@
+                        <button class="btn btn-sm btn-light border rounded-circle position-absolute bottom-0 end-0 shadow-sm"
+                                style="width: 40px; height: 40px;"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#avatarUploadCollapse"
+                                title="Zmień awatar">
+                            <i class="bi bi-camera-fill"></i>
+                        </button>
                     </div>
 
-                    <p><strong>Nazwa:</strong> @Model.Username</p>
+                    <h3 class="mb-1">@Model.Username</h3>
+                    <p class="text-muted mb-4">
+                        @if (isAdmin)
+                        {
+                            <span class="badge bg-danger">Administrator</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Użytkownik</span>
+                        }
+                    </p>
 
-                    <hr />
-                    <h5>Zmień Awatar</h5>
-                    <form asp-action="ChangeAvatar" method="post" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <input type="file" name="avatarFile" class="form-control-file" />
+                    @* Formularz zmiany avatara (ukryty domyślnie) *@
+                    <div class="collapse mb-3" id="avatarUploadCollapse">
+                        <div class="card card-body bg-light border-0 p-3">
+                            <form asp-action="ChangeAvatar" method="post" enctype="multipart/form-data">
+                                <div class="mb-2">
+                                    <input type="file" name="avatarFile" class="form-control form-control-sm" required />
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary w-100">Zapisz nowe zdjęcie</button>
+                            </form>
                         </div>
-                        <button type="submit" class="btn btn-sm btn-primary mt-2">Zmień awatar</button>
-                    </form>
+                    </div>
 
-                    <hr />
-                    <h5>Zmień Baner</h5>
-                    <form asp-action="ChangeBanner" method="post" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <input type="file" name="bannerFile" class="form-control-file" />
-                        </div>
-                        <button type="submit" class="btn btn-sm btn-primary mt-2">Zmień baner</button>
-                    </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-8">
+        @* --- PRAWA KOLUMNA: USTAWIENIA --- *@
+        <div class="col-lg-8">
 
-            <div class="card mb-3">
-                <div class="card-header">O mnie</div>
-                <div class="card-body">
-                    <form asp-action="UpdateDescription" method="post">
-                        <div class="form-group">
-                            <textarea asp-for="Description" class="form-control" rows="5"></textarea>
-                            <span asp-validation-for="Description" class="text-danger"></span>
-                        </div>
-                        <button type="submit" class="btn btn-primary mt-2">Zaktualizuj opis</button>
-                    </form>
+            @* 1. INTEGRACJA STEAM *@
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
+                    <h5 class="card-title fw-bold"><i class="bi bi-steam me-2 text-primary"></i> Integracja Steam</h5>
                 </div>
-            </div>
-
-            <div class="card mb-3">
-                <div class="card-header">Integracja Steam</div>
-                <div class="card-body">
+                <div class="card-body px-4 pb-4">
                     @if (string.IsNullOrEmpty(Model.SteamId))
                     {
-                        <p>Nie połączono z kontem Steam.</p>
-                        <form asp-action="LinkSteam" method="post">
-                            <button type="submit" class="btn btn-dark" style="background-color: #171a21; border-color: #171a21;">
-                                <i class="bi bi-steam"></i> <span style="color:white; font-weight:bold;">Połącz konto STEAM</span>
-                            </button>
-                        </form>
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 p-3 bg-light rounded">
+                            <div>
+                                <p class="mb-0 fw-bold">Połącz konto Steam</p>
+                                <small class="text-muted">Zaimportuj swoją bibliotekę gier i osiągnięcia.</small>
+                            </div>
+                            <form asp-action="LinkSteam" method="post">
+                                <button type="submit" class="btn btn-dark btn-sm">
+                                    <i class="bi bi-link-45deg"></i> Połącz teraz
+                                </button>
+                            </form>
+                        </div>
                     }
                     else
                     {
-                        <div class="alert alert-info">
-                            Konto połączone! (SteamID: @Model.SteamId)
+                        <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded border border-success border-opacity-25">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill text-success fs-4 me-3"></i>
+                                <div>
+                                    <p class="mb-0 fw-bold text-success">Konto połączone</p>
+                                    <small class="text-muted">Steam ID: @Model.SteamId</small>
+                                </div>
+                            </div>
+                            <a asp-action="SteamLibrary" class="btn btn-success btn-sm">
+                                <i class="bi bi-collection-play"></i> Twoja Biblioteka
+                            </a>
                         </div>
 
-                        <a asp-action="SteamLibrary" class="btn btn-success mb-2">Zobacz moją bibliotekę Steam</a>
-
-                        @* ZMIANA: Ukrywamy odłączanie, jeśli konto stworzone przez Steam *@
                         @if (!Model.IsCreatedBySteam)
                         {
-                            <form asp-action="UnlinkSteam" method="post" class="mt-2">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Odłącz konto Steam</button>
-                            </form>
-                        }
-                        else
-                        {
-                            <div class="text-muted mt-2 border-top pt-2">
-                                <small><i class="bi bi-info-circle"></i> To konto zostało utworzone za pomocą Steam i nie można go odłączyć.</small>
+                            <div class="text-end mt-2">
+                                <form asp-action="UnlinkSteam" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-link text-danger btn-sm text-decoration-none p-0"
+                                            onclick="return confirm('Czy na pewno chcesz odłączyć konto Steam? Utracisz synchronizację postępów.')">
+                                        Odłącz konto
+                                    </button>
+                                </form>
                             </div>
                         }
                     }
                 </div>
             </div>
 
+            @* 2. ZMIANA HASŁA (tylko dla kont lokalnych) *@
             @if (!Model.IsCreatedBySteam)
             {
-                <div class="card mb-3">
-                    <div class="card-header">Zmiana Hasła</div>
-                    <div class="card-body">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
+                        <h5 class="card-title fw-bold"><i class="bi bi-shield-lock me-2 text-primary"></i> Bezpieczeństwo</h5>
+                    </div>
+                    <div class="card-body px-4 pb-4">
                         <form asp-action="ChangePassword" method="post">
-                            <div class="form-group">
-                                <label for="changePasswordModel_OldPassword">Obecne hasło</label>
-                                <input type="password" id="changePasswordModel_OldPassword" name="changePasswordModel.OldPassword" class="form-control" />
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted">Obecne hasło</label>
+                                    <input type="password" name="changePasswordModel.OldPassword" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted">Nowe hasło</label>
+                                    <input type="password" name="changePasswordModel.NewPassword" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted">Potwierdź hasło</label>
+                                    <input type="password" name="changePasswordModel.ConfirmPassword" class="form-control" />
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="changePasswordModel_NewPassword">Nowe hasło</label>
-                                <input type="password" id="changePasswordModel_NewPassword" name="changePasswordModel.NewPassword" class="form-control" />
+                            <div class="mt-3 text-end">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Zmień hasło</button>
                             </div>
-                            <div class="form-group">
-                                <label for="changePasswordModel_ConfirmPassword">Potwierdź nowe hasło</label>
-                                <input type="password" id="changePasswordModel_ConfirmPassword" name="changePasswordModel.ConfirmPassword" class="form-control" />
-                            </div>
-                            <button type="submit" class="btn btn-warning mt-2">Zmień hasło</button>
                         </form>
                     </div>
                 </div>
             }
 
-            <div class="card mb-3 border-danger">
-                <div class="card-header bg-danger text-white">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Strefa Niebezpieczna
+            @* 3. STREFA NIEBEZPIECZNA (Ukryta dla Admina) *@
+            @if (!isAdmin)
+            {
+                <div class="card border-danger border-opacity-25 shadow-sm">
+                    <div class="card-body d-flex justify-content-between align-items-center p-4">
+                        <div>
+                            <h6 class="text-danger fw-bold mb-1"><i class="bi bi-exclamation-triangle"></i> Usuwanie konta</h6>
+                            <small class="text-muted d-block">Tej operacji nie można cofnąć. Wszystkie dane zostaną utracone.</small>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                            Usuń moje konto
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p class="card-text">Usunięcie konta jest nieodwracalne. Utracisz dostęp do swojej biblioteki i wszystkich postępów.</p>
-
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                        Usuń konto
-                    </button>
-                </div>
-            </div>
+            }
 
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Potwierdź usunięcie konta</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Czy na pewno chcesz usunąć swoje konto?</p>
-                <p class="text-danger fw-bold">Tej operacji nie można cofnąć!</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                <form asp-action="DeleteAccount" method="post">
-                    <button type="submit" class="btn btn-danger">Tak, usuń trwale</button>
-                </form>
+@* MODAL USUWANIA KONTA *@
+@if (!isAdmin)
+{
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-trash3-fill me-2"></i> Usuń konto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <p class="fs-5 mb-1">Czy na pewno chcesz nas opuścić?</p>
+                    <p class="text-muted small">Wszystkie Twoje gry, postępy i recenzje zostaną trwale usunięte.</p>
+                </div>
+                <div class="modal-footer justify-content-center bg-light border-top-0">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <form asp-action="DeleteAccount" method="post">
+                        <button type="submit" class="btn btn-danger px-4">Tak, usuń trwale</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

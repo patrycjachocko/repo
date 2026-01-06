@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity; // Niezbędne do dziedziczenia po IdentityUser
+﻿using Microsoft.AspNetCore.Identity;
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -21,14 +21,9 @@ namespace praca_dyplomowa_zesp.Models.Users
 
         public byte[]? ProfilePicture { get; set; }
         public string? ProfilePictureContentType { get; set; }
-
-        public byte[]? Banner { get; set; }
-        public string? BannerContentType { get; set; }
-
-        [StringLength(500)]
-        public string? Description { get; set; }
         public string? SteamId { get; set; }
     }
+
     public class LoginViewModel
     {
         [Required(ErrorMessage = "Login jest wymagany.")]
@@ -52,8 +47,6 @@ namespace praca_dyplomowa_zesp.Models.Users
         [Required(ErrorMessage = "Nazwa użytkownika jest wymagana.")]
         [Display(Name = "Nazwa użytkownika")]
         public string UserName { get; set; }
-
-        // USUNIĘTO: Pole Email
 
         [Required(ErrorMessage = "Hasło jest wymagane.")]
         [DataType(DataType.Password)]

@@ -320,18 +320,18 @@
                 <i class="bi bi-book"></i> Poradniki
             </a>
 
-            @* 2. NOWY GUZIK: Recenzje *@
+            @* 2. Recenzje *@
             <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="btn btn-outline-primary">
                 <i class="bi bi-chat-left-text"></i> Recenzje
             </a>
 
-            @* 3. Usuń *@
-            <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-outline-danger">
+            @* 3. Usuń (ZMODYFIKOWANE: Otwiera modal) *@
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteGameModal">
                 <i class="bi bi-trash"></i> Usuń
-            </a>
+            </button>
         </div>
 
-        @* --- DANE O GRZE (Przeniesione NA GÓRĘ) --- *@
+        @* --- DANE O GRZE --- *@
         <dl class="row text-muted mb-4">
             <dt class="col-sm-3">Deweloper</dt>
             <dd class="col-sm-9">@(Model.Developer ?? "Nieznany")</dd>
@@ -345,7 +345,7 @@
 
         <hr />
 
-        @* --- OCENY (Przeniesione POD dane o grze) --- *@
+        @* --- OCENY --- *@
         <div class="mb-4">
             @if (Model.Ratings != null)
             {
@@ -436,5 +436,38 @@
                 <i class="bi bi-info-circle"></i> Brak wbudowanych osiągnięć. Ustaw postęp ręcznie suwakiem.
             </div>
         }
+    </div>
+</div>
+
+@* --- MODAL USUWANIA GRY --- *@
+<div class="modal fade" id="deleteGameModal" tabindex="-1" aria-labelledby="deleteGameModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteGameModalLabel"><i class="bi bi-exclamation-triangle-fill"></i> Usuń grę z biblioteki</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h4 class="text-danger mb-3">Czy na pewno chcesz usunąć tę grę?</h4>
+                <div class="alert alert-danger">
+                    Tej operacji nie można cofnąć. Utracisz wszystkie zapisane postępy i statusy osiągnięć dla tej gry.
+                </div>
+                <hr />
+                <dl class="row">
+                    <dt class="col-sm-4">Gra:</dt>
+                    <dd class="col-sm-8 fw-bold">@Model.Name</dd>
+
+                    <dt class="col-sm-4">Data dodania:</dt>
+                    <dd class="col-sm-8">@Model.DateAddedToLibrary.ToString("dd.MM.yyyy")</dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" name="Id" value="@Model.DbId" />
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-danger">Tak, usuń</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>

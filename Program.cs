@@ -106,8 +106,7 @@ using (var scope = app.Services.CreateScope())
                 UserName = "Admin",
                 Login = "admin",
                 Role = "Admin",
-                CreatedAt = DateTime.Now,
-                EmailConfirmed = true
+                CreatedAt = DateTime.Now
             };
 
             var result = await userManager.CreateAsync(newAdmin, "Admin890");

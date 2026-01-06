@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\uploads\avatars\" />
-    <Folder Include="wwwroot\uploads\banners\" />
     <Folder Include="wwwroot\uploads\maps\" />
   </ItemGroup>
 
