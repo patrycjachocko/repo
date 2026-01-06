@@ -120,7 +120,7 @@
 
     <div class="container">
         <main role="main" class="pb-3">
-            @* --- DODANO: OBSŁUGA KOMUNIKATÓW TEMPDATA --- *@
+            @* --- OBSŁUGA KOMUNIKATÓW TEMPDATA --- *@
 
             @* 1. Komunikaty sukcesu (zielone) *@
             @if (TempData["Success"] != null)
@@ -150,12 +150,15 @@
         <div class="container text-center">
             &copy; 2025 - GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
 
-            @* Tutaj dodaliśmy nowy link: *@
+            @* Link do ticketów *@
             | <a asp-controller="Tickets" asp-action="Index">
                 <i class="fas fa-headset"></i> Zgłoś błąd / Kontakt
             </a>
         </div>
     </footer>
+
+    @* --- WAŻNE: Załadowanie Modali Logowania/Rejestracji --- *@
+    <partial name="_AuthModals" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

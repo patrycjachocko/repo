@@ -1,0 +1,169 @@
+﻿@using praca_dyplomowa_zesp.Models.Users
+
+@* --- STYLE SPECJALNE DLA MODALI (OPCJA 2: BEZ BLURA) --- *@
+<style>
+    .modal-backdrop.show {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background-color: rgba(15, 15, 20, 0.95) !important;
+        opacity: 1 !important;
+    }
+
+    .modal-content {
+        box-shadow: 0 0 40px rgba(0,0,0,0.8) !important;
+        border: 1px solid rgba(255,255,255,0.1);
+        background-color: #212529;
+        color: #fff;
+    }
+
+    #loginModal .form-control, #registerModal .form-control {
+        background-color: #fff !important;
+        color: #212529 !important;
+        border: 1px solid #ced4da;
+        font-size: 1rem;
+    }
+
+    #loginModal .form-floating label, #registerModal .form-floating label {
+        color: #6c757d !important;
+    }
+
+    .modal-header .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+</style>
+
+@* --- MODAL LOGOWANIA --- *@
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <div class="modal-header border-bottom-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 p-sm-5 pt-0">
+
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-primary">Witaj ponownie!</h2>
+                    <p class="text-white-50">Zaloguj się, aby kontynuować.</p>
+                </div>
+
+                <form asp-controller="Account" asp-action="Login" method="post">
+
+                    @* UKRYTE POLE NA ADRES POWROTU *@
+                    <input type="hidden" name="returnUrl" class="current-url-input" />
+
+                    <div class="form-floating mb-3">
+                        <input name="Login" type="text" class="form-control rounded-3" placeholder="Twój login" required />
+                        <label><i class="bi bi-person me-2"></i>Login</label>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input name="Password" type="password" class="form-control rounded-3" placeholder="Hasło" required />
+                        <label><i class="bi bi-lock me-2"></i>Hasło</label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="RememberMe" value="true" id="loginRememberMe" />
+                        <label class="form-check-label text-white-50" for="loginRememberMe">
+                            Zapamiętaj mnie
+                        </label>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-3 fw-bold py-2">Zaloguj się</button>
+                    </div>
+
+                    <hr class="my-4 border-secondary">
+
+                    <div class="text-center">
+                        <p class="text-white-50 mb-0">Nie masz jeszcze konta?</p>
+                        @* PRZEŁĄCZANIE ZA POMOCĄ JS *@
+                        <button type="button" class="btn btn-link text-decoration-none fw-bold link-info p-0" onclick="switchToRegister()">
+                            Zarejestruj się teraz
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- MODAL REJESTRACJI --- *@
+<div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <div class="modal-header border-bottom-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 p-sm-5 pt-0">
+
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-success">Dołącz do nas!</h2>
+                    <p class="text-white-50">Stwórz nowe konto w kilka sekund.</p>
+                </div>
+
+                <form asp-controller="Account" asp-action="Register" method="post">
+
+                    @* UKRYTE POLE NA ADRES POWROTU *@
+                    <input type="hidden" name="returnUrl" class="current-url-input" />
+
+                    <div class="form-floating mb-3">
+                        <input name="Login" type="text" class="form-control rounded-3" placeholder="Login" required />
+                        <label><i class="bi bi-person-badge me-2"></i>Login (do logowania)</label>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input name="UserName" type="text" class="form-control rounded-3" placeholder="Nick" required />
+                        <label><i class="bi bi-person me-2"></i>Nazwa wyświetlana</label>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input name="Password" type="password" class="form-control rounded-3" placeholder="Hasło" required />
+                        <label><i class="bi bi-lock me-2"></i>Hasło</label>
+                    </div>
+
+                    <div class="form-floating mb-4">
+                        <input name="ConfirmPassword" type="password" class="form-control rounded-3" placeholder="Powtórz hasło" required />
+                        <label><i class="bi bi-lock-fill me-2"></i>Powtórz hasło</label>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-success btn-lg rounded-3 fw-bold py-2">Stwórz konto</button>
+                    </div>
+
+                    <hr class="my-4 border-secondary">
+
+                    <div class="text-center">
+                        <p class="text-white-50 mb-0">Masz już konto?</p>
+                        @* PRZEŁĄCZANIE ZA POMOCĄ JS *@
+                        <button type="button" class="btn btn-link text-decoration-none fw-bold link-info p-0" onclick="switchToLogin()">
+                            Zaloguj się tutaj
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- SKRYPTY (Przełączanie i URL) --- *@
+<script>
+    // 1. Logika przełączania (z opóźnieniem dla płynności)
+    function switchToRegister() {
+        $('#loginModal').modal('hide');
+        setTimeout(function() { $('#registerModal').modal('show'); }, 300);
+    }
+
+    function switchToLogin() {
+        $('#registerModal').modal('hide');
+        setTimeout(function() { $('#loginModal').modal('show'); }, 300);
+    }
+
+    // 2. Automatyczne uzupełnianie returnUrl
+    document.addEventListener("DOMContentLoaded", function() {
+        var currentUrl = window.location.pathname + window.location.search;
+        var inputs = document.querySelectorAll('.current-url-input');
+        inputs.forEach(function(input) {
+            input.value = currentUrl;
+        });
+    });
+</script>

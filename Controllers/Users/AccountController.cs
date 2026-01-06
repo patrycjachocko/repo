@@ -54,14 +54,37 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
+                // Szukamy po polu "Login"
                 var user = await _context.Users.SingleOrDefaultAsync(u => u.Login == model.Login);
 
                 if (user == null)
                 {
-                    ModelState.AddModelError(string.Empty, "Nieprawidłowa próba logowania.");
+                    ModelState.AddModelError(string.Empty, "Nieprawidłowy login lub hasło.");
+                    TempData["Error"] = "Nieprawidłowy login lub hasło.";
                     return View(model);
                 }
 
+                // 1. Sprawdzenie BANA
+                if (user.isBanned)
+                {
+                    if (user.BanEnd.HasValue && user.BanEnd > DateTimeOffset.Now)
+                    {
+                        string errorMsg = GetBanMessage(user);
+                        ModelState.AddModelError(string.Empty, errorMsg);
+                        TempData["Error"] = errorMsg;
+                        return View(model);
+                    }
+                    else
+                    {
+                        // Ban minął - zdejmujemy
+                        user.isBanned = false;
+                        user.BanEnd = null;
+                        user.BanReason = null;
+                        await _userManager.UpdateAsync(user);
+                    }
+                }
+
+                // 2. Próba logowania
                 var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
 
                 if (result.Succeeded)
@@ -73,13 +96,15 @@ namespace praca_dyplomowa_zesp.Controllers.Users
 
                 if (result.IsLockedOut)
                 {
-                    string errorMsg = GetBanMessage(user);
+                    string errorMsg = "Konto zostało tymczasowo zablokowane z powodu zbyt wielu nieudanych prób.";
                     ModelState.AddModelError(string.Empty, errorMsg);
+                    TempData["Error"] = errorMsg;
                     return View(model);
                 }
                 else
                 {
-                    ModelState.AddModelError(string.Empty, "Nieprawidłowa próba logowania.");
+                    ModelState.AddModelError(string.Empty, "Nieprawidłowy login lub hasło.");
+                    TempData["Error"] = "Nieprawidłowy login lub hasło.";
                     return View(model);
                 }
             }
@@ -107,15 +132,15 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 if (await _context.Users.AnyAsync(u => u.Login == model.Login))
                 {
                     ModelState.AddModelError(nameof(model.Login), "Ten login jest już zajęty.");
+                    TempData["Error"] = "Ten login jest już zajęty.";
                     return View(model);
                 }
 
                 var user = new User
                 {
-                    UserName = model.UserName, // Wyświetlana nazwa
+                    UserName = model.UserName, // Nazwa wyświetlana
                     Login = model.Login,       // Login do logowania
                     CreatedAt = DateTime.Now,
-                    EmailConfirmed = true,
                     Role = "User"
                 };
 
@@ -124,6 +149,7 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 {
                     await _userManager.AddToRoleAsync(user, "User");
                     await _signInManager.SignInAsync(user, isPersistent: false);
+                    TempData["Success"] = "Rejestracja udana! Witaj w GameHub.";
                     return RedirectToLocal(returnUrl);
                 }
                 AddErrors(result);
@@ -134,9 +160,17 @@ namespace praca_dyplomowa_zesp.Controllers.Users
         // POST: /Account/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> Logout(string? returnUrl = null) // ZMIANA: Dodano parametr returnUrl
         {
             await _signInManager.SignOutAsync();
+
+            // Jeśli mamy returnUrl, wracamy tam (np. do gry, którą przeglądaliśmy)
+            if (returnUrl != null)
+            {
+                return LocalRedirect(returnUrl);
+            }
+
+            // Fallback: Wróć na stronę główną
             return RedirectToAction(nameof(HomeController.Index), "Home");
         }
 
@@ -171,7 +205,8 @@ namespace praca_dyplomowa_zesp.Controllers.Users
 
             if (user != null)
             {
-                if (await _userManager.IsLockedOutAsync(user))
+                // Sprawdzamy bana
+                if (user.isBanned && user.BanEnd.HasValue && user.BanEnd > DateTimeOffset.Now)
                 {
                     TempData["Error"] = GetBanMessage(user);
                     return RedirectToAction(nameof(Login));
@@ -183,13 +218,10 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 return RedirectToLocal(returnUrl);
             }
 
-            // B. NOWY UŻYTKOWNIK (Steam) - Tworzymy konto
+            // B. NOWY UŻYTKOWNIK (Steam)
             var steamProfile = await _steamService.GetPlayerSummaryAsync(steamId);
-
-            // Pobieramy nick ze Steam (np. "KoxGamer")
             string nick = steamProfile?.PersonaName ?? $"Gracz_{steamId.Substring(0, 5)}";
 
-            // Upewniamy się, że UserName jest unikalne
             var finalUserName = nick;
             int counter = 1;
             while (await _userManager.FindByNameAsync(finalUserName) != null)
@@ -197,10 +229,7 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 finalUserName = $"{nick}{counter++}";
             }
 
-            // ZMIANA: Login ustawiamy taki sam jak UserName (jeśli wolny), zamiast "Steam_..."
-            // Dzięki temu w bazie będzie ładnie: Login="KoxGamer", UserName="KoxGamer"
             var finalLogin = finalUserName;
-            // Sprawdzamy unikalność Loginu (bo w modelu User.Login musi być unikalny)
             counter = 1;
             while (await _context.Users.AnyAsync(u => u.Login == finalLogin))
             {
@@ -211,11 +240,10 @@ namespace praca_dyplomowa_zesp.Controllers.Users
 
             var newUser = new User
             {
-                UserName = finalUserName, // To wyświetlamy (np. KoxGamer)
-                Login = finalLogin,       // To zapisujemy jako login
+                UserName = finalUserName,
+                Login = finalLogin,
                 SteamId = steamId,
                 CreatedAt = DateTime.Now,
-                EmailConfirmed = true,
                 Role = "User",
                 LastActive = DateTime.Now
             };
@@ -263,9 +291,9 @@ namespace praca_dyplomowa_zesp.Controllers.Users
         private string GetBanMessage(User user)
         {
             string errorMsg = "Twoje konto zostało zablokowane.";
-            if (user.LockoutEnd.HasValue)
+            if (user.BanEnd.HasValue)
             {
-                var endDate = user.LockoutEnd.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+                var endDate = user.BanEnd.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
                 errorMsg = $"Twoje konto jest zbanowane do: {endDate}.";
                 if (!string.IsNullOrEmpty(user.BanReason)) errorMsg += $" Powód: {user.BanReason}";
             }

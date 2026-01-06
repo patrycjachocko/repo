@@ -17,17 +17,22 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Konfiguracja Identity z obs³ug¹ Ról
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 {
+    // Ustawienia has³a
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
 
+    // Ustawienia blokady (Lockout)
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
 
     options.SignIn.RequireConfirmedAccount = false;
+
+    // --- KLUCZOWA ZMIANA: Pozwalamy na brak unikalnego maila (lub brak maila w ogóle) ---
+    options.User.RequireUniqueEmail = false;
 })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
@@ -87,7 +92,7 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<User>>();
 
         // 1. Tworzenie ról (ZMIANA: Dodano "Verified")
-        string[] roleNames = { "Admin", "Moderator", "User"};
+        string[] roleNames = { "Admin", "Moderator", "User" };
 
         foreach (var roleName in roleNames)
         {

@@ -1,43 +1,75 @@
-﻿@model praca_dyplomowa_zesp.Models.Users.RegisterViewModel
+﻿@using praca_dyplomowa_zesp.Models.Users
+@model RegisterViewModel
 @{
     ViewData["Title"] = "Rejestracja";
 }
 
-<h1>@ViewData["Title"]</h1>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6 col-xl-5">
 
-<div class="row">
-    <div class="col-md-4">
-        <form asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
-            <h4>Stwórz nowe konto.</h4>
-            <hr />
-            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="card border-0 shadow-lg rounded-3">
+                <div class="card-body p-4 p-sm-5">
 
-            <div class="form-group">
-                <label asp-for="Login"></label>
-                <input asp-for="Login" class="form-control" />
-                <span asp-validation-for="Login" class="text-danger"></span>
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-success">Dołącz do nas!</h2>
+                        <p class="text-muted">Stwórz nowe konto w kilka sekund.</p>
+                    </div>
+
+                    <form asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+
+                        @* Wyświetlanie błędów *@
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-3" role="alert"></div>
+
+                        @* LOGIN *@
+                        <div class="form-floating mb-3">
+                            <input asp-for="Login" class="form-control" placeholder="Twój unikalny login" required />
+                            <label asp-for="Login"><i class="bi bi-person-badge me-2"></i>Login (do logowania)</label>
+                            <span asp-validation-for="Login" class="text-danger small"></span>
+                        </div>
+
+                        @* NAZWA UŻYTKOWNIKA (NICK) *@
+                        <div class="form-floating mb-3">
+                            <input asp-for="UserName" class="form-control" placeholder="Twój nick" required />
+                            <label asp-for="UserName"><i class="bi bi-person me-2"></i>Nazwa wyświetlana</label>
+                            <span asp-validation-for="UserName" class="text-danger small"></span>
+                        </div>
+
+                        @* HASŁO *@
+                        <div class="form-floating mb-3">
+                            <input asp-for="Password" class="form-control" placeholder="Hasło" required />
+                            <label asp-for="Password"><i class="bi bi-lock me-2"></i>Hasło</label>
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+
+                        @* POTWIERDZENIE HASŁA *@
+                        <div class="form-floating mb-4">
+                            <input asp-for="ConfirmPassword" class="form-control" placeholder="Powtórz hasło" required />
+                            <label asp-for="ConfirmPassword"><i class="bi bi-lock-fill me-2"></i>Powtórz hasło</label>
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+
+                        @* PRZYCISK REJESTRACJI *@
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-success btn-lg fw-bold py-2">
+                                Stwórz konto
+                            </button>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="text-center">
+                            <p class="text-muted mb-0">Masz już konto?</p>
+                            <a asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="text-decoration-none fw-bold">
+                                Zaloguj się tutaj
+                            </a>
+                        </div>
+
+                    </form>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label asp-for="UserName"></label>
-                <input asp-for="UserName" class="form-control" />
-                <span asp-validation-for="UserName" class="text-danger"></span>
-            </div>
-
-            <div class="form-group">
-                <label asp-for="Password"></label>
-                <input asp-for="Password" class="form-control" />
-                <span asp-validation-for="Password" class="text-danger"></span>
-            </div>
-
-            <div class="form-group">
-                <label asp-for="ConfirmPassword"></label>
-                <input asp-for="ConfirmPassword" class="form-control" />
-                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
-            </div>
-
-            <button type="submit" class="btn btn-primary">Zarejestruj</button>
-        </form>
+        </div>
     </div>
 </div>
 

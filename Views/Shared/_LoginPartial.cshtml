@@ -21,37 +21,34 @@
                         <i class="bi bi-steam"></i> Połącz Steam
                     </a>
                 }
-                @* Usunięto 'else' z linkiem do biblioteki - jest teraz w _Layout *@
             </li>
 
             @* --- PRZYCISK PANELU (Dla Admina i Moderatora) --- *@
-    @if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
-    {
-        <li class="nav-item">
-            <a class="nav-link text-white btn btn-outline-secondary border-0 me-2" asp-controller="Admin" asp-action="Index" title="Panel zarządzania">
-                @if (User.IsInRole("Admin"))
-                {
-                    <i class="fas fa-user-shield text-danger"></i> <span class="d-none d-lg-inline">Panel Admina</span>
-                }
-                else
-                {
-                    <i class="fas fa-user-check text-info"></i> <span class="d-none d-lg-inline">Panel Moderatora</span>
-                }
-            </a>
-        </li>
-    }
+            @if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link text-white btn btn-outline-secondary border-0 me-2" asp-controller="Admin" asp-action="Index" title="Panel zarządzania">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <i class="fas fa-user-shield text-danger"></i> <span class="d-none d-lg-inline">Panel Admina</span>
+                        }
+                        else
+                        {
+                            <i class="fas fa-user-check text-info"></i> <span class="d-none d-lg-inline">Panel Moderatora</span>
+                        }
+                    </a>
+                </li>
+            }
 
             @* --- 2. SEKCJA AWATARA I PROFILU --- *@
             <li class="nav-item d-flex align-items-center">
                 <a class="nav-link text-light d-flex align-items-center" asp-controller="Profile" asp-action="Index" title="Mój profil">
                     @if (user.ProfilePicture != null)
                     {
-                        @* Awatar z bazy danych *@
                         <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
                     }
                     else
                     {
-                        @* Domyślny awatar z pliku *@
                         <img src="~/uploads/avatars/default_avatar.png" alt="Domyślny awatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
                     }
                     Cześć @(user.UserName)!
@@ -60,7 +57,8 @@
 
             @* 3. WYLOGOWANIE *@
             <li class="nav-item">
-                <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                @* ZMIANA: Dynamiczny returnUrl (wraca na tę samą stronę) *@
+                <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">
                     <button type="submit" class="nav-link btn btn-link text-light" style="text-decoration: none;">Wyloguj</button>
                 </form>
             </li>
@@ -89,11 +87,11 @@
         </li>
 
         <li class="nav-item">
-            <a class="nav-link text-light" asp-controller="Account" asp-action="Register">Rejestracja</a>
+            <a class="nav-link text-light" href="#" data-bs-toggle="modal" data-bs-target="#registerModal">Rejestracja</a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link text-light" asp-controller="Account" asp-action="Login">Zaloguj</a>
+            <a class="nav-link text-light" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">Zaloguj</a>
         </li>
     }
 </ul>
