@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260104154533_migracja")]
+    [Migration("20260106163446_migracja")]
     partial class migracja
     {
         /// <inheritdoc />
@@ -323,6 +323,9 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.Property<Guid?>("CommentId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("GameReviewId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("ReplyId")
                         .HasColumnType("TEXT");
 
@@ -339,6 +342,8 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.HasIndex("CommentId");
 
+                    b.HasIndex("GameReviewId");
+
                     b.HasIndex("ReplyId");
 
                     b.HasIndex("TipId");
@@ -346,6 +351,33 @@ namespace praca_dyplomowa_zesp.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Reactions");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Games.GameReview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("IgdbGameId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("GameReviews");
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Guides.GameMap", b =>
@@ -853,6 +885,11 @@ namespace praca_dyplomowa_zesp.Migrations
                         .HasForeignKey("CommentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("praca_dyplomowa_zesp.Models.Modules.Games.GameReview", "GameReview")
+                        .WithMany("Reactions")
+                        .HasForeignKey("GameReviewId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("praca_dyplomowa_zesp.Models.Interactions.Comments.Replies.Reply", "Reply")
                         .WithMany("Reactions")
                         .HasForeignKey("ReplyId")
@@ -870,9 +907,22 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.Navigation("Comment");
 
+                    b.Navigation("GameReview");
+
                     b.Navigation("Reply");
 
                     b.Navigation("Tip");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Games.GameReview", b =>
+                {
+                    b.HasOne("praca_dyplomowa_zesp.Models.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -973,6 +1023,11 @@ namespace praca_dyplomowa_zesp.Migrations
                 });
 
             modelBuilder.Entity("praca_dyplomowa_zesp.Models.Interactions.Comments.Replies.Reply", b =>
+                {
+                    b.Navigation("Reactions");
+                });
+
+            modelBuilder.Entity("praca_dyplomowa_zesp.Models.Modules.Games.GameReview", b =>
                 {
                     b.Navigation("Reactions");
                 });

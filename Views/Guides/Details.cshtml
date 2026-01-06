@@ -117,7 +117,31 @@
             <h1 class="display-4 fw-bold mt-3">@Model.Guide.Title</h1>
             <p class="lead text-light mb-4">@Model.Guide.Description</p>
             <div class="d-flex justify-content-center align-items-center gap-3 text-muted">
-                <span><i class="fas fa-user"></i> @Model.Guide.User?.UserName</span>
+
+                @* --- AUTOR (Z AVATAREM) --- *@
+                @{
+                    string guideAuthorClass = "";
+                    var guideRole = Model.Guide.User?.Role?.ToLower();
+                    if (guideRole == "admin") { guideAuthorClass = "text-danger fw-bold"; }
+                    else if (guideRole == "moderator") { guideAuthorClass = "text-success fw-bold"; }
+                }
+
+                <div class="d-flex align-items-center">
+                    @if (Model.Guide.User?.ProfilePicture != null)
+                    {
+                        <img src="@Url.Action("GetAvatar", "Profile", new { id = Model.Guide.UserId })"
+                             alt="Avatar" class="rounded-circle me-2"
+                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
+                    }
+                    else
+                    {
+                        <img src="~/uploads/avatars/default_avatar.png"
+                             alt="Avatar" class="rounded-circle me-2"
+                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
+                    }
+                    <span class="@guideAuthorClass">@Model.Guide.User?.UserName</span>
+                </div>
+
                 <span><i class="fas fa-calendar"></i> @Model.Guide.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
                 <span><i class="fas fa-star text-warning"></i> Średnia: @Model.AverageRating.ToString("0.0")/5.0</span>
             </div>
@@ -265,10 +289,33 @@
                 <div class="card bg-dark border-secondary mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <strong class="text-primary me-2">@comment.Author.UserName</strong>
+
+                            @* --- AVATAR I NICK Z KOLOREM (KOMENTARZ) --- *@
+                            <div class="d-flex align-items-center">
+                                @if (comment.Author?.ProfilePicture != null)
+                                {
+                                    <img src="@Url.Action("GetAvatar", "Profile", new { id = comment.Author.Id })"
+                                         alt="Avatar" class="rounded-circle me-2"
+                                         style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
+                                }
+                                else
+                                {
+                                    <img src="~/uploads/avatars/default_avatar.png"
+                                         alt="Avatar" class="rounded-circle me-2"
+                                         style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
+                                }
+
+                                @{
+                                    string commentNickClass = "text-primary";
+                                    var commentRole = comment.Author?.Role?.ToLower();
+                                    if (commentRole == "admin") { commentNickClass = "text-danger fw-bold"; }
+                                    else if (commentRole == "moderator") { commentNickClass = "text-success fw-bold"; }
+                                }
+
+                                <strong class="@commentNickClass me-2">@comment.Author?.UserName</strong>
                                 <small class="text-muted">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
                             </div>
+
                             @if (canManageComment)
                             {
                                 <div class="dropdown">
@@ -353,7 +400,33 @@
 
                                     <div class="mb-3 pb-2 border-bottom border-secondary" style="border-bottom-style: dashed !important; border-color: #444 !important;">
                                         <div class="d-flex justify-content-between align-items-start">
-                                            <div><strong class="text-info small">@reply.Author.UserName</strong> <small class="text-muted" style="font-size: 0.8rem;">@reply.CreatedAt.ToString("dd.MM HH:mm")</small></div>
+
+                                            @* --- ZMIANA: AVATAR I NICK Z KOLOREM (ODPOWIEDŹ) --- *@
+                                            <div class="d-flex align-items-center">
+                                                @if (reply.Author?.ProfilePicture != null)
+                                                {
+                                                    <img src="@Url.Action("GetAvatar", "Profile", new { id = reply.Author.Id })"
+                                                         alt="Avatar" class="rounded-circle me-2"
+                                                         style="width: 24px; height: 24px; object-fit: cover; border: 1px solid #555;" />
+                                                }
+                                                else
+                                                {
+                                                    <img src="~/uploads/avatars/default_avatar.png"
+                                                         alt="Avatar" class="rounded-circle me-2"
+                                                         style="width: 24px; height: 24px; object-fit: cover; border: 1px solid #555;" />
+                                                }
+
+                                                @{
+                                                    string replyNickClass = "text-info small";
+                                                    var replyRole = reply.Author?.Role?.ToLower();
+                                                    if (replyRole == "admin") { replyNickClass = "text-danger small fw-bold"; }
+                                                    else if (replyRole == "moderator") { replyNickClass = "text-success small fw-bold"; }
+                                                }
+
+                                                <strong class="@replyNickClass me-2">@reply.Author.UserName</strong>
+                                                <small class="text-muted" style="font-size: 0.8rem;">@reply.CreatedAt.ToString("dd.MM HH:mm")</small>
+                                            </div>
+
                                             @if (canManageReply)
                                             {
                                                 <div class="dropdown">

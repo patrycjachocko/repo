@@ -246,6 +246,7 @@
 </script>
 
 <div class="row">
+    @* --- LEWA KOLUMNA (Okładka, Postęp, Notatki) --- *@
     <div class="col-md-4">
         <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded mb-3 shadow-sm" alt="Okładka @Model.Name">
 
@@ -307,29 +308,31 @@
         </div>
     </div>
 
+    @* --- PRAWA KOLUMNA (Tytuł, Akcje, Info, Oceny, ToDo, Osiągnięcia) --- *@
     <div class="col-md-8">
         <h1>@Model.Name</h1>
         <hr />
 
-        <div class="mb-3">
+        @* --- PRZYCISKI AKCJI --- *@
+        <div class="mb-3 d-flex gap-2">
+            @* 1. Poradniki *@
             <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info">
                 <i class="bi bi-book"></i> Poradniki
             </a>
+
+            @* 2. NOWY GUZIK: Recenzje *@
+            <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="btn btn-outline-primary">
+                <i class="bi bi-chat-left-text"></i> Recenzje
+            </a>
+
+            @* 3. Usuń *@
             <a asp-action="Delete" asp-route-id="@Model.DbId" class="btn btn-outline-danger">
                 <i class="bi bi-trash"></i> Usuń
             </a>
         </div>
 
-        @* --- WSTAWIENIE PARTIALA Z OCENAMI --- *@
-        <div class="mb-4">
-            @if (Model.Ratings != null)
-            {
-                <partial name="_GameRatingPartial" model="Model.Ratings" />
-            }
-        </div>
-        @* ------------------------------------ *@
-
-        <dl class="row text-muted">
+        @* --- DANE O GRZE (Przeniesione NA GÓRĘ) --- *@
+        <dl class="row text-muted mb-4">
             <dt class="col-sm-3">Deweloper</dt>
             <dd class="col-sm-9">@(Model.Developer ?? "Nieznany")</dd>
             <dt class="col-sm-3">Data wydania</dt>
@@ -342,6 +345,15 @@
 
         <hr />
 
+        @* --- OCENY (Przeniesione POD dane o grze) --- *@
+        <div class="mb-4">
+            @if (Model.Ratings != null)
+            {
+                <partial name="_GameRatingPartial" model="Model.Ratings" />
+            }
+        </div>
+
+        @* --- TO-DO LISTA --- *@
         <div class="card mb-4 border-secondary shadow-sm">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i> To-Do List</h5>

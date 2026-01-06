@@ -9,6 +9,7 @@ using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
+using praca_dyplomowa_zesp.Models.Modules.Games; // Dodano namespace
 using praca_dyplomowa_zesp.Models.Users;
 using System.Collections.Generic;
 using System.Reflection.Emit;
@@ -41,6 +42,8 @@ namespace praca_dyplomowa.Data
         public DbSet<GameRate> GameRates { get; set; } = null!;
         public DbSet<GameMap> GameMaps { get; set; } = null!;
 
+        // NOWE: Tabela recenzji
+        public DbSet<GameReview> GameReviews { get; set; } = null!;
 
 
         /// <summary>
@@ -50,8 +53,6 @@ namespace praca_dyplomowa.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-
 
             // Konfiguracja relacji pozostaje bez zmian
             modelBuilder.Entity<GameInLibrary>()
@@ -86,6 +87,13 @@ namespace praca_dyplomowa.Data
                 .HasOne(r => r.Reply)
                 .WithMany(r => r.Reactions)
                 .HasForeignKey(r => r.ReplyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 4. NOWE: Relacja Recenzja -> Reakcje (Usunięcie recenzji usuwa jej lajki)
+            modelBuilder.Entity<Reaction>()
+                .HasOne(r => r.GameReview)
+                .WithMany(gr => gr.Reactions)
+                .HasForeignKey(r => r.GameReviewId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

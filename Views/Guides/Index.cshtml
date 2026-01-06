@@ -163,7 +163,14 @@
                                 <div class="card-body d-flex flex-column">
                                     <h5 class="card-title text-primary fw-bold">@guide.Title</h5>
                                     <p class="card-text text-muted small mb-3">
-                                        Autor: <span class="text-white">@guide.User?.UserName</span> |
+                                        @* --- ZMIANA: KOLOR AUTORA (BEZ AVATARA) --- *@
+                                        @{
+                                            string guideAuthorClass = "text-white"; // Domyślny
+                                            var guideRole = guide.User?.Role?.ToLower();
+                                            if (guideRole == "admin") { guideAuthorClass = "text-danger fw-bold"; }
+                                            else if (guideRole == "moderator") { guideAuthorClass = "text-success fw-bold"; }
+                                        }
+                                        Autor: <span class="@guideAuthorClass">@guide.User?.UserName</span> |
                                         @guide.CreatedAt.ToString("dd.MM.yyyy")
                                     </p>
                                     <p class="card-text flex-grow-1 text-truncate" style="max-height: 3em;">@guide.Description</p>
@@ -267,14 +274,33 @@
                             <div class="card bg-light border-0 shadow-sm">
                                 <div class="card-body p-3">
                                     @* Treść *@
-                                    <p class="card-text mb-2 small text-dark" style="white-space: pre-wrap; font-weight: 500;" id="tip-content-@tip.Id">@tip.Content</p>
+                                    <p class="card-text mb-2 text-dark" style="white-space: pre-wrap; font-weight: 500;" id="tip-content-@tip.Id">@tip.Content</p>
 
                                     <div class="d-flex justify-content-between align-items-end">
-                                        @* Info o autorze *@
+                                        @* Info o autorze - ZMIANA: AVATAR + KOLOR *@
                                         <div>
-                                            <small class="text-muted d-block" style="font-size: 0.7rem;">
-                                                <i class="fas fa-user-circle"></i> @tip.User?.UserName
-                                            </small>
+                                            @{
+                                                string tipAuthorClass = "text-muted";
+                                                var tipRole = tip.User?.Role?.ToLower();
+                                                if (tipRole == "admin") { tipAuthorClass = "text-danger fw-bold"; }
+                                                else if (tipRole == "moderator") { tipAuthorClass = "text-success fw-bold"; }
+                                            }
+                                            <div class="d-flex align-items-center mb-1">
+                                                @if (tip.User?.ProfilePicture != null)
+                                                {
+                                                    <img src="@Url.Action("GetAvatar", "Profile", new { id = tip.UserId })"
+                                                         alt="Avatar" class="rounded-circle me-2"
+                                                         style="width: 24px; height: 24px; object-fit: cover; border: 1px solid #ccc;" />
+                                                }
+                                                else
+                                                {
+                                                    <img src="~/uploads/avatars/default_avatar.png"
+                                                         alt="Avatar" class="rounded-circle me-2"
+                                                         style="width: 24px; height: 24px; object-fit: cover; border: 1px solid #ccc;" />
+                                                }
+                                                <span class="@tipAuthorClass" style="font-size: 0.8rem;">@tip.User?.UserName</span>
+                                            </div>
+
                                             <small class="text-muted" style="font-size: 0.7rem;">
                                                 @tip.CreatedAt.ToString("dd.MM.yyyy")
                                             </small>
@@ -306,16 +332,27 @@
                                         </div>
                                     </div>
 
-                                    @* Edycja/Usuwanie *@
+                                    @* Edycja/Usuwanie (DROPDOWN) *@
                                     @if (canEditTip)
                                     {
-                                        <div class="mt-2 pt-2 border-top d-flex justify-content-end gap-2">
-                                            <button class="btn btn-sm btn-link text-warning p-0" onclick="openEditTipModal(@tip.Id)">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-link text-danger p-0" onclick="openDeleteTipModal(@tip.Id)">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                        <div class="position-absolute top-0 end-0 mt-2 me-2">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="openEditTipModal(@tip.Id)">
+                                                            <i class="fas fa-pencil-alt text-warning me-2"></i> Edytuj
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="#" onclick="openDeleteTipModal(@tip.Id)">
+                                                            <i class="fas fa-trash text-danger me-2"></i> Usuń
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     }
                                 </div>

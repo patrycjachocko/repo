@@ -10,6 +10,7 @@ using praca_dyplomowa_zesp.Models.API;
 using Microsoft.AspNetCore.Identity;
 using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
+using praca_dyplomowa_zesp.Models.Interactions.Reactions; // Potrzebne do ReactionType
 
 namespace praca_dyplomowa_zesp.Models.Modules.Games
 {
@@ -33,6 +34,9 @@ namespace praca_dyplomowa_zesp.Models.Modules.Games
         public string? Developer { get; set; }
         public string? ReleaseDate { get; set; }
         public ViewModels.GameRatingViewModel Ratings { get; set; }
+
+        // NOWE: Lista topowych recenzji do wyświetlenia
+        public List<GameReview> TopReviews { get; set; } = new List<GameReview>();
     }
 }
 
@@ -98,7 +102,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (showCritic && !showUser) sortField = "aggregated_rating";
             else if (showUser && !showCritic) sortField = "rating";
 
-            if (!string.IsNullOrEmpty(safeSearch)) // USUNIĘTO: && mode == "browse"
+            if (!string.IsNullOrEmpty(safeSearch))
             {
                 query = $"{fields}; search \"{safeSearch}\"; {baseFilter} & cover.url != null; limit 100; offset {offset};";
             }
@@ -181,8 +185,6 @@ namespace praca_dyplomowa_zesp.Controllers
                 };
             })
             // --- NOWOŚĆ: SORTOWANIE W PAMIĘCI ---
-            // Sortujemy tak, aby gry z najwyższą WIDOCZNĄ oceną były na górze.
-            // Gry bez oceny (null) trafią na sam dół (-1).
             .OrderByDescending(g => g.Total_rating ?? -1)
             .ToList();
             // -------------------------------------
@@ -256,6 +258,28 @@ namespace praca_dyplomowa_zesp.Controllers
                 UserPersonalRating = personalRating
             };
 
+            // 4. NOWE: Pobieranie Top 3 Recenzji
+            var reviews = await _context.GameReviews
+                .Include(r => r.User)
+                .Include(r => r.Reactions)
+                .Where(r => r.IgdbGameId == id)
+                .ToListAsync();
+
+            // Sortowanie w pamięci:
+            // 1. Najpierw według Wyniku (Like - Dislike) malejąco
+            // 2. Jeśli wynik taki sam, to nowsze na górze
+            var topReviews = reviews
+                .Select(r => new
+                {
+                    Review = r,
+                    Score = r.Reactions.Count(x => x.Type == ReactionType.Like) - r.Reactions.Count(x => x.Type == ReactionType.Dislike)
+                })
+                .OrderByDescending(x => x.Score)              // Najlepsza ocena
+                .ThenByDescending(x => x.Review.CreatedAt)    // Najnowsze przy remisie
+                .Take(3)
+                .Select(x => x.Review)
+                .ToList();
+
             var viewModel = new Models.Modules.Games.GameDetailViewModel
             {
                 IgdbGameId = gameDetailsFromApi.Id,
@@ -264,7 +288,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 Genres = gameDetailsFromApi.Genres?.Select(g => g.Name).ToList() ?? new List<string>(),
                 Developer = gameDetailsFromApi.Involved_companies?.FirstOrDefault(ic => ic.developer)?.Company?.Name,
                 ReleaseDate = gameDetailsFromApi.Release_dates?.FirstOrDefault()?.Human,
-                Ratings = ratingsModel // <--- PRZYPISANIE OCEN
+                Ratings = ratingsModel, // <--- PRZYPISANIE OCEN
+                TopReviews = topReviews // <--- PRZYPISANIE RECENZJI
             };
 
             return View(viewModel);

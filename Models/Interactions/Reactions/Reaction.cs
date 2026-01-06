@@ -4,6 +4,7 @@ using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using praca_dyplomowa_zesp.Models.Users;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using praca_dyplomowa_zesp.Models.Modules.Games;
 
 namespace praca_dyplomowa_zesp.Models.Interactions.Reactions
 {
@@ -29,5 +30,9 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Reactions
         public int? TipId { get; set; }
         [ForeignKey("TipId")]
         public virtual Tip? Tip { get; set; }
+        // W klasie Reaction dodaj:
+        public int? GameReviewId { get; set; }
+        [ForeignKey("GameReviewId")]
+        public virtual GameReview? GameReview { get; set; }
     }
 }

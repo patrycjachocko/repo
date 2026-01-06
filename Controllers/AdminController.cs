@@ -159,7 +159,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
         // --- ZARZĄDZANIE UŻYTKOWNIKAMI (Bez zmian logicznych, tylko autoryzacja Admin) ---
 
-        [Authorize(Roles = "Admin")] // Tylko Admin może zmieniać moderatorów
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleModerator(Guid userId)
@@ -175,12 +175,24 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (await _userManager.IsInRoleAsync(user, "Moderator"))
             {
+                // 1. Odbieramy uprawnienia systemowe
                 await _userManager.RemoveFromRoleAsync(user, "Moderator");
+
+                // 2. NOWOŚĆ: Aktualizujemy pole tekstowe dla kolorów w widoku
+                user.Role = "User";
+                await _userManager.UpdateAsync(user);
+
                 TempData["Success"] = $"Odebrano uprawnienia Moderatora użytkownikowi {user.UserName}.";
             }
             else
             {
+                // 1. Nadajemy uprawnienia systemowe
                 await _userManager.AddToRoleAsync(user, "Moderator");
+
+                // 2. NOWOŚĆ: Aktualizujemy pole tekstowe dla kolorów w widoku
+                user.Role = "Moderator";
+                await _userManager.UpdateAsync(user);
+
                 TempData["Success"] = $"Nadano uprawnienia Moderatora użytkownikowi {user.UserName}.";
             }
 
