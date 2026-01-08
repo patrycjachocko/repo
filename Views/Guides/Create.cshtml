@@ -6,62 +6,264 @@
 
 <script src="https://unpkg.com/tinymce@6.8.2/tinymce.min.js"></script>
 
-<div class="container mt-4">
+<style>
+    /* --- STYLE CYBERPUNK (ZDEFINIOWANE LOKALNIE DLA SPÓJNOŚCI) --- */
+    :root {
+        --neon-blue: #00f3ff;
+        --neon-pink: #ff0099;
+        --neon-green: #00ff9d;
+        --panel-bg: rgba(19, 19, 24, 0.95);
+        --input-bg: #0b0b0e;
+    }
+
+    /* Główny kontener formularza */
+    .cyber-form-card {
+        background: var(--panel-bg);
+        border: 1px solid rgba(0, 243, 255, 0.2);
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 243, 255, 0.05);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+
+    .cyber-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        background: linear-gradient(90deg, rgba(0, 243, 255, 0.1) 0%, transparent 100%);
+    }
+
+    .cyber-title {
+        font-family: 'Orbitron', sans-serif; /* Opcjonalnie, jeśli masz font */
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #fff;
+        text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        margin: 0;
+    }
+
+    /* Inputy */
+    .form-label-cyber {
+        color: var(--neon-blue);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .form-control-cyber {
+        background-color: var(--input-bg);
+        border: 1px solid #333;
+        color: #fff;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+        .form-control-cyber:focus {
+            background-color: #000;
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+            color: #fff;
+        }
+
+        .form-control-cyber::placeholder {
+            color: #555;
+        }
+
+    /* File Input Wrapper */
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Podgląd zdjęcia */
+    .preview-box {
+        border: 1px solid var(--neon-pink);
+        padding: 5px;
+        background: rgba(255, 0, 153, 0.1);
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(255, 0, 153, 0.2);
+    }
+
+    /* Przyciski */
+    .btn-cyber-primary {
+        background: linear-gradient(135deg, #b000b0, #7000ff);
+        border: none;
+        color: #fff;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(112, 0, 255, 0.4);
+    }
+
+        .btn-cyber-primary:hover {
+            background: linear-gradient(135deg, #d400d4, #8a2be2);
+            box-shadow: 0 0 25px rgba(255, 0, 153, 0.6);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+    .btn-cyber-secondary {
+        background: transparent;
+        border: 1px solid #555;
+        color: #aaa;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+    }
+
+        .btn-cyber-secondary:hover {
+            border-color: #fff;
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+    .btn-cyber-info {
+        background: rgba(0, 243, 255, 0.1);
+        border: 1px solid var(--neon-blue);
+        color: var(--neon-blue);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+    }
+
+        .btn-cyber-info:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.6);
+        }
+
+    /* --- STYL MODALA MAPY --- */
+    .modal-content-cyber {
+        background-color: #131318;
+        border: 1px solid var(--neon-green);
+        box-shadow: 0 0 30px rgba(0, 255, 157, 0.15);
+        color: #fff;
+    }
+
+    .modal-header-cyber {
+        border-bottom: 1px solid rgba(0, 255, 157, 0.3);
+        background: linear-gradient(90deg, rgba(0, 255, 157, 0.1), transparent);
+    }
+
+    .modal-title-cyber {
+        color: var(--neon-green);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    /* Karta Mapy w Modalu */
+    .map-card-cyber {
+        background: #0b0b0e;
+        border: 1px solid #333;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .map-card-cyber:hover {
+            border-color: var(--neon-green);
+            transform: translateY(-3px);
+            box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);
+            cursor: pointer;
+        }
+
+        .map-card-cyber img {
+            filter: grayscale(40%);
+            transition: all 0.3s;
+        }
+
+        .map-card-cyber:hover img {
+            filter: grayscale(0%);
+        }
+
+    .map-card-footer {
+        background: rgba(0, 255, 157, 0.1);
+        color: var(--neon-green);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        border-top: 1px solid rgba(0, 255, 157, 0.2);
+    }
+
+    /* TinyMCE Dark Border */
+    .tox-tinymce {
+        border: 1px solid #333 !important;
+        border-radius: 4px !important;
+    }
+</style>
+
+<div class="container mt-5 mb-5">
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <div class="card bg-dark text-white border-secondary shadow">
-                <div class="card-header border-secondary bg-transparent py-3">
-                    <h2 class="mb-0"><i class="fas fa-pen-fancy text-primary"></i> Nowy Poradnik</h2>
+
+            <div class="cyber-form-card">
+                <div class="cyber-header d-flex align-items-center gap-3">
+                    <i class="fas fa-pen-fancy fa-2x" style="color: var(--neon-blue);"></i>
+                    <h2 class="cyber-title">Nowy Poradnik</h2>
                 </div>
-                <div class="card-body">
+
+                <div class="card-body p-4">
                     <form asp-action="Create" enctype="multipart/form-data" id="createForm">
-                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                         <input type="hidden" asp-for="IgdbGameId" />
 
+                        @* Tytuł *@
                         <div class="form-group mb-4">
-                            <label asp-for="Title" class="form-label fw-bold">Tytuł poradnika</label>
-                            <input asp-for="Title" class="form-control form-control-lg bg-secondary text-white border-0" placeholder="Wpisz chwytliwy tytuł..." />
-                            <span asp-validation-for="Title" class="text-danger"></span>
+                            <label asp-for="Title" class="form-label-cyber">Tytuł poradnika</label>
+                            <input asp-for="Title" class="form-control form-control-lg form-control-cyber" placeholder="Wpisz chwytliwy tytuł..." />
+                            <span asp-validation-for="Title" class="text-danger small"></span>
                         </div>
 
+                        @* Opis *@
                         <div class="form-group mb-4">
-                            <label asp-for="Description" class="form-label fw-bold">Krótki wstęp</label>
-                            <textarea asp-for="Description" class="form-control bg-secondary text-white border-0" rows="3"></textarea>
-                            <span asp-validation-for="Description" class="text-danger"></span>
+                            <label asp-for="Description" class="form-label-cyber">Krótki wstęp</label>
+                            <textarea asp-for="Description" class="form-control form-control-cyber" rows="3" placeholder="O czym będzie ten poradnik?"></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
                         </div>
 
+                        @* Okładka *@
                         <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Zdjęcie okładkowe (wymagane)</label>
-                            <input type="file" id="coverImageInput" name="coverImageFile" class="form-control bg-secondary text-white border-0" accept="image/*" required onchange="previewFile()" />
-                            <span asp-validation-for="CoverImage" class="text-danger"></span>
-                            <div id="imagePreviewContainer" class="mt-3 position-relative d-none" style="width: fit-content;">
-                                <img id="imagePreview" src="#" alt="Podgląd" style="max-height: 200px; border-radius: 8px; border: 1px solid #6c757d;" />
-                                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" onclick="clearImage()"></button>
+                            <label class="form-label-cyber">Zdjęcie okładkowe (wymagane)</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="coverImageInput" name="coverImageFile" class="form-control form-control-cyber" accept="image/*" required onchange="previewFile()" />
                             </div>
-                        </div>
+                            <span asp-validation-for="CoverImage" class="text-danger small"></span>
 
-                        <div class="form-group mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label asp-for="Content" class="form-label fw-bold mb-0">Treść poradnika</label>
-                                @* --- PRZYCISK MAPY --- *@
-                                <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#mapsModal" onclick="resetModal()">
-                                    <i class="fas fa-map"></i> Wstaw mapę
+                            <div id="imagePreviewContainer" class="mt-3 position-relative d-none preview-box" style="width: fit-content;">
+                                <img id="imagePreview" src="#" alt="Podgląd" style="max-height: 200px; border-radius: 4px;" />
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 shadow" onclick="clearImage()" title="Usuń zdjęcie">
+                                    <i class="fas fa-times"></i>
                                 </button>
                             </div>
-                            @* USUNIĘTO ALERT Z INSTRUKCJĄ *@
+                        </div>
+
+                        @* Edytor *@
+                        <div class="form-group mb-4">
+                            <div class="d-flex justify-content-between align-items-end mb-2">
+                                <label asp-for="Content" class="form-label-cyber mb-0">Treść poradnika</label>
+                                @* --- PRZYCISK MAPY --- *@
+                                <button type="button" class="btn btn-cyber-info btn-sm py-1 px-3" data-bs-toggle="modal" data-bs-target="#mapsModal" onclick="resetModal()">
+                                    <i class="fas fa-map me-2"></i> Wstaw mapę
+                                </button>
+                            </div>
+
                             <textarea asp-for="Content" id="guide-editor"></textarea>
-                            <span asp-validation-for="Content" class="text-danger"></span>
+                            <span asp-validation-for="Content" class="text-danger small"></span>
                         </div>
 
                         @* --- PRZYCISKI AKCJI --- *@
-                        <div class="d-flex justify-content-between pt-3 align-items-center">
-                            <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-link text-muted text-decoration-none">Anuluj</a>
+                        <div class="d-flex justify-content-between pt-4 align-items-center border-top border-secondary border-opacity-25 mt-4">
+                            <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-link text-muted text-decoration-none text-uppercase small" style="letter-spacing: 1px;">
+                                <i class="fas fa-arrow-left me-1"></i> Anuluj
+                            </a>
 
-                            <div class="d-flex gap-2">
-                                <button type="submit" name="action" value="draft" class="btn btn-secondary px-4">
-                                    <i class="fas fa-save me-2"></i> Zapisz jako szkic
+                            <div class="d-flex gap-3">
+                                <button type="submit" name="action" value="draft" class="btn btn-cyber-secondary px-4 py-2">
+                                    <i class="fas fa-save me-2"></i> Zapisz szkic
                                 </button>
-                                <button type="submit" name="action" value="publish" class="btn btn-primary px-4 fw-bold">
+                                <button type="submit" name="action" value="publish" class="btn btn-cyber-primary px-5 py-2">
                                     <i class="fas fa-paper-plane me-2"></i> Opublikuj
                                 </button>
                             </div>
@@ -73,69 +275,76 @@
     </div>
 </div>
 
-@* --- MODAL MAPY --- *@
+@* --- MODAL MAPY (CYBERPUNK STYLE) --- *@
 <div class="modal fade" id="mapsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content bg-dark text-white border-secondary">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title">Menedżer Map</h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content modal-content-cyber">
+            <div class="modal-header modal-header-cyber">
+                <h5 class="modal-title modal-title-cyber"><i class="fas fa-globe-americas me-2"></i>Menedżer Map</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
 
                 @* WIDOK 1: WYBÓR *@
-                <div id="step-select-map" class="p-3">
-                    <div class="mb-4 p-3 border border-secondary rounded bg-secondary bg-opacity-10">
-                        <h6><i class="fas fa-plus-circle"></i> Dodaj nową mapę</h6>
+                <div id="step-select-map" class="p-4">
+
+                    @* Sekcja Dodawania *@
+                    <div class="mb-4 p-4 border border-secondary rounded" style="background: rgba(255,255,255,0.02);">
+                        <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="fas fa-plus-circle text-success me-2"></i> Dodaj nową mapę</h6>
                         <form id="uploadMapForm" enctype="multipart/form-data">
-                            <div class="row g-2">
+                            <div class="row g-3">
                                 <div class="col-md-5">
-                                    <input type="text" class="form-control bg-dark text-white border-secondary" id="newMapName" placeholder="Nazwa mapy (np. Velen)" required>
+                                    <input type="text" class="form-control form-control-cyber" id="newMapName" placeholder="Nazwa mapy (np. Centrum)" required>
                                 </div>
                                 <div class="col-md-5">
-                                    <input type="file" class="form-control bg-dark text-white border-secondary" id="newMapFile" accept="image/*" required>
+                                    <input type="file" class="form-control form-control-cyber" id="newMapFile" accept="image/*" required>
                                 </div>
                                 <div class="col-md-2">
-                                    <button type="submit" class="btn btn-success w-100">Dodaj</button>
+                                    <button type="submit" class="btn btn-success w-100 fw-bold" style="background: var(--neon-green); color: #000; border:none;">DODAJ</button>
                                 </div>
                             </div>
                         </form>
                     </div>
 
-                    <div class="input-group mb-3">
-                        <span class="input-group-text bg-secondary border-secondary text-white"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" id="mapSearch" placeholder="Szukaj mapy..." onkeyup="filterMaps()">
+                    @* Wyszukiwarka *@
+                    <div class="input-group mb-4">
+                        <span class="input-group-text bg-transparent border-secondary text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control form-control-cyber" id="mapSearch" placeholder="Szukaj mapy w bazie..." onkeyup="filterMaps()">
                     </div>
 
-                    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3" id="mapsListContainer"></div>
+                    @* Lista Map *@
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4" id="mapsListContainer"></div>
                 </div>
 
                 @* WIDOK 2: EDYCJA *@
-                <div id="step-draw-map" class="d-none" style="height: 75vh; display: flex; flex-direction: column;">
-                    <div class="bg-secondary p-2 d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="fw-bold"><i class="fas fa-pencil-alt"></i> Edycja: <span id="drawingMapName"></span></span>
+                <div id="step-draw-map" class="d-none" style="height: 80vh; display: flex; flex-direction: column;">
+                    <div class="p-3 d-flex justify-content-between align-items-center" style="background: #1a1a20; border-bottom: 1px solid #333;">
+                        <div class="d-flex align-items-center gap-4">
+                            <span class="fw-bold text-white text-uppercase" style="letter-spacing: 1px;">
+                                <i class="fas fa-pencil-alt text-warning me-2"></i> <span id="drawingMapName"></span>
+                            </span>
 
-                            @* --- WYBIERAK KOLORÓW (POPRAWIONY STYL) --- *@
-                            <div class="d-flex align-items-center">
-                                <span class="me-2 text-white">Kolor:</span>
-                                <input type="color" class="form-control form-control-color bg-dark border-secondary p-1"
-                                       id="drawingColor" value="#dc3545" title="Wybierz kolor"
-                                       style="width: 50px; height: 35px; cursor: pointer;">
+                            @* --- WYBIERAK KOLORÓW --- *@
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small text-uppercase">Kolor znacznika:</span>
+                                <input type="color" class="form-control form-control-color bg-dark border-secondary p-0"
+                                       id="drawingColor" value="#00f3ff" title="Wybierz kolor"
+                                       style="width: 40px; height: 30px; cursor: pointer; border-radius: 4px;">
                             </div>
                         </div>
 
                         <div>
-                            <small class="text-white me-3 d-none d-md-inline"><i class="fas fa-info-circle"></i> Wybierz kolor, a potem pinezkę lub linię.</small>
-                            <button class="btn btn-sm btn-light" onclick="backToSelect()"><i class="fas fa-arrow-left"></i> Wróć</button>
+                            <button class="btn btn-sm btn-outline-secondary me-2" onclick="backToSelect()">
+                                <i class="fas fa-arrow-left me-1"></i> Wróć
+                            </button>
                         </div>
                     </div>
 
-                    <div id="editorMap" style="flex-grow: 1; width: 100%; background: #222;"></div>
+                    <div id="editorMap" style="flex-grow: 1; width: 100%; background: #000;"></div>
 
-                    <div class="p-3 border-top border-secondary text-end bg-dark">
-                        <button class="btn btn-primary btn-lg" onclick="finishAndInsert()">
-                            <i class="fas fa-check"></i> Zatwierdź i wstaw
+                    <div class="p-3 border-top border-secondary text-end" style="background: #1a1a20;">
+                        <button class="btn btn-cyber-primary px-4" onclick="finishAndInsert()">
+                            <i class="fas fa-check me-2"></i> ZATWIERDŹ I WSTAW
                         </button>
                     </div>
                 </div>
@@ -169,7 +378,7 @@
             document.getElementById('imagePreviewContainer').classList.add('d-none');
         }
 
-        // Pomocnik do naprawiania ścieżek URL (dodaje slash na początku jeśli go brak)
+        // Pomocnik do naprawiania ścieżek URL
         function fixUrl(url) {
             if (!url) return '';
             if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -187,11 +396,9 @@
                 skin: "oxide-dark",
                 content_css: "dark",
                 automatic_uploads: true,
-                // --- BARDZO WAŻNE USTAWIENIA DLA ŚCIEŻEK ---
                 convert_urls: false,
                 relative_urls: false,
                 remove_script_host: false,
-                // -------------------------------------------
                 file_picker_types: 'image',
                 file_picker_callback: function (cb, value, meta) {
                     var input = document.createElement('input');
@@ -268,23 +475,23 @@
                 var container = $('#mapsListContainer');
                 container.empty();
                 if (data.length === 0) {
-                    container.html('<div class="col-12 text-center text-muted py-4">Brak map. Dodaj pierwszą!</div>');
+                    container.html('<div class="col-12 text-center text-muted py-5">Brak map w bazie. Dodaj pierwszą!</div>');
                     return;
                 }
                 data.forEach(function (map) {
                     var safeUrl = fixUrl(map.imageUrl);
                     var html = `
                         <div class="col">
-                            <div class="card h-100 bg-secondary border-0 text-white shadow-sm map-hover"
-                                 onclick="startEditingMap('${safeUrl}', '${map.name}')" style="cursor: pointer;">
-                                <div style="height: 150px; overflow: hidden;">
-                                    <img src="${safeUrl}" class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div class="card h-100 map-card-cyber shadow-sm"
+                                 onclick="startEditingMap('${safeUrl}', '${map.name}')">
+                                <div style="height: 140px; overflow: hidden; position: relative;">
+                                    <img src="${safeUrl}" class="card-img-top w-100 h-100" style="object-fit: cover;">
                                 </div>
-                                <div class="card-body p-2 text-center">
-                                    <span class="fw-bold small">${map.name}</span>
+                                <div class="card-body p-2 text-center bg-dark">
+                                    <span class="fw-bold small text-white">${map.name}</span>
                                 </div>
-                                <div class="card-footer p-1 text-center bg-primary border-0">
-                                    <small><i class="fas fa-paint-brush"></i> Wybierz i Rysuj</small>
+                                <div class="map-card-footer p-1 text-center">
+                                    <small><i class="fas fa-mouse-pointer"></i> WYBIERZ</small>
                                 </div>
                             </div>
                         </div>
@@ -324,7 +531,7 @@
         function getPinIcon(color) {
             return L.divIcon({
                 className: 'custom-pin-icon',
-                html: `<i class="fas fa-map-marker-alt fa-3x" style="color: ${color}; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);"></i>`,
+                html: `<i class="fas fa-map-marker-alt fa-3x" style="color: ${color}; text-shadow: 0px 0px 10px ${color};"></i>`,
                 iconSize: [30, 42],
                 iconAnchor: [15, 42],
                 popupAnchor: [0, -45]
@@ -441,13 +648,12 @@
                 reader.onloadend = function() {
                     var base64data = reader.result;
 
-                    // Wstawiamy sam obrazek, bez zbędnych napisów
                     var imgHtml = `<img src="${base64data}"
-                                 data-origin-src="${currentMapData.url}"
-                                 data-geojson="${safeJson}"
-                                 data-map-name="${currentMapData.name}"
-                                 class="img-fluid rounded border border-secondary interactive-map-source"
-                                 style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />`;
+                                     data-origin-src="${currentMapData.url}"
+                                     data-geojson="${safeJson}"
+                                     data-map-name="${currentMapData.name}"
+                                     class="img-fluid rounded border border-secondary interactive-map-source"
+                                     style="max-width: 100%; height: auto; display: block; margin: 0 auto; box-shadow: 0 0 10px rgba(0,243,255,0.3);" />`;
 
                     var wrapperHtml = `
                         <div class="interactive-map-wrapper my-3 text-center">
@@ -474,12 +680,6 @@
     </script>
 
     <style>
-        .map-hover:hover {
-            transform: scale(1.02);
-            transition: transform 0.2s;
-            border: 2px solid #0d6efd !important;
-        }
-
         .custom-pin-icon {
             background: transparent !important;
             border: none !important;
@@ -489,7 +689,7 @@
             margin-left: -15px !important;
             margin-top: -42px !important;
         }
-        /* Ramka edycji */
+
         .leaflet-marker-icon.leaflet-edit-marker-selected {
             border: 2px dashed rgba(0, 0, 0, 0.5);
             border-radius: 4px;
