@@ -261,14 +261,15 @@
             color: #fff;
         }
 
-    /* NOWA KLASA DLA KWADRATOWYCH IKON ADMINA */
+    /* --- POPRAWIONE BUTTONY ADMINA --- */
     .btn-admin-icon {
-        width: 40px;
-        height: 38px;
-        padding: 0;
+        width: 38px !important; /* Wymuszona szerokość */
+        height: 38px !important; /* Wymuszona wysokość */
+        padding: 0 !important; /* Reset paddingu, żeby tekst go nie rozpychał */
         display: flex;
         justify-content: center;
         align-items: center;
+        min-width: 38px;
     }
 
     /* Alert Box */
@@ -476,6 +477,32 @@
             text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
         }
 
+    /* NOWA IKONA W MODALU - PULSUJĄCA */
+    .modal-icon-danger {
+        color: var(--neon-red);
+        font-size: 4.5rem;
+        text-shadow: 0 0 25px rgba(255, 51, 51, 0.9);
+        margin-bottom: 20px;
+        animation: pulse-red 2s infinite;
+    }
+
+    @@keyframes pulse-red {
+        0% {
+            text-shadow: 0 0 20px rgba(255, 51, 51, 0.7);
+            transform: scale(1);
+        }
+
+        50% {
+            text-shadow: 0 0 40px rgba(255, 51, 51, 1);
+            transform: scale(1.1);
+        }
+
+        100% {
+            text-shadow: 0 0 20px rgba(255, 51, 51, 0.7);
+            transform: scale(1);
+        }
+    }
+
     .table-cyber {
         color: #ccc;
     }
@@ -663,7 +690,7 @@
                                         @if (canManage)
                                         {
                                             <div style="z-index: 3; position: relative;" class="d-flex gap-2">
-                                                @* EDYCJA - Dodano klasę btn-admin-icon dla równego rozmiaru *@
+                                                @* EDYCJA - Dodano klasę btn-admin-icon *@
                                                 <a asp-action="Edit" asp-route-id="@guide.Id" class="btn-card-action btn-card-edit btn-admin-icon" title="Edytuj">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
@@ -807,7 +834,7 @@
     </div>
 </div>
 
-@* --- MODAL: PERMANENT DELETE (TRWAŁE USUWANIE) - CZERWONY --- *@
+@* --- MODAL: PERMANENT DELETE (TRWAŁE USUWANIE) - POPRAWIONY IKONA --- *@
 <div class="modal fade" id="deletePermanentlyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-cyber-danger">
@@ -816,7 +843,8 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center py-4">
-                <i class="fas fa-exclamation-circle fa-3x text-danger mb-3" style="text-shadow: 0 0 15px red;"></i>
+                @* ZMIANA: NOWA KLASA modal-icon-danger *@
+                <i class="fas fa-exclamation-circle modal-icon-danger"></i>
                 <p class="mb-3 text-white-50">Tej operacji nie można cofnąć.</p>
                 <h4 id="deletePermTitle" class="text-white fw-bold mb-0"></h4>
             </div>
@@ -850,7 +878,6 @@
     <script>
         var gameId = @Model.IgdbGameId;
 
-        // --- OBSŁUGA MODALI USUWANIA ---
         function openDeleteGuideModal(id, title) {
             document.getElementById('deleteGuideId').value = id;
             document.getElementById('deleteGuideTitle').innerText = title;
@@ -863,7 +890,6 @@
             new bootstrap.Modal(document.getElementById('deletePermanentlyModal')).show();
         }
 
-        // --- SKRYPTY DLA TIPÓW ---
         function openEditTipModal(id) {
             var content = document.getElementById('tip-content-' + id).innerText;
             document.getElementById('editTipId').value = id;
@@ -875,7 +901,6 @@
             new bootstrap.Modal(document.getElementById('deleteTipModal')).show();
         }
 
-        // --- SKRYPTY DLA MAP ---
         function openMapManager() {
             var modal = new bootstrap.Modal(document.getElementById('mapManagerModal'));
             loadManagerMaps();

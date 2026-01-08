@@ -21,148 +21,388 @@
     bool isPending = !Model.Guide.IsApproved && !Model.Guide.IsDeleted && !Model.Guide.IsDraft && !isRejected;
 }
 
+@* --- STYLE CYBERPUNK --- *@
+<style>
+    :root {
+        --neon-blue: #00f3ff;
+        --neon-pink: #ff0099;
+        --neon-green: #00ff9d;
+        --neon-red: #ff3333;
+        --neon-yellow: #fcee0a;
+        --dark-bg: #0b0b0e;
+        --panel-bg: rgba(19, 19, 24, 0.95);
+        --glass-bg: rgba(20, 20, 25, 0.7);
+    }
+
+    body {
+        background-color: var(--dark-bg);
+        color: #e0e0e0;
+    }
+
+    /* Karty i Panele */
+    .cyber-card {
+        background: var(--panel-bg);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px; /* Lekko zaokrąglone */
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .cyber-card-header {
+        background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+    }
+
+    /* Hero Section (Nagłówek z tłem) */
+    .guide-hero {
+        position: relative;
+        padding: 4rem 2rem;
+        border-bottom: 2px solid var(--neon-blue);
+        background-position: center;
+        background-size: cover;
+        box-shadow: 0 10px 30px rgba(0, 243, 255, 0.15);
+    }
+
+        .guide-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(11, 11, 14, 0.6) 0%, var(--dark-bg) 100%);
+            z-index: 1;
+        }
+
+    .guide-hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+    }
+
+    .guide-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #fff;
+        text-shadow: 0 0 20px rgba(0, 243, 255, 0.6);
+        margin-bottom: 1rem;
+    }
+
+    /* Alerty Systemowe */
+    .cyber-alert {
+        background: rgba(10, 10, 12, 0.9);
+        border-left: 4px solid;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    .cyber-alert-danger {
+        border-color: var(--neon-red);
+        box-shadow: inset 0 0 20px rgba(255, 51, 51, 0.1);
+    }
+
+    .cyber-alert-warning {
+        border-color: var(--neon-yellow);
+        box-shadow: inset 0 0 20px rgba(252, 238, 10, 0.1);
+    }
+
+    .cyber-alert-info {
+        border-color: var(--neon-blue);
+        box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
+    }
+
+    /* Treść Poradnika */
+    .guide-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #ddd;
+    }
+
+        .guide-content h2, .guide-content h3 {
+            color: var(--neon-blue);
+            margin-top: 2rem;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+            padding-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .guide-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid #444;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            margin: 20px 0;
+        }
+
+    /* Komentarze */
+    .comment-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+
+        .comment-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+    /* Linie odpowiedzi */
+    .reply-thread {
+        border-left: 2px solid rgba(255, 255, 255, 0.1);
+        margin-left: 1.5rem;
+        padding-left: 1rem;
+    }
+
+    /* Przyciski */
+    .btn-cyber {
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: bold;
+        border-radius: 4px;
+        transition: all 0.3s;
+        border: none;
+        padding: 8px 20px;
+    }
+
+    .btn-cyber-primary {
+        background: linear-gradient(45deg, #007bff, var(--neon-blue));
+        color: #fff;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.4);
+    }
+
+        .btn-cyber-primary:hover {
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.6);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+    .btn-cyber-outline {
+        background: transparent;
+        border: 1px solid var(--neon-blue);
+        color: var(--neon-blue);
+    }
+
+        .btn-cyber-outline:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+
+    /* Avatary z ramką */
+    .avatar-cyber {
+        border: 2px solid #555;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    .role-admin {
+        border-color: var(--neon-red);
+        box-shadow: 0 0 10px var(--neon-red);
+    }
+
+    .role-mod {
+        border-color: var(--neon-green);
+        box-shadow: 0 0 10px var(--neon-green);
+    }
+
+    /* Modal Odrzucenia */
+    .modal-content-cyber {
+        background-color: var(--panel-bg);
+        border: 1px solid var(--neon-red);
+        box-shadow: 0 0 30px rgba(255, 51, 51, 0.2);
+        color: #fff;
+    }
+
+    .modal-header {
+        border-bottom-color: rgba(255, 51, 51, 0.3);
+    }
+
+    .modal-footer {
+        border-top-color: rgba(255, 51, 51, 0.3);
+    }
+
+    /* Gwiazdki */
+    .star-icon {
+        text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+        transition: transform 0.2s;
+    }
+
+        .star-icon:hover {
+            transform: scale(1.2);
+        }
+</style>
+
 <div class="container mt-4">
 
-    @* --- KOMUNIKATY --- *@
+    @* --- KOMUNIKATY (TOASTS) --- *@
     @if (TempData["StatusMessage"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["StatusMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="alert cyber-alert cyber-alert-info alert-dismissible fade show text-white" role="alert">
+            <i class="fas fa-check-circle me-2 text-info"></i> @TempData["StatusMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="alert cyber-alert cyber-alert-danger alert-dismissible fade show text-white" role="alert">
+            <i class="fas fa-exclamation-triangle me-2 text-danger"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
-    @* --- STATUSY --- *@
+    @* --- PASEK NAWIGACJI --- *@
+    <div class="d-flex justify-content-between mb-4">
+        <a asp-action="Index" asp-route-gameId="@Model.Guide.IgdbGameId" class="btn btn-cyber-outline">
+            <i class="fas fa-arrow-left me-2"></i> BAZA DANYCH
+        </a>
+
+        @if (!Model.Guide.IsDraft)
+        {
+            <a asp-action="DownloadPdf" asp-route-id="@Model.Guide.Id" class="btn btn-outline-danger" style="border-color: var(--neon-red); color: var(--neon-red);" target="_blank">
+                <i class="fas fa-file-pdf me-2"></i> POBIERZ DANE [PDF]
+            </a>
+        }
+    </div>
+
+    @* --- BLOKI STATUSÓW (CYBER STYL) --- *@
     @if (isRejected)
     {
-        <div class="alert alert-danger border-danger border-3 shadow-sm mb-4" role="alert" style="background-color: #2c0b0e; border-color: #842029;">
+        <div class="cyber-alert cyber-alert-danger">
             <div class="d-flex align-items-start">
-                <i class="fas fa-times-circle fa-2x me-3 text-danger"></i>
+                <i class="fas fa-times-circle fa-3x me-4 text-danger" style="text-shadow: 0 0 15px red;"></i>
                 <div class="w-100">
-                    <h4 class="alert-heading text-danger fw-bold">Poradnik wymaga poprawek</h4>
-                    <p class="text-white">Twój poradnik został odrzucony przez administrację. Zapoznaj się z powodem poniżej, wprowadź poprawki i prześlij go ponownie do akceptacji.</p>
-                    <hr class="border-danger">
-                    <p class="mb-0 text-white"><strong>Powód odrzucenia:</strong> <span class="fst-italic text-light">@Model.Guide.RejectionReason</span></p>
+                    <h4 class="text-danger fw-bold text-uppercase mb-2">ODMOWA DOSTĘPU: BŁĘDY DANYCH</h4>
+                    <p class="text-white-50 mb-3">Twój poradnik został odrzucony przez administrację. Wymagana korekta danych.</p>
+                    <div class="p-3 border border-danger bg-danger bg-opacity-10 rounded">
+                        <strong class="text-danger text-uppercase">Log systemowy:</strong> <span class="text-light fst-italic">@Model.Guide.RejectionReason</span>
+                    </div>
                 </div>
             </div>
         </div>
     }
     else if (Model.Guide.IsDraft)
     {
-        <div class="alert alert-secondary border-secondary d-flex align-items-center mb-4" role="alert" style="background-color: #e2e3e5; color: #383d41;">
-            <i class="fas fa-pencil-ruler fa-2x me-3"></i>
-            <div>
-                <h5 class="alert-heading fw-bold mb-1">To jest SZKIC poradnika</h5>
-                <p class="mb-0 small">Ten poradnik jest widoczny tylko dla Ciebie (i administracji). Aby go upublicznić, musisz go edytować i kliknąć "Opublikuj".</p>
+        <div class="cyber-alert cyber-alert-info" style="border-color: #aaa; box-shadow: inset 0 0 20px rgba(255,255,255,0.1);">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-pencil-ruler fa-2x me-3 text-muted"></i>
+                <div>
+                    <h5 class="fw-bold text-uppercase text-muted mb-1">Status: SZKIC ROBOCZY</h5>
+                    <p class="mb-0 text-white-50 small">Widoczne tylko dla autora. Edytuj i opublikuj, aby udostępnić w sieci.</p>
+                </div>
             </div>
         </div>
     }
     else if (isPending)
     {
-        <div class="alert alert-warning border-warning d-flex align-items-center mb-4" role="alert">
-            <i class="fas fa-lock fa-2x me-3"></i>
-            <div>
-                <h5 class="alert-heading fw-bold mb-1">Poradnik oczekuje na akceptację</h5>
-                <p class="mb-0 small">Treść jest obecnie weryfikowana przez moderatorów. Jest widoczna tylko dla Ciebie i administracji.</p>
+        <div class="cyber-alert cyber-alert-warning">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-lock fa-2x me-3 text-warning"></i>
+                <div>
+                    <h5 class="fw-bold text-uppercase text-warning mb-1">Status: WERYFIKACJA SYSTEMOWA</h5>
+                    <p class="mb-0 text-white-50 small">Dane są analizowane przez moderatorów. Oczekiwanie na autoryzację.</p>
+                </div>
             </div>
         </div>
     }
 
     @if (Model.Guide.IsDeleted)
     {
-        <div class="alert alert-danger border-danger mb-4 shadow-sm" role="alert">
+        <div class="cyber-alert cyber-alert-danger">
             <div class="d-flex align-items-center">
-                <i class="fas fa-trash-alt fa-2x me-3"></i>
+                <i class="fas fa-trash-alt fa-2x me-3 text-danger"></i>
                 <div>
-                    <h5 class="alert-heading fw-bold mb-1">Ten poradnik znajduje się w KOSZU</h5>
-                    <p class="mb-0 small">Został usunięty lub przeniesiony do archiwum. Jest widoczny tylko dla administracji.</p>
+                    <h5 class="fw-bold text-uppercase text-danger mb-1">OBIEKT W KOSZU</h5>
+                    <p class="mb-0 text-white-50 small">Zasób usunięty lub zarchiwizowany. Dostęp tylko dla administracji.</p>
                 </div>
             </div>
         </div>
     }
 
-    <div class="d-flex justify-content-between mb-3">
-        <a asp-action="Index" asp-route-gameId="@Model.Guide.IgdbGameId" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Wróć do listy
-        </a>
+    @* --- KARTA PORADNIKA (HERO + TREŚĆ) --- *@
+    <div class="cyber-card mb-5">
 
-        @if (!Model.Guide.IsDraft)
-        {
-            <a asp-action="DownloadPdf" asp-route-id="@Model.Guide.Id" class="btn btn-outline-danger" target="_blank">
-                <i class="fas fa-file-pdf"></i> Pobierz jako PDF
-            </a>
-        }
-    </div>
-
-    @* --- KARTA PORADNIKA --- *@
-    <div class="card bg-dark text-white border-secondary shadow-lg mb-4">
-        <div class="card-header border-secondary p-4 text-center" style="background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('@(Model.Guide.CoverImage != null ? $"data:{Model.Guide.CoverImageContentType};base64,{Convert.ToBase64String(Model.Guide.CoverImage)}" : "")') center/cover no-repeat;">
-
-            @if (Model.Guide.IsDraft)
-            {
-                <span class="badge bg-secondary mb-2">SZKIC</span>
-            }
-            @if (isRejected)
-            {
-                <span class="badge bg-danger mb-2">ODRZUCONY</span>
-            }
-
-            <h1 class="display-4 fw-bold mt-3">@Model.Guide.Title</h1>
-            <p class="lead text-light mb-4">@Model.Guide.Description</p>
-            <div class="d-flex justify-content-center align-items-center gap-3 text-muted">
-
-                @* --- AUTOR (Z AVATAREM) --- *@
-                @{
-                    string guideAuthorClass = "";
-                    var guideRole = Model.Guide.User?.Role?.ToLower();
-                    if (guideRole == "admin") { guideAuthorClass = "text-danger fw-bold"; }
-                    else if (guideRole == "moderator") { guideAuthorClass = "text-success fw-bold"; }
+        @* Hero Image Wrapper *@
+        <div class="guide-hero" style="background-image: url('@(Model.Guide.CoverImage != null ? $"data:{Model.Guide.CoverImageContentType};base64,{Convert.ToBase64String(Model.Guide.CoverImage)}" : "")');">
+            <div class="guide-hero-content">
+                @if (Model.Guide.IsDraft)
+                {
+                    <span class="badge bg-secondary mb-3 border border-light">SZKIC</span>
+                }
+                @if (isRejected)
+                {
+                    <span class="badge bg-danger mb-3 border border-danger shadow">ODRZUCONY</span>
                 }
 
-                <div class="d-flex align-items-center">
-                    @if (Model.Guide.User?.ProfilePicture != null)
-                    {
-                        <img src="@Url.Action("GetAvatar", "Profile", new { id = Model.Guide.UserId })"
-                             alt="Avatar" class="rounded-circle me-2"
-                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
-                    }
-                    else
-                    {
-                        <img src="~/uploads/avatars/default_avatar.png"
-                             alt="Avatar" class="rounded-circle me-2"
-                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
-                    }
-                    <span class="@guideAuthorClass">@Model.Guide.User?.UserName</span>
-                </div>
+                <h1 class="guide-title">@Model.Guide.Title</h1>
+                <p class="lead text-light opacity-75 mb-4" style="font-family: monospace;">@Model.Guide.Description</p>
 
-                <span><i class="fas fa-calendar"></i> @Model.Guide.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
-                <span><i class="fas fa-star text-warning"></i> Średnia: @Model.AverageRating.ToString("0.0")/5.0</span>
+                @* Metadane *@
+                <div class="d-flex justify-content-center flex-wrap gap-4 text-white-50 small text-uppercase">
+
+                    @* Autor *@
+                    @{
+                        string guideAuthorClass = "text-white";
+                        string avatarClass = "avatar-cyber";
+                        var guideRole = Model.Guide.User?.Role?.ToLower();
+                        if (guideRole == "admin") { guideAuthorClass = "text-danger fw-bold"; avatarClass += " role-admin"; }
+                        else if (guideRole == "moderator") { guideAuthorClass = "text-success fw-bold"; avatarClass += " role-mod"; }
+                    }
+
+                    <div class="d-flex align-items-center bg-black bg-opacity-50 px-3 py-1 rounded-pill border border-secondary">
+                        @if (Model.Guide.User?.ProfilePicture != null)
+                        {
+                            <img src="@Url.Action("GetAvatar", "Profile", new { id = Model.Guide.UserId })" class="rounded-circle me-2 @avatarClass" style="width: 24px; height: 24px; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <img src="~/uploads/avatars/default_avatar.png" class="rounded-circle me-2 @avatarClass" style="width: 24px; height: 24px; object-fit: cover;" />
+                        }
+                        <span class="@guideAuthorClass">@Model.Guide.User?.UserName</span>
+                    </div>
+
+                    <div class="d-flex align-items-center bg-black bg-opacity-50 px-3 py-1 rounded-pill border border-secondary">
+                        <i class="fas fa-calendar-alt me-2 text-info"></i> @Model.Guide.CreatedAt.ToString("dd.MM.yyyy")
+                    </div>
+
+                    <div class="d-flex align-items-center bg-black bg-opacity-50 px-3 py-1 rounded-pill border border-secondary">
+                        <i class="fas fa-star me-2 text-warning"></i> @Model.AverageRating.ToString("0.0")/5.0
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="card-body p-4 p-md-5 guide-content">
-            @if (!string.IsNullOrEmpty(Model.Guide.Content))
-            {
-                @Html.Raw(Model.Guide.Content)
-            }
-            else
-            {
-                <p class="text-muted text-center">Ten poradnik nie ma jeszcze treści.</p>
-            }
+        @* Treść *@
+        <div class="card-body p-4 p-md-5">
+            <div class="guide-content">
+                @if (!string.IsNullOrEmpty(Model.Guide.Content))
+                {
+                    @Html.Raw(Model.Guide.Content)
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5 border border-secondary border-dashed rounded">
+                        <i class="fas fa-terminal fa-2x mb-3"></i>
+                        <p>BRAK DANYCH. PLIK PUSTY.</p>
+                    </div>
+                }
+            </div>
         </div>
 
+        @* Footer Akcji *@
         @if ((!Model.Guide.IsDeleted && (isAuthor || isAdminOrMod)) || (Model.Guide.IsDeleted && isAdminOrMod))
         {
-            <div class="card-footer border-secondary p-3 d-flex justify-content-end gap-2">
-                <a asp-action="Edit" asp-route-id="@Model.Guide.Id" class="btn btn-warning">
-                    <i class="fas fa-edit"></i> Edytuj
+            <div class="card-footer border-top border-secondary p-3 bg-black bg-opacity-25 d-flex justify-content-end gap-3">
+                <a asp-action="Edit" asp-route-id="@Model.Guide.Id" class="btn btn-warning fw-bold text-dark">
+                    <i class="fas fa-edit me-1"></i> Edytuj
                 </a>
 
                 @if (Model.Guide.IsDeleted)
@@ -170,21 +410,21 @@
                     <form asp-controller="Admin" asp-action="RestoreGuide" method="post">
                         <input type="hidden" name="id" value="@Model.Guide.Id" />
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-trash-restore"></i> Przywróć
+                            <i class="fas fa-trash-restore me-1"></i> Przywróć
                         </button>
                     </form>
                     <form asp-controller="Guides" asp-action="DeletePermanently" method="post" onsubmit="return confirm('To usunięcie będzie PERMANENTNE i nieodwracalne. Kontynuować?');">
                         <input type="hidden" name="id" value="@Model.Guide.Id" />
-                        <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-times"></i> Usuń na zawsze
+                        <button type="submit" class="btn btn-danger" style="box-shadow: 0 0 10px red;">
+                            <i class="fas fa-times me-1"></i> Usuń TRWALE
                         </button>
                     </form>
                 }
                 else
                 {
-                    <form asp-action="Delete" method="post" asp-route-id="@Model.Guide.Id" onsubmit="return confirm('@(Model.Guide.IsApproved ? "Czy przenieść do kosza?" : "Czy usunąć?")');">
+                    <form asp-action="Delete" method="post" asp-route-id="@Model.Guide.Id" onsubmit="return confirm('@(Model.Guide.IsApproved ? "Przenieść do kosza?" : "Usunąć?")');">
                         <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash"></i> Usuń
+                            <i class="fas fa-trash me-1"></i> Usuń
                         </button>
                     </form>
                 }
@@ -192,316 +432,279 @@
         }
     </div>
 
+    @* --- PANEL MODERATORA (OCZEKUJĄCE) --- *@
     @if (isPending && isAdminOrMod)
     {
-        <div class="card bg-dark border-warning mb-5 shadow">
-            <div class="card-header border-warning bg-transparent text-warning">
-                <h4 class="mb-0"><i class="fas fa-user-shield"></i> Decyzja Moderatora</h4>
-            </div>
-            <div class="card-body text-center">
-                <p class="lead mb-4 text-white">Ten poradnik oczekuje na akceptację. Jaka jest Twoja decyzja?</p>
-                <div class="d-flex justify-content-center gap-3">
-                    <form asp-controller="Guides" asp-action="ApproveGuide" method="post">
-                        <input type="hidden" name="id" value="@Model.Guide.Id" />
-                        <button type="submit" class="btn btn-success btn-lg px-4">
-                            <i class="fas fa-check me-2"></i> Zatwierdź
-                        </button>
-                    </form>
-                    <button type="button" class="btn btn-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#rejectModal">
-                        <i class="fas fa-ban me-2"></i> Odrzuć
+        <div class="cyber-alert cyber-alert-warning p-4 mb-5 text-center">
+            <h4 class="text-warning text-uppercase fw-bold mb-3"><i class="fas fa-user-shield me-2"></i> Panel Decyzyjny</h4>
+            <p class="text-white-50 mb-4">Ten zasób oczekuje na autoryzację. Podejmij decyzję.</p>
+
+            <div class="d-flex justify-content-center gap-3">
+                <form asp-controller="Guides" asp-action="ApproveGuide" method="post">
+                    <input type="hidden" name="id" value="@Model.Guide.Id" />
+                    <button type="submit" class="btn btn-success btn-lg px-5 fw-bold" style="background: var(--neon-green); color: #000; border: none; box-shadow: 0 0 15px rgba(0,255,157,0.4);">
+                        <i class="fas fa-check me-2"></i> ZATWIERDŹ
                     </button>
-                </div>
-            </div>
-            <div class="card-footer border-warning text-muted small text-center">
-                Zatwierdzenie opublikuje poradnik. Odrzucenie zwróci go autorowi do poprawy.
+                </form>
+                <button type="button" class="btn btn-danger btn-lg px-5 fw-bold" data-bs-toggle="modal" data-bs-target="#rejectModal" style="background: var(--neon-red); border: none; box-shadow: 0 0 15px rgba(255,51,51,0.4);">
+                    <i class="fas fa-ban me-2"></i> ODRZUĆ
+                </button>
             </div>
         </div>
     }
 
+    @* --- SEKCJA OCENY --- *@
     @if (Model.Guide.IsApproved && !Model.Guide.IsDeleted && !Model.Guide.IsDraft)
     {
-        <div class="card bg-dark text-white border-secondary mb-5">
-            <div class="card-body text-center">
-                <h4 class="mb-3">Oceń ten poradnik</h4>
-                @if (User.Identity.IsAuthenticated)
-                {
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="guideId" value="@Model.Guide.Id" />
-                    <input type="hidden" id="currentRating" value="@Model.UserRating" />
-
-                    <div class="d-flex flex-column justify-content-center align-items-center gap-2 mb-2">
-                        <div id="star-container" style="cursor: pointer; font-size: 2rem; color: #ccc;">
-                            <i class="far fa-star star-icon" data-value="1"></i>
-                            <i class="far fa-star star-icon" data-value="2"></i>
-                            <i class="far fa-star star-icon" data-value="3"></i>
-                            <i class="far fa-star star-icon" data-value="4"></i>
-                            <i class="far fa-star star-icon" data-value="5"></i>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted small">Twoja ocena:</span>
-                            <span id="rating-display" class="fs-4 fw-bold text-warning">
-                                @(Model.UserRating > 0 ? Model.UserRating.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "0.0")
-                            </span>
-                        </div>
-                        <span id="save-message" class="text-success fw-bold" style="opacity: 0; transition: opacity 0.5s;">
-                            <i class="fas fa-check"></i> Zapisano!
-                        </span>
-                    </div>
-                }
-                else
-                {
-                    <p class="text-muted"><a asp-controller="Account" asp-action="Login">Zaloguj się</a>, aby ocenić poradnik.</p>
-                }
-            </div>
-        </div>
-
-        <div class="comments-section mb-5" id="comments">
-            <h3 class="text-white border-bottom border-secondary pb-2 mb-4">Komentarze (@Model.Comments.Count)</h3>
-
+        <div class="cyber-card mb-5 text-center p-4">
+            <h4 class="text-uppercase text-white mb-3" style="letter-spacing: 2px;">Oceń ten materiał</h4>
             @if (User.Identity.IsAuthenticated)
             {
-                <div class="card bg-dark border-secondary mb-4">
-                    <div class="card-body">
-                        <form asp-action="AddComment" method="post">
-                            <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                            <div class="mb-3">
-                                <textarea name="content" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="Napisz komentarz..."></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary float-end">Dodaj komentarz</button>
-                        </form>
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="guideId" value="@Model.Guide.Id" />
+                <input type="hidden" id="currentRating" value="@Model.UserRating" />
+
+                <div class="d-flex flex-column justify-content-center align-items-center gap-2">
+                    <div id="star-container" style="cursor: pointer; font-size: 2.5rem; color: #444;">
+                        <i class="far fa-star star-icon" data-value="1"></i>
+                        <i class="far fa-star star-icon" data-value="2"></i>
+                        <i class="far fa-star star-icon" data-value="3"></i>
+                        <i class="far fa-star star-icon" data-value="4"></i>
+                        <i class="far fa-star star-icon" data-value="5"></i>
                     </div>
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <span class="text-muted text-uppercase small">Twoja ocena:</span>
+                        <span id="rating-display" class="fs-4 fw-bold text-warning" style="text-shadow: 0 0 10px gold;">
+                            @(Model.UserRating > 0 ? Model.UserRating.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "0.0")
+                        </span>
+                    </div>
+                    <span id="save-message" class="text-success fw-bold text-uppercase mt-2" style="opacity: 0; transition: opacity 0.5s; letter-spacing: 1px;">
+                        <i class="fas fa-check-circle"></i> Zapisano w bazie
+                    </span>
                 </div>
             }
-
-            @foreach (var comment in Model.Comments)
+            else
             {
-                var isCommentAuthor = User.Identity.IsAuthenticated && comment.Author.UserName == User.Identity.Name;
-                var canManageComment = isCommentAuthor || isAdminOrMod;
-                var userLikedComment = comment.Reactions.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like);
-                var userDislikedComment = comment.Reactions.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike);
-
-                // --- OBLICZANIE WYNIKU DLA KOMENTARZA ---
-                var likesCount = comment.Reactions.Count(r => r.Type == ReactionType.Like);
-                var dislikesCount = comment.Reactions.Count(r => r.Type == ReactionType.Dislike);
-                var commentScore = likesCount - dislikesCount;
-                var scoreColorClass = commentScore > 0 ? "text-success" : (commentScore < 0 ? "text-danger" : "text-muted");
-
-                <div class="card bg-dark border-secondary mb-3">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-
-                            @* --- AVATAR I NICK Z KOLOREM (KOMENTARZ) --- *@
-                            <div class="d-flex align-items-center">
-                                @if (comment.Author?.ProfilePicture != null)
-                                {
-                                    <img src="@Url.Action("GetAvatar", "Profile", new { id = comment.Author.Id })"
-                                         alt="Avatar" class="rounded-circle me-2"
-                                         style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
-                                }
-                                else
-                                {
-                                    <img src="~/uploads/avatars/default_avatar.png"
-                                         alt="Avatar" class="rounded-circle me-2"
-                                         style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #555;" />
-                                }
-
-                                @{
-                                    string commentNickClass = "text-primary";
-                                    var commentRole = comment.Author?.Role?.ToLower();
-                                    if (commentRole == "admin") { commentNickClass = "text-danger fw-bold"; }
-                                    else if (commentRole == "moderator") { commentNickClass = "text-success fw-bold"; }
-                                }
-
-                                <strong class="@commentNickClass me-2">@comment.Author?.UserName</strong>
-                                <small class="text-muted">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
-                            </div>
-
-                            @if (canManageComment)
-                            {
-                                <div class="dropdown">
-                                    <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
-                                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                                        @if (isCommentAuthor)
-                                        {
-                                            <li><a class="dropdown-item" href="#" onclick="toggleEditForm('comment-edit-@comment.Id'); return false;">Edytuj</a></li>
-                                        }
-                                        <li>
-                                            <form asp-action="DeleteComment" method="post" onsubmit="return confirm('Usunąć komentarz?');">
-                                                <input type="hidden" name="commentId" value="@comment.Id" />
-                                                <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                                                <button type="submit" class="dropdown-item text-danger">Usuń</button>
-                                            </form>
-                                        </li>
-                                    </ul>
-                                </div>
-                            }
-                        </div>
-                        <div id="comment-content-@comment.Id"><p class="card-text text-light">@comment.Content</p></div>
-                        @if (isCommentAuthor)
-                        {
-                            <div id="comment-edit-@comment.Id" class="d-none mb-3">
-                                <form asp-action="EditComment" method="post">
-                                    <input type="hidden" name="commentId" value="@comment.Id" />
-                                    <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                                    <textarea name="content" class="form-control bg-dark text-white border-secondary mb-2">@comment.Content</textarea>
-                                    <button type="submit" class="btn btn-sm btn-success">Zapisz</button>
-                                    <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEditForm('comment-edit-@comment.Id')">Anuluj</button>
-                                </form>
-                            </div>
-                        }
-
-                        <div class="d-flex align-items-center gap-2 mt-3">
-                            <form asp-action="ToggleReaction" method="post" class="d-inline">
-                                <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" /> <input type="hidden" name="isUpvote" value="true" />
-                                <button class="btn btn-link p-0 text-decoration-none action-btn @(userLikedComment ? "text-success" : "text-muted")">
-                                    <i class="fas fa-thumbs-up"></i>
-                                </button>
-                            </form>
-
-                            <span class="fw-bold @scoreColorClass" style="min-width: 20px; text-align: center; font-size: 1.1em;">
-                                @commentScore
-                            </span>
-
-                            <form asp-action="ToggleReaction" method="post" class="d-inline">
-                                <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" /> <input type="hidden" name="isUpvote" value="false" />
-                                <button class="btn btn-link p-0 text-decoration-none action-btn @(userDislikedComment ? "text-danger" : "text-muted")">
-                                    <i class="fas fa-thumbs-down"></i>
-                                </button>
-                            </form>
-
-                            @if (User.Identity.IsAuthenticated)
-                            {
-                                <button class="btn btn-link p-0 text-decoration-none text-muted action-btn ms-2" onclick="document.getElementById('reply-form-@comment.Id').classList.toggle('d-none')"><i class="fas fa-reply"></i> Odpowiedz</button>
-                            }
-                        </div>
-
-                        <div id="reply-form-@comment.Id" class="mt-3 d-none border-top border-secondary pt-3">
-                            <form asp-action="AddReply" method="post">
-                                <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                                <div class="input-group"> <input type="text" name="content" class="form-control bg-dark text-white border-secondary" placeholder="Twoja odpowiedź..." required> <button class="btn btn-primary" type="submit">Wyślij</button> </div>
-                            </form>
-                        </div>
-                        @if (comment.Replies != null && comment.Replies.Any())
-                        {
-                            <div class="mt-3 ps-4 border-start border-secondary">
-                                @foreach (var reply in comment.Replies)
-                                {
-                                    var isReplyAuthor = User.Identity.IsAuthenticated && reply.Author.UserName == User.Identity.Name;
-                                    var canManageReply = isReplyAuthor || isAdminOrMod;
-
-                                    // --- OBLICZANIE WYNIKU DLA ODPOWIEDZI ---
-                                    var replyLikes = reply.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
-                                    var replyDislikes = reply.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
-                                    var replyScore = replyLikes - replyDislikes;
-                                    var replyScoreColor = replyScore > 0 ? "text-success" : (replyScore < 0 ? "text-danger" : "text-muted");
-
-                                    var userLikedReply = reply.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like) ?? false;
-                                    var userDislikedReply = reply.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike) ?? false;
-
-                                    <div class="mb-3 pb-2 border-bottom border-secondary" style="border-bottom-style: dashed !important; border-color: #444 !important;">
-                                        <div class="d-flex justify-content-between align-items-start">
-
-                                            @* --- ZMIANA: AVATAR I NICK Z KOLOREM (ODPOWIEDŹ) --- *@
-                                            <div class="d-flex align-items-center">
-                                                @if (reply.Author?.ProfilePicture != null)
-                                                {
-                                                    <img src="@Url.Action("GetAvatar", "Profile", new { id = reply.Author.Id })"
-                                                         alt="Avatar" class="rounded-circle me-2"
-                                                         style="width: 24px; height: 24px; object-fit: cover; border: 1px solid #555;" />
-                                                }
-                                                else
-                                                {
-                                                    <img src="~/uploads/avatars/default_avatar.png"
-                                                         alt="Avatar" class="rounded-circle me-2"
-                                                         style="width: 24px; height: 24px; object-fit: cover; border: 1px solid #555;" />
-                                                }
-
-                                                @{
-                                                    string replyNickClass = "text-info small";
-                                                    var replyRole = reply.Author?.Role?.ToLower();
-                                                    if (replyRole == "admin") { replyNickClass = "text-danger small fw-bold"; }
-                                                    else if (replyRole == "moderator") { replyNickClass = "text-success small fw-bold"; }
-                                                }
-
-                                                <strong class="@replyNickClass me-2">@reply.Author.UserName</strong>
-                                                <small class="text-muted" style="font-size: 0.8rem;">@reply.CreatedAt.ToString("dd.MM HH:mm")</small>
-                                            </div>
-
-                                            @if (canManageReply)
-                                            {
-                                                <div class="dropdown">
-                                                    <button class="btn btn-link text-muted p-0" style="font-size: 0.8rem;" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></button>
-                                                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                                                        @if (isReplyAuthor)
-                                                        {
-                                                            <li><a class="dropdown-item btn-sm" href="#" onclick="toggleEditForm('reply-edit-@reply.Id'); return false;">Edytuj</a></li>
-                                                        }
-                                                        <li><form asp-action="DeleteReply" method="post" onsubmit="return confirm('Usunąć odpowiedź?');"><input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><button type="submit" class="dropdown-item text-danger btn-sm">Usuń</button></form></li>
-                                                    </ul>
-                                                </div>
-                                            }
-                                        </div>
-                                        <div id="reply-content-@reply.Id"><p class="mb-1 text-light small">@reply.Content</p></div>
-                                        @if (isReplyAuthor)
-                                        {
-                                            <div id="reply-edit-@reply.Id" class="d-none mb-2">
-                                                <form asp-action="EditReply" method="post">
-                                                    <input type="hidden" name="replyId" value="@reply.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" />
-                                                    <div class="input-group input-group-sm"> <input type="text" name="content" class="form-control bg-dark text-white border-secondary" value="@reply.Content"> <button class="btn btn-success" type="submit">OK</button> <button class="btn btn-secondary" type="button" onclick="toggleEditForm('reply-edit-@reply.Id')">X</button> </div>
-                                                </form>
-                                            </div>
-                                        }
-
-                                        <div class="d-flex align-items-center gap-2">
-                                            <form asp-action="ToggleReaction" method="post" class="d-inline">
-                                                <input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="true" />
-                                                <button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userLikedReply ? "text-success" : "text-muted")" style="font-size: 0.8rem;">
-                                                    <i class="fas fa-thumbs-up"></i>
-                                                </button>
-                                            </form>
-
-                                            <span class="@replyScoreColor small fw-bold" style="min-width: 15px; text-align: center;">
-                                                @replyScore
-                                            </span>
-
-                                            <form asp-action="ToggleReaction" method="post" class="d-inline">
-                                                <input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="false" />
-                                                <button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userDislikedReply ? "text-danger" : "text-muted")" style="font-size: 0.8rem;">
-                                                    <i class="fas fa-thumbs-down"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
+                <p class="text-muted"><a asp-controller="Account" asp-action="Login" class="text-info text-decoration-none">Zaloguj się</a>, aby przyznać ocenę.</p>
             }
         </div>
     }
+
+    @* --- SEKCJA KOMENTARZY --- *@
+    <div class="comments-section mb-5" id="comments">
+        <h4 class="text-white text-uppercase border-bottom border-secondary pb-2 mb-4">
+            <i class="fas fa-comments me-2 text-primary"></i> Transmisja Danych (@Model.Comments.Count)
+        </h4>
+
+        @if (User.Identity.IsAuthenticated)
+        {
+            <div class="cyber-card p-3 mb-4">
+                <form asp-action="AddComment" method="post">
+                    <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                    <div class="mb-3">
+                        <textarea name="content" class="form-control bg-black text-white border-secondary" rows="3" placeholder="Wprowadź komunikat..." style="resize: none;"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-cyber-primary float-end">WYŚLIJ</button>
+                    <div class="clearfix"></div>
+                </form>
+            </div>
+        }
+
+        @foreach (var comment in Model.Comments)
+        {
+            var isCommentAuthor = User.Identity.IsAuthenticated && comment.Author.UserName == User.Identity.Name;
+            var canManageComment = isCommentAuthor || isAdminOrMod;
+            var userLikedComment = comment.Reactions.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like);
+            var userDislikedComment = comment.Reactions.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike);
+
+            var likesCount = comment.Reactions.Count(r => r.Type == ReactionType.Like);
+            var dislikesCount = comment.Reactions.Count(r => r.Type == ReactionType.Dislike);
+            var commentScore = likesCount - dislikesCount;
+            var scoreColorClass = commentScore > 0 ? "text-success" : (commentScore < 0 ? "text-danger" : "text-muted");
+
+            <div class="comment-card p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    @* Avatar *@
+                    <div class="d-flex align-items-center">
+                        @if (comment.Author?.ProfilePicture != null)
+                        {
+                            <img src="@Url.Action("GetAvatar", "Profile", new { id = comment.Author.Id })" class="rounded-circle me-2" style="width: 36px; height: 36px; object-fit: cover; border: 1px solid #666;" />
+                        }
+                        else
+                        {
+                            <img src="~/uploads/avatars/default_avatar.png" class="rounded-circle me-2" style="width: 36px; height: 36px; object-fit: cover; border: 1px solid #666;" />
+                        }
+
+                        @{
+                            string commentNickClass = "text-info fw-bold";
+                            var cRole = comment.Author?.Role?.ToLower();
+                            if (cRole == "admin") commentNickClass = "text-danger fw-bold";
+                            if (cRole == "moderator") commentNickClass = "text-success fw-bold";
+                        }
+                        <div>
+                            <div class="@commentNickClass">@comment.Author?.UserName</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                        </div>
+                    </div>
+
+                    @* Menu *@
+                    @if (canManageComment)
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                @if (isCommentAuthor)
+                                {
+                                    <li><a class="dropdown-item" href="#" onclick="toggleEditForm('comment-edit-@comment.Id'); return false;">Edytuj</a></li>
+                                }
+                                <li>
+                                    <form asp-action="DeleteComment" method="post" onsubmit="return confirm('Usunąć komentarz?');">
+                                        <input type="hidden" name="commentId" value="@comment.Id" />
+                                        <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                                        <button type="submit" class="dropdown-item text-danger">Usuń</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+
+                <div id="comment-content-@comment.Id" class="mb-2"><p class="card-text text-light">@comment.Content</p></div>
+
+                @if (isCommentAuthor)
+                {
+                    <div id="comment-edit-@comment.Id" class="d-none mb-3">
+                        <form asp-action="EditComment" method="post">
+                            <input type="hidden" name="commentId" value="@comment.Id" />
+                            <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                            <textarea name="content" class="form-control bg-black text-white border-secondary mb-2">@comment.Content</textarea>
+                            <button type="submit" class="btn btn-sm btn-success">Zapisz</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEditForm('comment-edit-@comment.Id')">Anuluj</button>
+                        </form>
+                    </div>
+                }
+
+                @* Akcje Komentarza *@
+                <div class="d-flex align-items-center gap-3">
+                    <div class="btn-group btn-group-sm">
+                        <form asp-action="ToggleReaction" method="post" class="d-inline">
+                            <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" /> <input type="hidden" name="isUpvote" value="true" />
+                            <button class="btn btn-link p-0 text-decoration-none action-btn @(userLikedComment ? "text-success" : "text-muted")"><i class="fas fa-thumbs-up"></i></button>
+                        </form>
+                        <span class="fw-bold @scoreColorClass mx-2">@commentScore</span>
+                        <form asp-action="ToggleReaction" method="post" class="d-inline">
+                            <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" /> <input type="hidden" name="isUpvote" value="false" />
+                            <button class="btn btn-link p-0 text-decoration-none action-btn @(userDislikedComment ? "text-danger" : "text-muted")"><i class="fas fa-thumbs-down"></i></button>
+                        </form>
+                    </div>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <button class="btn btn-link btn-sm text-decoration-none text-secondary action-btn" onclick="document.getElementById('reply-form-@comment.Id').classList.toggle('d-none')"><i class="fas fa-reply"></i> Odpowiedz</button>
+                    }
+                </div>
+
+                @* Formularz Odpowiedzi *@
+                <div id="reply-form-@comment.Id" class="mt-3 d-none ps-4">
+                    <form asp-action="AddReply" method="post">
+                        <input type="hidden" name="commentId" value="@comment.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                        <div class="input-group">
+                            <input type="text" name="content" class="form-control bg-dark text-white border-secondary" placeholder="Odpowiedź..." required>
+                            <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </form>
+                </div>
+
+                @* Odpowiedzi *@
+                @if (comment.Replies != null && comment.Replies.Any())
+                {
+                    <div class="reply-thread mt-3">
+                        @foreach (var reply in comment.Replies)
+                        {
+                            var isReplyAuthor = User.Identity.IsAuthenticated && reply.Author.UserName == User.Identity.Name;
+                            var canManageReply = isReplyAuthor || isAdminOrMod;
+                            var replyLikes = reply.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
+                            var replyDislikes = reply.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
+                            var replyScore = replyLikes - replyDislikes;
+                            var replyScoreColor = replyScore > 0 ? "text-success" : (replyScore < 0 ? "text-danger" : "text-muted");
+                            var userLikedReply = reply.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like) ?? false;
+                            var userDislikedReply = reply.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike) ?? false;
+
+                            <div class="mb-3 pb-2 border-bottom border-secondary" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="d-flex align-items-center">
+                                        @if (reply.Author?.ProfilePicture != null)
+                                        {
+                                            <img src="@Url.Action("GetAvatar", "Profile", new { id = reply.Author.Id })" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;" />
+                                        }
+                                        else
+                                        {
+                                            <img src="~/uploads/avatars/default_avatar.png" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;" />
+                                        }
+                                        <strong class="text-light me-2 small">@reply.Author.UserName</strong>
+                                        <small class="text-muted" style="font-size: 0.7rem;">@reply.CreatedAt.ToString("dd.MM HH:mm")</small>
+                                    </div>
+                                    @if (canManageReply)
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-muted p-0" style="font-size: 0.8rem;" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></button>
+                                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                                @if (isReplyAuthor)
+                                                {
+                                                    <li><a class="dropdown-item btn-sm" href="#" onclick="toggleEditForm('reply-edit-@reply.Id'); return false;">Edytuj</a></li>
+                                                }
+                                                <li><form asp-action="DeleteReply" method="post" onsubmit="return confirm('Usunąć odpowiedź?');"><input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><button type="submit" class="dropdown-item text-danger btn-sm">Usuń</button></form></li>
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div id="reply-content-@reply.Id"><p class="mb-1 text-light small opacity-75">@reply.Content</p></div>
+
+                                @if (isReplyAuthor)
+                                {
+                                    <div id="reply-edit-@reply.Id" class="d-none mb-2">
+                                        <form asp-action="EditReply" method="post">
+                                            <input type="hidden" name="replyId" value="@reply.Id" /> <input type="hidden" name="guideId" value="@Model.Guide.Id" />
+                                            <div class="input-group input-group-sm"> <input type="text" name="content" class="form-control bg-dark text-white border-secondary" value="@reply.Content"> <button class="btn btn-success" type="submit"><i class="fas fa-check"></i></button> <button class="btn btn-secondary" type="button" onclick="toggleEditForm('reply-edit-@reply.Id')"><i class="fas fa-times"></i></button> </div>
+                                        </form>
+                                    </div>
+                                }
+
+                                <div class="d-flex align-items-center gap-2">
+                                    <form asp-action="ToggleReaction" method="post" class="d-inline"><input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="true" /><button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userLikedReply ? "text-success" : "text-muted")" style="font-size: 0.8rem;"><i class="fas fa-thumbs-up"></i></button></form>
+                                    <span class="@replyScoreColor small fw-bold">@replyScore</span>
+                                    <form asp-action="ToggleReaction" method="post" class="d-inline"><input type="hidden" name="replyId" value="@reply.Id" /><input type="hidden" name="guideId" value="@Model.Guide.Id" /><input type="hidden" name="isUpvote" value="false" /><button class="btn btn-link p-0 text-decoration-none action-btn-sm @(userDislikedReply ? "text-danger" : "text-muted")" style="font-size: 0.8rem;"><i class="fas fa-thumbs-down"></i></button></form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
 </div>
 
+@* --- MODAL ODRZUCENIA (CYBER) --- *@
 @if (isAdminOrMod)
 {
-    <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content bg-dark text-white border-secondary">
+    <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-content-cyber">
                 <form asp-controller="Guides" asp-action="RejectGuide" method="post">
-                    <div class="modal-header border-secondary">
-                        <h5 class="modal-title text-danger" id="rejectModalLabel"><i class="fas fa-ban"></i> Odrzuć poradnik</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-header">
+                        <h5 class="modal-title text-danger text-uppercase fw-bold"><i class="fas fa-ban me-2"></i> Odrzuć poradnik</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <input type="hidden" name="id" value="@Model.Guide.Id" />
                         <div class="mb-3">
-                            <label for="reason" class="form-label">Powód odrzucenia:</label>
-                            <textarea class="form-control bg-secondary text-white border-0" id="reason" name="reason" rows="4" required placeholder="Napisz, co autor musi poprawić..."></textarea>
+                            <label for="reason" class="form-label text-danger text-uppercase small fw-bold">Powód odrzucenia:</label>
+                            <textarea class="form-control bg-black text-white border-danger" id="reason" name="reason" rows="4" required placeholder="Wpisz instrukcje dla autora..." style="box-shadow: inset 0 0 10px rgba(255,0,0,0.1);"></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer border-secondary">
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                        <button type="submit" class="btn btn-danger">Potwierdź odrzucenie</button>
+                        <button type="submit" class="btn btn-danger">Potwierdź</button>
                     </div>
                 </form>
             </div>
@@ -509,57 +712,10 @@
     </div>
 }
 
-<style>
-    .guide-content {
-        font-size: 1.1rem;
-        line-height: 1.6;
-    }
-
-        .guide-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin: 15px 0;
-        }
-</style>
-
 @section Scripts {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
-    <style>
-        .action-btn:hover {
-            color: #fff !important;
-            transform: scale(1.1);
-            transition: all 0.2s;
-        }
-
-        .action-btn-sm:hover {
-            color: #fff !important;
-            transition: all 0.2s;
-        }
-
-        .leaflet-popup-content-wrapper {
-            background: #333;
-            color: #fff;
-        }
-
-        .leaflet-popup-tip {
-            background: #333;
-        }
-
-        /* CSS FIX: Poprawa wyrównania pinezki */
-        .custom-pin-icon {
-            background: transparent !important;
-            border: none !important;
-            text-align: center;
-            line-height: 42px; /* Wysokość ikony */
-            width: 30px !important; /* Szerokość */
-            margin-left: -15px !important; /* Centrowanie w poziomie (połowa szerokości) */
-            margin-top: -42px !important; /* Zakotwiczenie na dole (wysokość) */
-        }
-    </style>
 
     <script>
         function toggleEditForm(id) {
@@ -567,7 +723,7 @@
             if (form.classList.contains('d-none')) { form.classList.remove('d-none'); } else { form.classList.add('d-none'); }
         }
 
-        // Pomocnik do naprawy URL
+        // --- INTERAKTYWNA MAPA (LEAFLET) ---
         function fixUrl(url) {
             if (!url) return '';
             if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -579,55 +735,41 @@
             var mapImages = document.querySelectorAll('img.interactive-map-source');
 
             mapImages.forEach(function(img) {
-                // Pobieramy dane mapy
                 var rawUrl = img.getAttribute('data-origin-src') || img.getAttribute('src');
                 var imageUrl = fixUrl(rawUrl);
                 var geoJsonRaw = img.getAttribute('data-geojson');
 
-                if (!geoJsonRaw) return;
+                if (!geoJsonRaw) return; // Jeśli nie ma danych mapy, zostawiamy jako zwykły obrazek
 
-                // 1. Tworzymy kontener DIV
                 var mapContainer = document.createElement('div');
                 var mapId = 'map-' + Math.floor(Math.random() * 1000000);
                 mapContainer.id = mapId;
                 mapContainer.style.width = "100%";
                 mapContainer.style.height = "500px";
-                mapContainer.style.background = "#222";
+                mapContainer.style.background = "#111"; // Ciemne tło
                 mapContainer.style.borderRadius = "8px";
-                mapContainer.className = "shadow-lg border border-secondary mb-3";
+                mapContainer.className = "shadow-lg border border-secondary mb-4";
                 mapContainer.style.zIndex = "1";
 
                 img.parentNode.replaceChild(mapContainer, img);
 
-                // 2. Inicjalizacja Leaflet
                 var map = L.map(mapId, {
                     crs: L.CRS.Simple,
                     minZoom: -5, maxZoom: 4, zoomSnap: 0.25,
-                    scrollWheelZoom: false
+                    scrollWheelZoom: false // Wyłączone domyślnie, włącza się po kliknięciu
                 });
                 map.on('focus', () => { map.scrollWheelZoom.enable(); });
                 map.on('blur', () => { map.scrollWheelZoom.disable(); });
 
-                // 3. Ładowanie obrazka
                 var imageObj = new Image();
                 imageObj.src = imageUrl;
-
-                imageObj.onerror = function() {
-                    console.error("Nie udało się załadować obrazka mapy: " + imageUrl);
-                    mapContainer.innerHTML = '<div class="text-center text-danger p-5">Błąd ładowania mapy.<br>Sprawdź ścieżkę do pliku.</div>';
-                };
 
                 imageObj.onload = function() {
                     var w = this.width;
                     var h = this.height;
 
-                    var containerWidth = mapContainer.clientWidth;
-                    if(w > 0) {
-                        var ratio = h / w;
-                        var newHeight = containerWidth * ratio;
-                        mapContainer.style.height = newHeight + "px";
-                        map.invalidateSize();
-                    }
+                    // Skalowanie kontenera (opcjonalne)
+                    // mapContainer.style.height = "600px";
 
                     var southWest = map.unproject([0, h], map.getMaxZoom() - 1);
                     var northEast = map.unproject([w, 0], map.getMaxZoom() - 1);
@@ -636,52 +778,37 @@
                     L.imageOverlay(imageUrl, bounds).addTo(map);
                     map.fitBounds(bounds);
 
-                    var fitZoom = map.getBoundsZoom(bounds);
-                    map.setMinZoom(fitZoom);
-                    map.setMaxBounds(bounds);
+                    // Ustawienie zoomu, by obrazek wypełnił widok
+                    map.setZoom(map.getBoundsZoom(bounds));
 
-                    // 4. Rysowanie elementów z GeoJSON
+                    // Rysowanie
                     if (geoJsonRaw) {
                         try {
                             var geoJsonData = JSON.parse(geoJsonRaw);
                             L.geoJSON(geoJsonData, {
                                 style: function (feature) {
-                                    var color = feature.properties && feature.properties.color ? feature.properties.color : '#ffcc00';
-                                    return {
-                                        color: color,
-                                        fillColor: color,
-                                        weight: 4,
-                                        fillOpacity: 0.5
-                                    };
+                                    var color = feature.properties && feature.properties.color ? feature.properties.color : '#00f3ff';
+                                    return { color: color, fillColor: color, weight: 4, fillOpacity: 0.4 };
                                 },
                                 pointToLayer: function (feature, latlng) {
                                     var color = feature.properties && feature.properties.color ? feature.properties.color : '#dc3545';
-
-                                    // Używamy naszej Customowej Pinezki
-                                    return L.marker(latlng, {
-                                        icon: L.divIcon({
-                                            className: 'custom-pin-icon',
-                                            html: `<i class="fas fa-map-marker-alt fa-3x" style="color: ${color}; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);"></i>`,
-                                            iconSize: [30, 42],
-                                            iconAnchor: [15, 42],
-                                            popupAnchor: [0, -45]
-                                        })
+                                    // Prosta ikonka lub customowa pinezka
+                                    return L.circleMarker(latlng, {
+                                        radius: 8,
+                                        fillColor: color,
+                                        color: "#fff",
+                                        weight: 2,
+                                        opacity: 1,
+                                        fillOpacity: 0.8
                                     });
                                 },
                                 onEachFeature: function (feature, layer) {
-                                    // Tooltip (dymek) po najechaniu, jeśli jest opis
                                     if (feature.properties && feature.properties.note) {
-                                        layer.bindTooltip(feature.properties.note, {
-                                            permanent: false,
-                                            direction: 'top',
-                                            className: 'bg-dark text-white border-0 shadow px-2 py-1'
-                                        });
+                                        layer.bindPopup(feature.properties.note);
                                     }
                                 }
                             }).addTo(map);
-                        } catch (e) {
-                            console.error("Błąd GeoJSON:", e);
-                        }
+                        } catch (e) { console.error("Błąd GeoJSON:", e); }
                     }
                 };
             });
@@ -703,9 +830,9 @@
                 stars.forEach((star, index) => {
                     const starValue = index + 1;
                     star.className = 'star-icon far fa-star';
-                    star.style.color = '#ccc';
-                    if (value >= starValue) { star.className = 'star-icon fas fa-star'; star.style.color = '#ffc107'; }
-                    else if (value >= starValue - 0.5) { star.className = 'star-icon fas fa-star-half-alt'; star.style.color = '#ffc107'; }
+                    star.style.color = '#444'; // Ciemny szary domyślnie
+                    if (value >= starValue) { star.className = 'star-icon fas fa-star'; star.style.color = '#fcee0a'; } // Neonowy żółty
+                    else if (value >= starValue - 0.5) { star.className = 'star-icon fas fa-star-half-alt'; star.style.color = '#fcee0a'; }
                 });
             }
             renderStars(currentRating);
