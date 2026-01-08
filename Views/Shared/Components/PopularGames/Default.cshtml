@@ -1,24 +1,115 @@
 ﻿@model IEnumerable<praca_dyplomowa_zesp.Models.API.ApiGame>
 
+<style>
+    /* --- STYL DROPDOWN MENU (Cyberpunk - Twój styl) --- */
+
+    /* FIX: Wymuszenie, by menu było ZAWSZE na wierzchu */
+    /* To nadpisuje domyślny z-index Bootstrapa (zwykle 1000) na coś znacznie wyższego */
+    .dropdown-menu {
+        z-index: 9999 !important;
+    }
+
+    /* Pojedynczy element listy */
+    .cyber-dropdown-item {
+        color: #e0e0e0;
+        padding: 10px 20px;
+        transition: all 0.2s ease-in-out;
+        border-left: 3px solid transparent;
+        display: flex;
+        align-items: center;
+        font-size: 0.95rem;
+        text-decoration: none; /* Usuwa podkreślenie linku */
+        overflow: hidden; /* Zabezpieczenie dla długich nazw */
+    }
+
+        /* Efekt najechania */
+        .cyber-dropdown-item:hover,
+        .cyber-dropdown-item:focus {
+            background-color: rgba(255, 255, 255, 0.05); /* Lekkie rozjaśnienie tła */
+            color: #00f3ff; /* Neonowy cyjan */
+            border-left-color: #00f3ff; /* Pasek po lewej */
+            padding-left: 25px; /* Przesunięcie w prawo */
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+        }
+
+        /* Ikona wewnątrz linku */
+        .cyber-dropdown-item i {
+            margin-right: 10px;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            flex-shrink: 0; /* Ikona się nie zgniata */
+        }
+
+        .cyber-dropdown-item:hover i {
+            opacity: 1;
+            color: #ff66c4; /* Różowa ikona przy hoverze */
+        }
+
+    /* Zabezpieczenie długich nazw (Trzy kropki...) */
+    .text-truncate-custom {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 250px; /* Dostosuj szerokość w razie potrzeby */
+    }
+
+    /* Separator */
+    .cyber-divider {
+        margin: 0.5rem 0;
+        border: 0;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.2), rgba(255,255,255,0));
+    }
+
+    /* Link "Pokaż wszystkie" */
+    .cyber-show-all {
+        font-weight: bold;
+        color: #ff66c4 !important; /* Neonowy róż */
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 1px;
+        justify-content: center;
+    }
+
+        .cyber-show-all:hover {
+            background-color: rgba(255, 102, 196, 0.1);
+            color: #fff !important;
+            text-shadow: 0 0 10px rgba(255, 102, 196, 0.6);
+            border-left-color: transparent; /* Bez paska bocznego dla tego przycisku */
+            padding-left: 20px; /* Bez przesuwania */
+        }
+</style>
+
 @if (Model != null && Model.Any())
 {
+    @* Opcjonalny nagłówek listy *@
+    <li><h6 class="dropdown-header text-uppercase text-muted small fw-bold" style="letter-spacing: 1px; padding-left: 20px;">Na Topie</h6></li>
+
     @foreach (var game in Model)
     {
         <li>
-            <a class="dropdown-item" asp-controller="Guides" asp-action="Index" asp-route-gameId="@game.Id">
-                @game.Name
+            <a class="dropdown-item cyber-dropdown-item" asp-controller="Guides" asp-action="Index" asp-route-gameId="@game.Id">
+                <i class="bi bi-controller"></i>
+                @* Dodano span z ucinaniem tekstu, żeby zachować styl *@
+                <span class="text-truncate-custom" title="@game.Name">@game.Name</span>
             </a>
         </li>
     }
 }
 else
 {
-    <li><span class="dropdown-item-text">Nie udało się załadować popularnych gier.</span></li>
+    <li>
+        <span class="dropdown-item-text text-muted small text-center d-block py-3">
+            <i class="bi bi-wifi-off me-1"></i> Nie udało się wczytać.
+        </span>
+    </li>
 }
 
-<li><hr class="dropdown-divider"></li>
+<li><hr class="dropdown-divider cyber-divider"></li>
+
 <li>
-    <a class="dropdown-item" asp-controller="Games" asp-action="Index" asp-route-mode="guides">
-        Pokaż wszystkie gry
+    <a class="dropdown-item cyber-dropdown-item cyber-show-all" asp-controller="Games" asp-action="Index" asp-route-mode="guides">
+        Pokaż wszystkie <i class="bi bi-arrow-right ms-2"></i>
     </a>
 </li>

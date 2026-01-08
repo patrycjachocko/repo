@@ -1,80 +1,185 @@
 ﻿@model praca_dyplomowa_zesp.Models.ViewModels.GameRatingViewModel
 
+@* --- STYLE LOKALNE DLA PARTIALA (CYBERPUNK DATA PANELS) --- *@
+<style>
+    .cyber-panel {
+        background: rgba(20, 20, 25, 0.7); /* Ciemne półprzezroczyste tło */
+        backdrop-filter: blur(5px);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease-in-out;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 10px;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .cyber-panel:hover {
+            transform: translateY(-3px);
+            background: rgba(30, 30, 35, 0.8);
+        }
+
+    /* Warianty kolorystyczne neonów */
+    .panel-blue {
+        border-color: rgba(0, 243, 255, 0.5);
+        box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
+    }
+
+    .text-neon-blue {
+        color: #00f3ff;
+        text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    }
+
+    .panel-green {
+        border-color: rgba(0, 255, 157, 0.5);
+        box-shadow: inset 0 0 20px rgba(0, 255, 157, 0.1);
+    }
+
+    .text-neon-green {
+        color: #00ff9d;
+        text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+    }
+
+    .panel-purple {
+        border-color: rgba(188, 19, 254, 0.5);
+        box-shadow: inset 0 0 20px rgba(188, 19, 254, 0.1);
+    }
+
+    .text-neon-purple {
+        color: #bc13fe;
+        text-shadow: 0 0 10px rgba(188, 19, 254, 0.5);
+    }
+
+    .panel-gold {
+        border-color: rgba(255, 193, 7, 0.6);
+        box-shadow: inset 0 0 25px rgba(255, 193, 7, 0.15);
+        background: rgba(255, 193, 7, 0.05); /* Lekki złoty tint */
+    }
+
+    .text-neon-gold {
+        color: #ffc107;
+        text-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+    }
+
+    /* Nagłówki paneli */
+    .cyber-header-sm {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.8;
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+
+    /* Duże liczby */
+    .cyber-score-lg {
+        font-family: 'Segoe UI', sans-serif; /* Można podmienić na bardziej "cyfrowy" font */
+        font-weight: 800;
+        font-size: 1.8rem;
+        line-height: 1;
+    }
+
+    /* --- Kontener interaktywny gwiazdek --- */
+    .star-input-module {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+        padding: 8px 15px;
+        border: 1px solid rgba(255, 193, 7, 0.2);
+        transition: border-color 0.3s;
+    }
+
+        .star-input-module:hover {
+            border-color: rgba(255, 193, 7, 0.5);
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.2);
+        }
+
+    .game-star {
+        transition: transform 0.2s, filter 0.2s;
+    }
+    /* Efekt hover na samej gwiazdce */
+    #game-star-container:hover .game-star:hover {
+        transform: scale(1.15);
+        filter: drop-shadow(0 0 5px #ffc107);
+    }
+
+</style>
+
 @* --- RZĄD 1: Oceny Zewnętrzne (3 kafelki w jednej linii) --- *@
-<div class="row g-2 mb-2">
+<div class="row g-3 mb-3">
+    @* KRYTYCY (Niebieski Neon) *@
     <div class="col-4">
-        <div class="card bg-dark border-secondary text-center h-100">
-            <div class="card-body p-2 d-flex flex-column justify-content-center">
-                <h6 class="text-muted text-uppercase" style="font-size: 0.65rem; margin-bottom: 2px;">Krytycy (IGDB)</h6>
-                <div class="fs-4 fw-bold text-info">
-                    @(Model.IgdbCriticRating > 0 ? Model.IgdbCriticRating.ToString("0") : "-")
-                </div>
+        <div class="cyber-panel panel-blue text-center">
+            <h6 class="cyber-header-sm text-neon-blue">Krytycy (IGDB)</h6>
+            <div class="cyber-score-lg text-neon-blue">
+                @(Model.IgdbCriticRating > 0 ? Model.IgdbCriticRating.ToString("0") : "-")
             </div>
         </div>
     </div>
 
+    @* GRACZE (Zielony Neon) *@
     <div class="col-4">
-        <div class="card bg-dark border-secondary text-center h-100">
-            <div class="card-body p-2 d-flex flex-column justify-content-center">
-                <h6 class="text-muted text-uppercase" style="font-size: 0.65rem; margin-bottom: 2px;">Gracze (IGDB)</h6>
-                <div class="fs-4 fw-bold text-primary">
-                    @(Model.IgdbUserRating > 0 ? Model.IgdbUserRating.ToString("0") : "-")
-                </div>
+        <div class="cyber-panel panel-green text-center">
+            <h6 class="cyber-header-sm text-neon-green">Gracze (IGDB)</h6>
+            <div class="cyber-score-lg text-neon-green">
+                @(Model.IgdbUserRating > 0 ? Model.IgdbUserRating.ToString("0") : "-")
             </div>
         </div>
     </div>
 
+    @* TOTAL (Fioletowy Neon) *@
     <div class="col-4">
-        <div class="card bg-dark border-light text-center h-100 shadow">
-            <div class="card-body p-2 d-flex flex-column justify-content-center">
-                <h6 class="text-white text-uppercase" style="font-size: 0.65rem; margin-bottom: 2px;">Średnia Total</h6>
-                <div class="fs-4 fw-bold text-white">
-                    @(Model.HybridTotalRating > 0 ? Model.HybridTotalRating.ToString("0") : "-")
-                </div>
+        <div class="cyber-panel panel-purple text-center">
+            <h6 class="cyber-header-sm text-neon-purple">Średnia Total</h6>
+            <div class="cyber-score-lg text-neon-purple">
+                @(Model.HybridTotalRating > 0 ? Model.HybridTotalRating.ToString("0") : "-")
             </div>
         </div>
     </div>
 </div>
 
-@* --- RZĄD 2: Społeczność GameHub (1 szeroki, niski pasek) --- *@
+@* --- RZĄD 2: Społeczność GameHub (Interaktywny panel) --- *@
 <div class="row">
     <div class="col-12">
-        <div class="card bg-dark border-warning" style="border-width: 1px;">
-            <div class="card-body p-2 d-flex align-items-center justify-content-between">
+        <div class="cyber-panel panel-gold p-3">
+            <div class="d-flex align-items-center justify-content-between">
 
-                @* LEWA STRONA: Etykieta i Wynik *@
-                <div class="d-flex align-items-center gap-3">
-                    <h6 class="text-warning text-uppercase mb-0" style="font-size: 0.8rem; letter-spacing: 1px;">GameHub</h6>
-                    <div class="d-flex align-items-baseline">
-                        <span class="fw-bold text-warning fs-4 me-1" id="local-avg-display">
-                            @((Model.LocalAverageRating * 10) > 0 ? (Model.LocalAverageRating * 10).ToString("0") : "-")
-                        </span>
-                        <small class="text-muted" style="font-size: 0.7rem;">
-                            (<span id="local-count-display">@Model.LocalRatingCount</span> gł.)
+                @* LEWA STRONA: Etykieta GameHub i Wynik *@
+                <div class="d-flex align-items-center gap-4">
+                    <div class="d-flex flex-column">
+                        <h6 class="cyber-header-sm text-neon-gold mb-1" style="font-size: 0.85rem;">Społeczność GameHub</h6>
+                        <small class="text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                            Na podstawie <span id="local-count-display" class="text-white fw-bold">@Model.LocalRatingCount</span> głosów
                         </small>
+                    </div>
+
+                    <div class="cyber-score-lg text-neon-gold" style="font-size: 2.2rem;" id="local-avg-display">
+                        @((Model.LocalAverageRating * 10) > 0 ? (Model.LocalAverageRating * 10).ToString("0") : "-")
                     </div>
                 </div>
 
-                @* PRAWA STRONA: Gwiazdki do głosowania *@
-                <div>
+                @* PRAWA STRONA: Moduł Głosowania *@
+                <div class="star-input-module d-flex align-items-center">
                     @if (User.Identity.IsAuthenticated)
                     {
                         <div class="d-flex flex-column align-items-end">
                             @Html.AntiForgeryToken()
                             <input type="hidden" id="partialGameId" value="@Model.IgdbGameId" />
 
-                            @* Gwiazdki - ustawiłem mały font, żeby było subtelnie *@
-                            <div id="game-star-container" style="cursor: pointer; font-size: 1rem; color: #444; white-space: nowrap; line-height: 1;">
+                            @* Kontener Gwiazdek *@
+                            <div id="game-star-container" style="cursor: pointer; font-size: 1.5rem; color: #333; white-space: nowrap; line-height: 1; letter-spacing: 3px;">
                                 @for (int i = 1; i <= 10; i++)
                                 {
-                                    <i class="far fa-star game-star" data-value="@i" style="margin-right: 1px;"></i>
+                                    <i class="far fa-star game-star" data-value="@i"></i>
                                 }
                             </div>
 
-                            @* Tekst podpowiedzi (Twoja ocena) *@
-                            <div class="d-flex align-items-center mt-1">
-                                <span id="game-rate-msg" class="text-success fw-bold me-2" style="opacity:0; font-size: 0.7rem;">Zapisano!</span>
-                                <div id="current-hover-rating" class="text-muted small" style="font-size: 0.7rem; min-width: 40px; text-align: right;">
+                            @* Tekst podpowiedzi *@
+                            <div class="d-flex align-items-center mt-2 w-100 justify-content-between">
+                                <span id="game-rate-msg" class="text-neon-green fw-bold me-2" style="opacity:0; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Zapisano!</span>
+                                <div id="current-hover-rating" class="text-neon-gold fw-bold small" style="font-size: 0.85rem; min-width: 50px; text-align: right;">
                                     @(Model.UserPersonalRating > 0 ? Model.UserPersonalRating.ToString("0.0") + "/10" : "Oceń")
                                 </div>
                             </div>
@@ -82,7 +187,12 @@
                     }
                     else
                     {
-                        <a asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-secondary" style="font-size: 0.7rem; padding: 2px 10px;">Zaloguj, aby ocenić</a>
+                        <div class="text-end">
+                            <small class="text-muted d-block mb-2 text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Zaloguj się, aby ocenić</small>
+                            <a asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-bold" style="font-size: 0.8rem; box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);">
+                                <i class="fas fa-sign-in-alt me-1"></i> Logowanie
+                            </a>
+                        </div>
                     }
                 </div>
 
@@ -113,7 +223,8 @@
                 stars.forEach((star, index) => {
                     const starValue = index + 1;
                     star.className = 'game-star far fa-star';
-                    star.style.color = '#444'; // Ciemniejsze tło gwiazdek
+                    // Kolor pustej gwiazdki - ciemniejszy, bardziej metaliczny
+                    star.style.color = 'rgba(255, 255, 255, 0.2)';
 
                     // Pełna gwiazdka
                     if (value >= starValue) {

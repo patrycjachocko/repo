@@ -43,13 +43,16 @@
             flex-direction: column;
         }
 
-        /* --- NAVBAR STYLING --- */
+        /* --- NAVBAR STYLING (POPRAWIONY Z-INDEX) --- */
         .navbar {
             background-color: rgba(11, 11, 14, 0.95) !important;
-            border-bottom: 1px solid rgba(255, 102, 196, 0.2); /* Delikatna różowa linia */
-            box-shadow: 0 0 20px rgba(128, 0, 255, 0.15); /* Fioletowa poświata */
+            border-bottom: 1px solid rgba(255, 102, 196, 0.2);
+            box-shadow: 0 0 20px rgba(128, 0, 255, 0.15);
             backdrop-filter: blur(10px);
             padding: 0.8rem 1rem;
+            /* KLUCZOWA POPRAWKA: */
+            position: relative; /* Umożliwia działanie z-index */
+            z-index: 10000; /* Wymusza bycie nad wszystkim w body */
         }
 
         .navbar-brand {
@@ -57,7 +60,6 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             font-size: 1.5rem;
-            /* Gradient znany z Home/Index */
             background: linear-gradient(90deg, #ffffff 0%, var(--light-pink) 30%, var(--mid-pink) 60%, var(--deep-purple) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -84,7 +86,6 @@
                 text-shadow: 0 0 10px var(--mid-pink);
             }
 
-            /* Efekt podkreślenia przy hover */
             .nav-link::after {
                 content: '';
                 position: absolute;
@@ -117,7 +118,7 @@
             .dropdown-item:hover {
                 background-color: rgba(128, 0, 255, 0.2);
                 color: #fff;
-                padding-left: 1.5rem; /* Efekt przesunięcia */
+                padding-left: 1.5rem;
             }
 
         .dropdown-divider {
@@ -126,7 +127,7 @@
 
         /* --- STOPKA --- */
         footer {
-            margin-top: auto; /* Wypycha stopkę na sam dół */
+            margin-top: auto;
             background-color: #08080a;
             color: var(--text-muted);
             border-top: 1px solid #222 !important;
@@ -146,7 +147,7 @@
                     text-decoration: none;
                 }
 
-        /* --- ALERTY (TEMP DATA) --- */
+        /* --- ALERTY --- */
         .alert {
             background-color: rgba(26, 26, 32, 0.95);
             border: none;
@@ -157,7 +158,7 @@
         }
 
         .alert-success {
-            border-color: #00ff88; /* Neonowa zieleń */
+            border-color: #00ff88;
             box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
         }
 
@@ -166,7 +167,7 @@
             }
 
         .alert-danger {
-            border-color: #ff3366; /* Neonowa czerwień */
+            border-color: #ff3366;
             box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
         }
 
@@ -178,7 +179,6 @@
             filter: invert(1) grayscale(100%) brightness(200%);
         }
 
-        /* Dostosowanie kontenera głównego */
         .main-container {
             padding-top: 20px;
             padding-bottom: 40px;
@@ -189,7 +189,7 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark box-shadow mb-3">
             <div class="container-fluid">
-                @* LOGO - działa jako Home *@
+                @* LOGO *@
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">GameHub</a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -199,8 +199,6 @@
 
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1 align-items-center">
-
-                        @* USUNIĘTO LINK 'HOME' - Logo wystarczy *@
 
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="Games" asp-action="Index" asp-route-mode="browse">
@@ -226,7 +224,6 @@
                                 </a>
                             </li>
 
-                            @* Logika Steam *@
                             var user = await UserManager.GetUserAsync(User);
                             if (user != null && !string.IsNullOrEmpty(user.SteamId))
                             {
@@ -247,8 +244,6 @@
 
     <div class="container main-container">
         <main role="main" class="pb-3">
-            @* --- OBSŁUGA KOMUNIKATÓW TEMPDATA --- *@
-
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -269,27 +264,22 @@
         </main>
     </div>
 
-    @* --- STOPKA --- *@
     <footer class="border-top footer text-muted">
         <div class="container text-center">
             &copy; 2025 - GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
-
             <span class="mx-2 text-secondary">|</span>
-
             <a asp-controller="Tickets" asp-action="Index">
                 <i class="fas fa-headset me-1"></i> Support / Kontakt
             </a>
         </div>
     </footer>
 
-    @* --- MODALE LOGOWANIA --- *@
     <partial name="_AuthModals" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    @* LEAFLET JS *@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 

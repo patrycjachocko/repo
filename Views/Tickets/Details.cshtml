@@ -9,171 +9,404 @@
 }
 
 <style>
-    .chat-box {
-        background: #1a1a20;
-        border-radius: 10px;
+    /* --- STYL CZATU (Cyberpunk Messenger) --- */
+
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 70vh; /* Stała wysokość dla okna czatu */
+        background: rgba(22, 22, 28, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+    }
+
+    /* Nagłówek Czatu */
+    .chat-header {
         padding: 20px;
-        max-height: 600px;
+        background: rgba(30, 30, 35, 0.95);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* NOWE: Neonowa ikona biletu */
+    .ticket-icon-neon {
+        color: #00f3ff; /* Neonowy cyjan */
+        text-shadow: 0 0 10px rgba(0, 243, 255, 0.6); /* Poświata */
+        margin-right: 8px;
+        font-size: 1.1rem; /* Nieco większa niż tekst */
+    }
+
+    /* ZAKTUALIZOWANA KLASA: Wyrównanie ID i ikony */
+    .ticket-id {
+        font-size: 0.8rem;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        /* Dodajemy flexbox dla idealnego wyrównania */
+        display: flex;
+        align-items: center;
+    }
+
+    .ticket-topic {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #fff;
+        margin-top: 5px; /* Lekki odstęp od ID */
+    }
+
+    /* Obszar Wiadomości */
+    .chat-messages {
+        flex: 1;
         overflow-y: auto;
-        border: 1px solid #333;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        background: #0b0b0e;
+        /* Scrollbar styling */
+        scrollbar-width: thin;
+        scrollbar-color: var(--mid-pink) #1a1a20;
     }
 
-    .message-bubble {
-        padding: 10px 15px;
-        border-radius: 15px;
-        margin-bottom: 10px;
+    /* Dymki wiadomości */
+    .msg-wrapper {
+        display: flex;
+        flex-direction: column;
         max-width: 75%;
+    }
+
+    .msg-bubble {
+        padding: 12px 18px;
+        border-radius: 18px;
         position: relative;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        word-wrap: break-word;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
+    /* Wiadomość Użytkownika (Prawa strona) */
     .msg-user {
-        background-color: #0d6efd;
-        color: white;
-        margin-left: auto;
-        border-bottom-right-radius: 2px;
+        align-self: flex-end;
     }
 
+        .msg-user .msg-bubble {
+            background: linear-gradient(135deg, var(--deep-purple), var(--mid-pink));
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-user .msg-meta {
+            text-align: right;
+        }
+
+    /* Wiadomość Admina/Supportu (Lewa strona) */
     .msg-admin {
-        background-color: #333;
-        color: #ddd;
-        margin-right: auto;
-        border: 1px solid #444;
-        border-bottom-left-radius: 2px;
+        align-self: flex-start;
     }
 
-    .msg-info {
-        font-size: 0.75rem;
+        .msg-admin .msg-bubble {
+            background: #2a2a30;
+            color: #e0e0e0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-admin .msg-meta {
+            text-align: left;
+        }
+
+    .msg-meta {
+        font-size: 0.7rem;
+        color: #666;
+        margin-top: 4px;
         margin-bottom: 2px;
-        opacity: 0.7;
     }
 
-    .preview-thumb {
-        width: 80px;
-        height: 80px;
+    /* Załączniki w wiadomości */
+    .msg-attachment {
+        margin-top: 10px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.2);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+        .msg-attachment:hover {
+            transform: scale(1.02);
+        }
+
+    /* Panel wpisywania (Stopka) */
+    .chat-input-area {
+        padding: 15px 20px;
+        background: rgba(30, 30, 35, 0.95);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .input-wrapper {
+        background: #16161c;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 25px;
+        display: flex;
+        align-items: center;
+        padding: 5px 15px;
+        transition: border-color 0.3s;
+    }
+
+        .input-wrapper:focus-within {
+            border-color: var(--mid-pink);
+            box-shadow: 0 0 10px rgba(255, 102, 196, 0.2);
+        }
+
+    .chat-textarea {
+        background: transparent;
+        border: none;
+        color: #fff;
+        resize: none;
+        width: 100%;
+        max-height: 100px;
+        padding: 10px 0;
+        outline: none;
+    }
+
+    .btn-attach {
+        color: #888;
+        background: transparent;
+        border: none;
+        font-size: 1.2rem;
+        margin-right: 10px;
+        transition: color 0.3s;
+    }
+
+        .btn-attach:hover {
+            color: #fff;
+        }
+
+    .btn-send-msg {
+        background: var(--mid-pink);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 10px;
+        transition: transform 0.2s;
+    }
+
+        .btn-send-msg:hover {
+            transform: scale(1.1);
+            background: #ff3366;
+        }
+
+    /* Miniatury w panelu wysyłania */
+    .upload-preview-container {
+        display: flex;
+        gap: 10px;
+        padding: 10px 0;
+        overflow-x: auto;
+    }
+
+    .upload-thumb-wrapper {
+        position: relative;
+        width: 60px;
+        height: 60px;
+    }
+
+    .upload-thumb {
+        width: 100%;
+        height: 100%;
         object-fit: cover;
-        border-radius: 5px;
+        border-radius: 8px;
         border: 1px solid #555;
     }
 
-    .preview-container {
-        position: relative;
-        display: inline-block;
-        margin-right: 10px;
-        margin-bottom: 10px;
+    .btn-remove-upload {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #ff3366;
+        color: #fff;
+        border: none;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
     }
+
+    /* Statusy */
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .status-open {
+        background: rgba(0, 255, 157, 0.15);
+        color: #00ff9d;
+        border: 1px solid rgba(0, 255, 157, 0.4);
+    }
+
+    .status-progress {
+        background: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+        border: 1px solid rgba(255, 193, 7, 0.4);
+    }
+
+    .status-closed {
+        background: rgba(108, 117, 125, 0.15);
+        color: #adb5bd;
+        border: 1px solid rgba(108, 117, 125, 0.4);
+    }
+
 </style>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2><i class="fas fa-ticket-alt text-warning me-2"></i> @Model.Title</h2>
-        <a asp-action="Index" class="btn btn-outline-secondary">Wróć do listy</a>
+<div class="container mt-4 mb-5">
+
+    <div class="mb-3">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+            <i class="fas fa-arrow-left me-1"></i> Wróć do listy
+        </a>
     </div>
 
-    <div class="card bg-dark text-white mb-4 border-secondary">
-        <div class="card-body d-flex justify-content-between align-items-center">
+    <div class="chat-container">
+
+        @* --- HEADER --- *@
+        <div class="chat-header">
             <div>
-                <strong>Status:</strong>
+                @* ZMIANA: Dodano ikonę i poprawiono strukturę *@
+                <div class="ticket-id">
+                    <i class="fas fa-ticket-alt ticket-icon-neon"></i> Ticket #@Model.Id
+                </div>
+                <div class="ticket-topic">@Model.Title</div>
+            </div>
+            <div>
                 @if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.Oczekujące)
                 {
-                    <span class="badge bg-success">Oczekujące</span>
+                    <span class="status-badge status-open">Oczekujące</span>
                 }
                 else if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
                 {
-                    <span class="badge bg-warning text-dark">W trakcie realizacji</span>
+                    <span class="status-badge status-progress">W trakcie</span>
                 }
                 else
                 {
-                    <span class="badge bg-secondary">Zamknięte</span>
+                    <span class="status-badge status-closed">Zamknięte</span>
                 }
             </div>
-            <div class="text-muted small">Utworzono: @Model.CreatedAt.ToString("g")</div>
         </div>
-    </div>
 
-    <div class="chat-box mb-4 d-flex flex-column">
-        <div class="message-bubble msg-user mb-4 w-100" style="background: #1e3a5f; max-width: 90%;">
-            <div class="msg-info text-end">TY (Treść zgłoszenia) • @Model.CreatedAt.ToString("g")</div>
-            <div>@Model.Content</div>
-        </div>
-        <hr class="border-secondary my-3 w-100" />
+        @* --- OBSZAR WIADOMOŚCI --- *@
+        <div class="chat-messages" id="chatBox">
 
-        @foreach (var msg in Model.Messages.OrderBy(m => m.CreatedAt))
-        {
-            bool isMe = msg.UserId == currentUser.Id;
-            <div class="message-bubble @(isMe ? "msg-user" : "msg-admin")">
-                <div class="msg-info @(isMe ? "text-end" : "text-start")">
-                    @(isMe ? "Ty" : msg.User?.UserName ?? "Support") • @msg.CreatedAt.ToString("g")
+            @* Pierwsza wiadomość (Treść zgłoszenia) - Zawsze jako User *@
+            <div class="msg-wrapper msg-user">
+                <div class="msg-meta">Ty • @Model.CreatedAt.ToString("dd.MM HH:mm")</div>
+                <div class="msg-bubble">
+                    @Model.Content
                 </div>
+            </div>
 
-                @if (!string.IsNullOrEmpty(msg.Message))
-                {
-                    <div class="mb-1">@msg.Message</div>
-                }
+            @* Pętla po wiadomościach *@
+            @foreach (var msg in Model.Messages.OrderBy(m => m.CreatedAt))
+            {
+                bool isMe = msg.UserId == currentUser.Id;
+                <div class="msg-wrapper @(isMe ? "msg-user" : "msg-admin")">
+                    <div class="msg-meta">
+                        @(isMe ? "Ty" : msg.User?.UserName ?? "Support") • @msg.CreatedAt.ToString("dd.MM HH:mm")
+                    </div>
 
-                @if (msg.Attachments != null && msg.Attachments.Any())
-                {
-                    <div class="d-flex flex-wrap gap-2 mt-2">
-                        @foreach (var att in msg.Attachments)
+                    <div class="msg-bubble">
+                        @if (!string.IsNullOrEmpty(msg.Message))
                         {
-                            <a href="#" data-bs-toggle="modal" data-bs-target="#imgModal-@att.Id">
-                                <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)"
-                                     class="preview-thumb" style="width: 100px; height: 100px;" />
-                            </a>
+                            <div>@msg.Message</div>
+                        }
 
-                            <div class="modal fade" id="imgModal-@att.Id" tabindex="-1">
-                                <div class="modal-dialog modal-lg modal-dialog-centered">
-                                    <div class="modal-content bg-dark">
-                                        <div class="modal-body text-center p-0">
-                                            <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)" class="img-fluid" />
+                        @* Załączniki *@
+                        @if (msg.Attachments != null && msg.Attachments.Any())
+                        {
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                @foreach (var att in msg.Attachments)
+                                {
+                                    <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)"
+                                         class="msg-attachment"
+                                         style="width: 100px; height: 100px; object-fit: cover;"
+                                         data-bs-toggle="modal" data-bs-target="#imgModal-@att.Id" />
+
+                                    @* Modal podglądu *@
+                                    <div class="modal fade" id="imgModal-@att.Id" tabindex="-1">
+                                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                                            <div class="modal-content bg-transparent border-0 shadow-none">
+                                                <div class="modal-body text-center p-0">
+                                                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                                                    <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)" class="img-fluid rounded shadow-lg" />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                }
                             </div>
                         }
                     </div>
-                }
-            </div>
-        }
-    </div>
+                </div>
+            }
+        </div>
 
-    @if (Model.Status != praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
-    {
-        <div class="card bg-dark border-secondary">
-            <div class="card-body">
+        @* --- PANEL WPISYWANIA --- *@
+        @if (Model.Status != praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
+        {
+            <div class="chat-input-area">
                 <form asp-action="Reply" method="post" enctype="multipart/form-data" id="replyForm">
                     <input type="hidden" name="id" value="@Model.Id" />
 
-                    <div id="previews" class="d-flex flex-wrap gap-2 mb-2"></div>
+                    @* Kontener na miniatury dodawanych plików *@
+                    <div id="previews" class="upload-preview-container"></div>
 
                     <input type="file" name="attachments" id="attachmentInput" class="d-none" multiple accept="image/*" />
 
-                    <div class="form-group">
-                        <label class="form-label text-white small text-muted">Ctrl+V aby wkleić, lub przycisk spinacza.</label>
-                        <textarea name="message" id="messageInput" class="form-control bg-secondary text-white border-0" rows="3" placeholder="Napisz wiadomość..."></textarea>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-light" onclick="document.getElementById('attachmentInput').click()">
-                            <i class="fas fa-paperclip"></i> Dodaj pliki
+                    <div class="input-wrapper">
+                        <button type="button" class="btn-attach" onclick="document.getElementById('attachmentInput').click()" title="Dodaj plik">
+                            <i class="fas fa-paperclip"></i>
                         </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane me-1"></i> Wyślij
+
+                        <textarea name="message" id="messageInput" class="chat-textarea" rows="1" placeholder="Napisz wiadomość... (Ctrl+V aby wkleić zdjęcie)"></textarea>
+
+                        <button type="submit" class="btn-send-msg" title="Wyślij">
+                            <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
                 </form>
             </div>
-        </div>
-    }
-    else
-    {
-        <div class="alert alert-secondary text-center"><i class="fas fa-lock me-2"></i> Zgłoszenie zamknięte.</div>
-    }
+        }
+        else
+        {
+            <div class="p-3 text-center bg-dark border-top border-secondary text-muted">
+                <i class="fas fa-lock me-2"></i> To zgłoszenie zostało zamknięte.
+            </div>
+        }
+    </div>
 </div>
 
 <script>
-    var chatBox = document.querySelector('.chat-box');
+    // Automatyczne przewijanie na dół
+    var chatBox = document.getElementById('chatBox');
     if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 
+    // Obsługa plików
     const dt = new DataTransfer();
     const attachmentInput = document.getElementById('attachmentInput');
     const previewsDiv = document.getElementById('previews');
@@ -185,6 +418,7 @@
         updateFiles();
     });
 
+    // Obsługa wklejania (Paste)
     document.getElementById('messageInput')?.addEventListener('paste', function (e) {
         var items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (var index in items) {
@@ -195,6 +429,18 @@
             }
         }
     });
+
+    // Auto-resize textarea
+    const tx = document.getElementById('messageInput');
+    if(tx){
+        tx.setAttribute("style", "height:" + (tx.scrollHeight) + "px;overflow-y:hidden;");
+        tx.addEventListener("input", OnInput, false);
+    }
+
+    function OnInput() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + "px";
+    }
 
     function updateFiles(){
         attachmentInput.files = dt.files;
@@ -208,11 +454,12 @@
             const reader = new FileReader();
             reader.onload = function(e){
                 const div = document.createElement('div');
-                div.className = 'preview-container';
-                // ZMIANA: Używamy btn-close
+                div.className = 'upload-thumb-wrapper';
                 div.innerHTML = `
-                    <img src="${e.target.result}" class="preview-thumb" />
-                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-1" aria-label="Close" onclick="removeFile(${i})"></button>
+                    <img src="${e.target.result}" class="upload-thumb" />
+                    <button type="button" class="btn-remove-upload" onclick="removeFile(${i})">
+                        <i class="fas fa-times"></i>
+                    </button>
                 `;
                 previewsDiv.appendChild(div);
             }

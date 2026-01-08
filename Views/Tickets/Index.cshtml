@@ -1,71 +1,267 @@
 ﻿@model IEnumerable<praca_dyplomowa_zesp.Models.Ticket>
 
-@* Styl dla pulsującego wykrzyknika *@
+@{
+    ViewData["Title"] = "Moje Zgłoszenia";
+}
+
 <style>
-    @("@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }")
-    .animate-pulse {
-        animation: pulse 1.5s infinite;
+    /* --- STYL CENTRUM ZGŁOSZEŃ (Cyberpunk) --- */
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-title {
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        background: linear-gradient(90deg, #fff, var(--mid-pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+
+    .btn-new-ticket {
+        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
+        border: none;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 10px 25px;
+        border-radius: 30px;
+        box-shadow: 0 5px 15px rgba(188, 19, 254, 0.3);
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .btn-new-ticket:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(255, 102, 196, 0.6);
+            color: #fff;
+        }
+
+    /* Karta Zgłoszenia */
+    .ticket-card {
+        background: rgba(26, 26, 32, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+        .ticket-card:hover {
+            background: rgba(35, 35, 42, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+    /* Pasek statusu po lewej stronie karty */
+    .status-bar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+    }
+
+    .status-open {
+        background-color: #00ff9d;
+        box-shadow: 0 0 10px #00ff9d;
+    }
+    /* Oczekujące */
+    .status-progress {
+        background-color: #ffc107;
+        box-shadow: 0 0 10px #ffc107;
+    }
+    /* W trakcie */
+    .status-closed {
+        background-color: #6c757d;
+    }
+    /* Zamknięte */
+
+    /* Tytuł zgłoszenia */
+    .ticket-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 5px;
+    }
+
+    .ticket-date {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    /* Badge statusu */
+    .badge-cyber {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 5px 12px;
+        border-radius: 5px;
+        font-weight: 700;
+    }
+
+    .bg-cyber-open {
+        background: rgba(0, 255, 157, 0.1);
+        color: #00ff9d;
+        border: 1px solid rgba(0, 255, 157, 0.3);
+    }
+
+    .bg-cyber-progress {
+        background: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .bg-cyber-closed {
+        background: rgba(108, 117, 125, 0.1);
+        color: #adb5bd;
+        border: 1px solid rgba(108, 117, 125, 0.3);
+    }
+
+    /* Animacja pulsowania (dla nowej odpowiedzi) */
+    @@keyframes cyber-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255, 51, 102, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(255, 51, 102, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 51, 102, 0);
+        }
+    }
+
+    .new-reply-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: #ff3366;
+        font-weight: bold;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        background: rgba(255, 51, 102, 0.1);
+        padding: 5px 10px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 51, 102, 0.4);
+        animation: cyber-pulse 2s infinite;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 20px;
+        border: 2px dashed rgba(255, 255, 255, 0.1);
     }
 </style>
 
 <div class="container mt-4">
-    <h2>Moje zgłoszenia</h2>
-    <p>
-        <a asp-action="Create" class="btn btn-primary">Nowe zgłoszenie</a>
-    </p>
 
+    @* --- NAGŁÓWEK --- *@
+    <div class="header-section">
+        <div>
+            <h2 class="page-title">Moje Zgłoszenia</h2>
+            <p class="text-muted mb-0 small">Śledź status swoich zapytań do administracji.</p>
+        </div>
+        <a asp-action="Create" class="btn-new-ticket">
+            <i class="fas fa-plus-circle"></i> Nowe Zgłoszenie
+        </a>
+    </div>
+
+    @* --- LISTA ZGŁOSZEŃ --- *@
     @if (!Model.Any())
     {
-        <div class="alert alert-info">Nie masz jeszcze żadnych zgłoszeń.</div>
+        <div class="empty-state">
+            <i class="fas fa-inbox fa-4x mb-3 text-muted" style="opacity: 0.3;"></i>
+            <h4 class="text-white">Brak zgłoszeń</h4>
+            <p class="text-muted">Nie masz jeszcze żadnych aktywnych spraw.</p>
+            <a asp-action="Create" class="btn btn-outline-light mt-2 rounded-pill px-4">Utwórz pierwsze</a>
+        </div>
     }
     else
     {
-        <table class="table table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>Temat</th>
-                    <th>Status</th>
-                    <th>Data utworzenia</th>
-                    <th>Akcje</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="row">
+            <div class="col-12">
                 @foreach (var item in Model)
                 {
-                    <tr>
-                        <td>
-                            @item.Title
-                            
-                            @* --- PUNKT 5: Wykrzyknik dla użytkownika, gdy Admin odpisze --- *@
-                            @if (item.HasUnreadResponse)
-                            {
-                                <span class="ms-2 text-danger" title="Nowa odpowiedź od administracji!" data-bs-toggle="tooltip">
-                                    <i class="fas fa-exclamation-circle fa-lg animate-pulse"></i>
-                                </span>
-                            }
-                        </td>
-                        <td>
-                            @if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
-                            {
-                                <span class="badge bg-secondary">Zamknięte</span>
-                            }
-                            else if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
-                            {
-                                <span class="badge bg-warning text-dark">W trakcie</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-success">Oczekujące</span>
-                            }
-                        </td>
-                        <td>@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td>
-                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info">Szczegóły</a>
-                        </td>
-                    </tr>
+                    // Logika stylów dla statusu
+                    string statusClass = "";
+                    string badgeClass = "";
+                    string statusText = "";
+
+                    if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
+                    {
+                        statusClass = "status-closed";
+                        badgeClass = "bg-cyber-closed";
+                        statusText = "Zamknięte";
+                    }
+                    else if (item.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
+                    {
+                        statusClass = "status-progress";
+                        badgeClass = "bg-cyber-progress";
+                        statusText = "W trakcie";
+                    }
+                    else
+                    {
+                        statusClass = "status-open";
+                        badgeClass = "bg-cyber-open";
+                        statusText = "Oczekujące";
+                    }
+
+                    <div class="ticket-card">
+                        @* Pasek statusu *@
+                        <div class="status-bar @statusClass"></div>
+
+                        @* Lewa sekcja: Info *@
+                        <div class="d-flex flex-column justify-content-center ps-3">
+                            <div class="d-flex align-items-center gap-3 mb-1">
+                                <span class="ticket-title">@item.Title</span>
+
+                                @* BADGE STATUSU *@
+                                <span class="badge-cyber @badgeClass">@statusText</span>
+
+                                @* --- PUNKT 5: NOWA ODPOWIEDŹ (Pulsacja) --- *@
+                                @if (item.HasUnreadResponse)
+                                {
+                                    <div class="new-reply-indicator" title="Otrzymałeś nową odpowiedź!" data-bs-toggle="tooltip">
+                                        <i class="fas fa-envelope"></i> Nowa Wiadomość
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="ticket-date">
+                                <i class="far fa-calendar-alt me-1"></i> Utworzono: @item.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                            </div>
+                        </div>
+
+                        @* Prawa sekcja: Przycisk *@
+                        <div>
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-light rounded-pill px-4" style="border-color: rgba(255,255,255,0.2);">
+                                Szczegóły <i class="fas fa-chevron-right ms-1 small"></i>
+                            </a>
+                        </div>
+                    </div>
                 }
-            </tbody>
-        </table>
+            </div>
+        </div>
     }
 </div>
 

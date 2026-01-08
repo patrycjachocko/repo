@@ -140,6 +140,8 @@
         padding: 20px;
         height: 100%;
         transition: all 0.3s;
+        display: flex;
+        flex-direction: column;
     }
 
         .review-card:hover {
@@ -162,6 +164,7 @@
         height: 40px;
         border-radius: 50%;
         border: 2px solid var(--neon-blue);
+        object-fit: cover;
     }
 
     .section-title {
@@ -172,10 +175,18 @@
         text-shadow: 0 0 15px rgba(255, 102, 196, 0.4);
     }
 
-    /* Badge w recenzji */
-    .star-rating {
+    /* Nowa, lepsza ramka dla oceny */
+    .rating-badge {
+        background-color: rgba(0,0,0,0.5);
+        border: 1px solid #ffc107;
         color: #ffc107;
+        padding: 4px 10px;
+        border-radius: 8px;
         font-weight: bold;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        box-shadow: 0 0 5px rgba(255, 193, 7, 0.3);
     }
 </style>
 
@@ -288,6 +299,12 @@
                     double authorRating = 0;
                     if (userRatings.ContainsKey(review.UserId)) { authorRating = userRatings[review.UserId]; }
 
+                    // --- LOGIKA KOLORU ROLI (DODANO) ---
+                    string nickClass = "text-white";
+                    var userRole = review.User?.Role?.ToLower();
+                    if (userRole == "admin") { nickClass = "text-danger fw-bold"; }
+                    else if (userRole == "moderator") { nickClass = "text-success fw-bold"; }
+
                     <div class="col-md-4">
                         <div class="review-card">
                             <div class="review-header">
@@ -295,14 +312,16 @@
                                     <img src="@(review.User?.ProfilePicture != null ? Url.Action("GetAvatar", "Profile", new { id = review.UserId }) : "/uploads/avatars/default_avatar.png")"
                                          class="avatar-img me-3" alt="Avatar">
                                     <div>
-                                        <div class="fw-bold text-white">@review.User?.UserName</div>
+                                        @* Użycie klasy nickClass dla koloru roli *@
+                                        <div class="fw-bold @nickClass">@review.User?.UserName</div>
                                         <div class="small text-muted">@review.CreatedAt.ToString("dd.MM.yyyy")</div>
                                     </div>
                                 </div>
 
                                 @if (authorRating > 0)
                                 {
-                                    <div class="star-rating">
+                                    @* ZMIANA: Nowa ramka dla oceny *@
+                                    <div class="rating-badge">
                                         <i class="fas fa-star me-1"></i>@authorRating.ToString("0.#")
                                     </div>
                                 }
@@ -312,7 +331,6 @@
                                 @if (review.Content.Length > 150)
                                 {
                                     @review.Content.Substring(0, 150)
-                        
                                     <text>...</text>
                                 }
                                 else
