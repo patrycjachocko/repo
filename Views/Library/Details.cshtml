@@ -7,69 +7,373 @@
 }
 
 <style>
-    /* --- STYLIZACJA SUWAKA MANUALNEGO (Niewidzialny Overlay) --- */
+    /* --- DEFINICJA ZMIENNYCH (Dla pewności) --- */
+    :root {
+        --neon-cyan: #00f3ff;
+        --neon-pink: #ff66c4;
+        --track-bg: #22222a;
+    }
+
+    /* --- KARTA OKŁADKI --- */
+    .cover-card {
+        background: rgba(26, 26, 32, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .cover-img {
+        width: 100%;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        margin-bottom: 20px;
+    }
+
+    /* --- NAPRAWIONY PASEK POSTĘPU --- */
+
+    /* 1. Tło paska (Pusta rura) */
+    .progress-track {
+        background-color: var(--track-bg);
+        border-radius: 10px; /* Zaokrąglenie */
+        height: 16px; /* Wysokość paska */
+        width: 100%;
+        position: relative;
+        overflow: hidden; /* Żeby wypełnienie nie wychodziło poza rogi */
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); /* Wewnętrzny cień dla głębi */
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* 2. Wypełnienie paska (Kolor) */
+    .neon-fill {
+        height: 100%;
+        width: 0%; /* JS to zmieni */
+        /* Solidny kolor bazowy + Gradient */
+        background-color: var(--neon-cyan);
+        background: linear-gradient(90deg, var(--neon-cyan) 0%, var(--neon-pink) 100%);
+        /* Poświata */
+        box-shadow: 0 0 15px var(--neon-pink);
+        transition: width 0.1s linear;
+        display: block; /* Ważne */
+    }
+
+    /* 3. Niewidzialny suwak (Sterowanie) */
     .range-overlay {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        opacity: 0; /* Całkowicie niewidoczny */
+        opacity: 0; /* Niewidoczny, ale klikalny */
         cursor: pointer;
-        z-index: 10; /* Musi być nad paskiem wizualnym */
+        z-index: 20; /* Musi być na wierzchu */
         margin: 0;
     }
 
-    /* --- INNE STYLE --- */
-    .achievement-icon {
-        width: 64px;
-        height: 64px;
-        margin-right: 15px;
-        transition: filter 0.3s ease;
+    /* --- RESZTA STYLÓW --- */
+    .notes-area {
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #ddd !important;
+        border-radius: 10px;
+        font-family: 'Consolas', monospace;
+        font-size: 0.9rem;
     }
 
-        .achievement-icon.locked {
-            filter: grayscale(100%) opacity(0.6);
+        .notes-area:focus {
+            border-color: var(--neon-cyan) !important;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
         }
 
-        .achievement-icon.unlocked {
-            filter: grayscale(0%);
-        }
-
-    .form-check-label .badge {
-        cursor: pointer;
+    .game-title {
+        font-weight: 900;
+        text-transform: uppercase;
+        color: #fff;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
     }
 
-    #notes-area {
-        resize: vertical;
-        border: 1px solid #ced4da;
-        background-color: #f8f9fa;
-        transition: background-color 0.3s;
-    }
-
-        #notes-area:focus {
-            background-color: #fff;
-            border-color: #80bdff;
-            outline: 0;
-        }
-
-    #save-status, #progress-save-status {
+    .btn-action {
+        border-radius: 20px;
+        text-transform: uppercase;
+        font-weight: 700;
         font-size: 0.85rem;
-        transition: opacity 0.5s;
-        opacity: 0;
+        padding: 8px 20px;
+    }
+
+    .todo-card {
+        background: rgba(26, 26, 32, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .todo-header {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .list-group-item-dark {
+        background-color: transparent;
+        border-color: rgba(255,255,255,0.05);
+        color: #ddd;
     }
 
     .todo-completed {
         text-decoration: line-through;
-        color: #6c757d;
+        color: #666;
     }
+
+    .achievement-item {
+        background: rgba(26, 26, 32, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 10px;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+
+        .achievement-item:hover {
+            background: rgba(26, 26, 32, 0.9);
+            border-color: var(--neon-cyan);
+        }
+
+    .achievement-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 8px;
+        margin-right: 15px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+        .achievement-icon.locked {
+            filter: grayscale(100%) brightness(0.5);
+        }
+
+        .achievement-icon.unlocked {
+            filter: grayscale(0%);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
 </style>
+
+<div class="container-fluid px-4 py-4">
+
+    <div class="row g-4">
+        @* --- LEWA KOLUMNA (Okładka, Postęp, Notatki) --- *@
+        <div class="col-lg-4 col-xl-3">
+            <div class="cover-card">
+                <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="cover-img" alt="@Model.Name">
+
+                @* --- SEKCJA POSTĘPU --- *@
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-white text-uppercase small" style="letter-spacing: 1px;">POSTĘP</span>
+                        <span id="@(hasAchievements ? "auto-progress-label" : "manual-progress-label")" class="fw-bold" style="color: var(--neon-cyan); font-size: 1.1rem;">
+                            @Model.CurrentUserStoryProgressPercent%
+                        </span>
+                    </div>
+
+                    <div class="position-relative" style="height: 16px;">
+
+                        @* 1. Tło (Track) i Wypełnienie (Fill) *@
+                        <div class="progress-track">
+                            <div id="@(hasAchievements ? "game-progress-bar" : "manual-visual-bar")"
+                                 class="neon-fill"
+                                 style="width: @Model.CurrentUserStoryProgressPercent%;">
+                            </div>
+                        </div>
+
+                        @* 2. Suwak Manualny (Tylko jeśli brak osiągnięć) *@
+                        @if (!hasAchievements)
+                        {
+                            <input type="range" class="range-overlay"
+                                   min="0" max="100" step="1"
+                                   id="manual-progress-range"
+                                   value="@Model.CurrentUserStoryProgressPercent"
+                                   title="Przesuń, aby zmienić postęp">
+                        }
+                    </div>
+
+                    @* Status zapisu *@
+                    @if (!hasAchievements)
+                    {
+                        <div class="text-end mt-1" style="height: 15px;">
+                            <small id="progress-save-status" class="fw-bold" style="font-size: 0.7rem;"></small>
+                        </div>
+                    }
+                </div>
+
+                <h5 class="text-uppercase fw-bold text-white mb-2 mt-4"><i class="bi bi-journal-text me-2"></i>Notatki</h5>
+                <textarea id="notes-area" class="form-control notes-area" rows="10" placeholder="Zapisz swoje myśli...">@(Model.Notes)</textarea>
+                <div class="text-end mt-1" style="height: 20px;">
+                    <small id="save-status" class="fw-bold" style="font-size: 0.7rem;"></small>
+                </div>
+            </div>
+        </div>
+
+        @* --- PRAWA KOLUMNA (Główna) --- *@
+        <div class="col-lg-8 col-xl-9">
+
+            <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
+                <h1 class="game-title mb-0">@Model.Name</h1>
+
+                <div class="d-flex gap-2">
+                    <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info btn-action">
+                        <i class="bi bi-book me-1"></i> Poradniki
+                    </a>
+                    <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="btn btn-outline-primary btn-action">
+                        <i class="bi bi-chat-text me-1"></i> Recenzje
+                    </a>
+                    <button type="button" class="btn btn-outline-danger btn-action" data-bs-toggle="modal" data-bs-target="#deleteGameModal">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            @* INFO *@
+            <div class="mb-4 text-muted small text-uppercase fw-bold">
+                <span class="me-3"><i class="bi bi-calendar3 me-1"></i> @(Model.ReleaseDate ?? "TBA")</span>
+                <span class="me-3"><i class="bi bi-code-slash me-1"></i> @(Model.Developer ?? "Unknown")</span>
+                <span><i class="bi bi-folder-plus me-1"></i> Dodano: @Model.DateAddedToLibrary.ToString("dd.MM.yyyy")</span>
+            </div>
+
+            <hr class="border-secondary mb-4" />
+
+            @* OCENY *@
+            @if (Model.Ratings != null)
+            {
+                <div class="mb-5">
+                    <partial name="_GameRatingPartial" model="Model.Ratings" />
+                </div>
+            }
+
+            <div class="row g-4">
+
+                @* --- TO-DO LIST --- *@
+                <div class="col-xl-6">
+                    <div class="todo-card h-100">
+                        <div class="todo-header">
+                            <h5 class="mb-0 text-white"><i class="bi bi-check2-square me-2 text-success"></i>Cele / Questy</h5>
+                            <div>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="deleteCompletedToDo()" title="Usuń ukończone"><i class="bi bi-trash"></i></button>
+                                <button class="btn btn-sm btn-outline-danger ms-1" onclick="resetToDoList()" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></button>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <div class="input-group mb-3">
+                                <input type="text" id="newToDoInput" class="form-control form-control-dark" placeholder="Nowy cel...">
+                                <button class="btn btn-success" type="button" onclick="addToDoItem()"><i class="bi bi-plus"></i></button>
+                            </div>
+
+                            <ul id="toDoList" class="list-group list-group-flush">
+                                @foreach (var item in Model.ToDoItems)
+                                {
+                                    <li class="list-group-item list-group-item-dark d-flex justify-content-between align-items-center px-0" id="item-@item.Id">
+                                        <div class="form-check flex-grow-1 ms-2">
+                                            <input class="form-check-input bg-dark border-secondary" type="checkbox" onchange="toggleToDo(@item.Id, this)" id="todo-check-@item.Id" @(item.IsCompleted ? "checked" : "")>
+                                            <label class="form-check-label w-100 ps-2 @(item.IsCompleted ? "todo-completed" : "")" for="todo-check-@item.Id" style="cursor: pointer;">@item.Content</label>
+                                        </div>
+                                        <button class="btn btn-sm text-danger border-0" onclick="deleteToDo(@item.Id)"><i class="bi bi-x-lg"></i></button>
+                                    </li>
+                                }
+                            </ul>
+                            <div id="todo-empty-info" class="text-center text-muted mt-3 small" style="@(Model.ToDoItems.Any() ? "display:none;" : "")">
+                                Brak aktywnych questów.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* --- OSIĄGNIĘCIA --- *@
+                <div class="col-xl-6">
+                    <h5 class="text-white mb-3 text-uppercase fw-bold"><i class="bi bi-trophy me-2 text-warning"></i>Osiągnięcia</h5>
+
+                    @if (Model.IsSteamGame && !Model.IsSteamConnected)
+                    {
+                        <div class="alert alert-warning bg-dark border-warning text-warning">
+                            <i class="bi bi-steam me-2"></i> Połącz konto Steam w profilu, aby synchronizować osiągnięcia.
+                        </div>
+                    }
+
+                    @if (hasAchievements)
+                    {
+                        <div style="max-height: 500px; overflow-y: auto; padding-right: 5px;">
+                            @foreach (var ach in Model.Achievements)
+                            {
+                                var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
+                                var checkboxId = "ach-" + safeId;
+                                bool isSteamUnlocked = Model.SteamUnlockedAchievementIds != null && Model.SteamUnlockedAchievementIds.Contains(ach.ExternalId);
+
+                                <div class="achievement-item p-2 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@ach.IconUrl" alt="Icon" id="img-@safeId" class="achievement-icon @(ach.IsUnlocked ? "unlocked" : "locked")">
+                                        <div>
+                                            <div class="fw-bold text-white small">@ach.Name</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">@ach.Description</div>
+                                        </div>
+                                    </div>
+
+                                    @if (isSteamUnlocked)
+                                    {
+                                        <span class="badge bg-primary me-2"><i class="bi bi-steam"></i></span>
+                                    }
+                                    else
+                                    {
+                                        <div class="form-check form-switch me-2">
+                                            <input class="form-check-input achievement-checkbox bg-dark border-secondary" type="checkbox" role="switch" id="@checkboxId" data-external-id="@ach.ExternalId" @(ach.IsUnlocked ? "checked" : "")>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info bg-dark border-info text-info">
+                            <i class="bi bi-info-circle me-2"></i> Brak wbudowanych osiągnięć. Użyj suwaka postępu.
+                        </div>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- MODAL USUWANIA --- *@
+<div class="modal fade" id="deleteGameModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background-color: #1a1a20; border: 1px solid #dc3545; box-shadow: 0 0 30px rgba(220, 53, 69, 0.2);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-danger fw-bold text-uppercase">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Usuwanie gry
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4 text-white">
+                <p class="fs-5 mb-2">Czy na pewno chcesz usunąć <strong>@Model.Name</strong>?</p>
+                <p class="text-muted small">Utracisz wszystkie notatki, postępy i statusy zadań.</p>
+            </div>
+            <div class="modal-footer border-secondary justify-content-center">
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" name="Id" value="@Model.DbId" />
+                    <button type="button" class="btn btn-outline-light px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-danger px-4">Tak, usuń</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
     const libraryGameId = @Model.DbId;
 
-    // --- FUNKCJE TO-DO LIST ---
+    // --- JS: To-Do ---
     function addToDoItem() {
         const input = document.getElementById('newToDoInput');
         const content = input.value;
@@ -78,12 +382,12 @@
             if (data.success) {
                 const list = document.getElementById('toDoList');
                 const newItemHtml = `
-                    <li class="list-group-item d-flex justify-content-between align-items-center" id="item-${data.id}">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" onchange="toggleToDo(${data.id}, this)">
-                            <label class="form-check-label">${escapeHtml(data.content)}</label>
+                    <li class="list-group-item list-group-item-dark d-flex justify-content-between align-items-center px-0" id="item-${data.id}">
+                        <div class="form-check flex-grow-1 ms-2">
+                            <input class="form-check-input bg-dark border-secondary" type="checkbox" onchange="toggleToDo(${data.id}, this)">
+                            <label class="form-check-label w-100 ps-2" style="cursor: pointer;">${escapeHtml(data.content)}</label>
                         </div>
-                        <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteToDo(${data.id})">X</button>
+                        <button class="btn btn-sm text-danger border-0" onclick="deleteToDo(${data.id})"><i class="bi bi-x-lg"></i></button>
                     </li>`;
                 list.insertAdjacentHTML('beforeend', newItemHtml);
                 input.value = '';
@@ -133,22 +437,16 @@
         return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    // --- DOCUMENT READY ---
     $(document).ready(function () {
-
-        // --- OBSŁUGA MANUALNEGO SUWAKA ---
+        // --- SUWAK MANUALNY ---
         const slider = document.getElementById('manual-progress-range');
         if (slider) {
-            // Zdarzenie input: Aktualizuje wizualny pasek Bootstrapa i tekst "na żywo"
             $(slider).on('input', function() {
                 var val = $(this).val();
-                // Aktualizujemy szerokość PRAWDZIWEGO paska pod spodem
                 $('#manual-visual-bar').css('width', val + '%');
-                // Aktualizujemy tekst nad paskiem
                 $('#manual-progress-label').text(val + '%');
             });
 
-            // Zdarzenie change: Zapis do bazy (po puszczeniu myszki)
             $(slider).on('change', function() {
                 var val = $(this).val();
                 var statusSpan = $('#progress-save-status');
@@ -161,7 +459,7 @@
                     headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                     success: function (response) {
                         if (response.success) {
-                            statusSpan.text("Zapisano").css('color', 'green');
+                            statusSpan.text("Zapisano").css('color', '#00f3ff');
                             setTimeout(function () { statusSpan.css('opacity', 0); }, 2000);
                         } else statusSpan.text("Błąd").css('color', 'red');
                     },
@@ -170,21 +468,17 @@
             });
         }
 
-        // --- OBSŁUGA AUTOMATYCZNEGO PASKA (OSIĄGNIĘCIA) ---
+        // --- AUTOMATYCZNY POSTĘP ---
         function recalculateProgress() {
-            var total = $('.achievement-list-item').length;
-            if (total === 0) return;
+            var totalAll = $('.achievement-item').length;
+            if (totalAll === 0) return;
             var unlocked = $('.achievement-icon.unlocked').length;
-            var percent = Math.round((unlocked / total) * 100);
+            var percent = Math.round((unlocked / totalAll) * 100);
 
-            // Aktualizacja wizualnego paska
             var progressBar = $('#game-progress-bar');
             if(progressBar.length) {
                 progressBar.css('width', percent + '%');
-                progressBar.attr('aria-valuenow', percent);
-                // USUNIĘTO: progressBar.text(percent + '%'); -> Tekst w środku usunięty na prośbę
             }
-            // Aktualizacja tekstu NAD paskiem
             $('#auto-progress-label').text(percent + '%');
         }
 
@@ -192,7 +486,8 @@
             var igdbGameId = @Model.IgdbGameId;
             var achievementId = $(this).data('external-id');
             var isChecked = $(this).is(':checked');
-            var imgElement = $('#img-' + achievementId.replace(/[^a-zA-Z0-9]/g, '_'));
+            var row = $(this).closest('.achievement-item');
+            var imgElement = row.find('.achievement-icon');
             var checkbox = $(this);
 
             $.ajax({
@@ -202,14 +497,10 @@
                 headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                 success: function (response) {
                     if (response.success) {
-                        var label = $('label[for="' + checkbox.attr('id') + '"]');
-                        var badge = label.find('.badge');
                         if (response.isUnlocked) {
                             imgElement.removeClass('locked').addClass('unlocked');
-                            badge.removeClass('bg-secondary').addClass('bg-success').text("Odblokowane");
                         } else {
                             imgElement.removeClass('unlocked').addClass('locked');
-                            badge.removeClass('bg-success').addClass('bg-secondary').text("Zablokowane");
                         }
                         recalculateProgress();
                     } else checkbox.prop('checked', !isChecked);
@@ -218,7 +509,7 @@
             });
         });
 
-        // --- Auto-zapis notatek ---
+        // --- NOTATKI ---
         $('#notes-area').on('blur', function () {
             var notesContent = $(this).val();
             var statusSpan = $('#save-status');
@@ -231,7 +522,7 @@
                 headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
                 success: function (response) {
                     if (response.success) {
-                        statusSpan.text("Zapisano pomyślnie!").css('color', 'green');
+                        statusSpan.text("Zapisano pomyślnie!").css('color', '#00f3ff');
                         setTimeout(function () { statusSpan.css('opacity', 0); }, 2000);
                     } else statusSpan.text("Błąd zapisu.").css('color', 'red');
                 },
@@ -244,230 +535,3 @@
         });
     });
 </script>
-
-<div class="row">
-    @* --- LEWA KOLUMNA (Okładka, Postęp, Notatki) --- *@
-    <div class="col-md-4">
-        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded mb-3 shadow-sm" alt="Okładka @Model.Name">
-
-        @if (hasAchievements)
-        {
-            @* --- WARIANT 1: Pasek automatyczny (gdy są osiągnięcia) --- *@
-            <p class="mb-1 d-flex justify-content-between align-items-center">
-                <strong>Postęp:</strong>
-                <span id="auto-progress-label" class="fw-bold text-success h5 mb-0">@Model.CurrentUserStoryProgressPercent%</span>
-            </p>
-
-            <div class="progress mb-3" style="height: 20px;">
-                <div id="game-progress-bar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar"
-                     style="width: @Model.CurrentUserStoryProgressPercent%;"
-                     aria-valuenow="@Model.CurrentUserStoryProgressPercent" aria-valuemin="0" aria-valuemax="100">
-                    @* Tekst w środku usunięty *@
-                </div>
-            </div>
-        }
-        else
-        {
-            @* --- WARIANT 2: Suwak ręczny (wyglądający IDENCIKO jak pasek) --- *@
-            <p class="mb-1 d-flex justify-content-between align-items-center">
-                <strong>Postęp:</strong>
-                <span id="manual-progress-label" class="fw-bold text-success h5 mb-0">@Model.CurrentUserStoryProgressPercent%</span>
-            </p>
-
-            <div class="position-relative mb-3" style="height: 20px;">
-
-                @* 1. WARSTWA WIZUALNA: Prawdziwy Pasek Bootstrapa (pod spodem) *@
-                <div class="progress" style="height: 100%;">
-                    <div id="manual-visual-bar"
-                         class="progress-bar bg-success progress-bar-striped progress-bar-animated"
-                         role="progressbar"
-                         style="width: @Model.CurrentUserStoryProgressPercent%">
-                    </div>
-                </div>
-
-                @* 2. WARSTWA FUNKCJONALNA: Niewidzialny Input (na wierzchu) *@
-                <input type="range" class="range-overlay"
-                       min="0" max="100" step="1"
-                       id="manual-progress-range"
-                       value="@Model.CurrentUserStoryProgressPercent"
-                       title="Przesuń, aby zmienić postęp">
-
-                @* Status zapisu *@
-                <div class="d-flex justify-content-end mt-1" style="height: 15px;">
-                    <span id="progress-save-status"></span>
-                </div>
-            </div>
-        }
-
-        <h4>Notatki</h4>
-        <div class="form-group">
-            <textarea id="notes-area" class="form-control" rows="12" placeholder="Notatki...">@(Model.Notes)</textarea>
-            <div class="mt-1" style="min-height: 20px;">
-                <span id="save-status"></span>
-            </div>
-        </div>
-    </div>
-
-    @* --- PRAWA KOLUMNA (Tytuł, Akcje, Info, Oceny, ToDo, Osiągnięcia) --- *@
-    <div class="col-md-8">
-        <h1>@Model.Name</h1>
-        <hr />
-
-        @* --- PRZYCISKI AKCJI --- *@
-        <div class="mb-3 d-flex gap-2">
-            @* 1. Poradniki *@
-            <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-outline-info">
-                <i class="bi bi-book"></i> Poradniki
-            </a>
-
-            @* 2. Recenzje *@
-            <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="btn btn-outline-primary">
-                <i class="bi bi-chat-left-text"></i> Recenzje
-            </a>
-
-            @* 3. Usuń (ZMODYFIKOWANE: Otwiera modal) *@
-            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteGameModal">
-                <i class="bi bi-trash"></i> Usuń
-            </button>
-        </div>
-
-        @* --- DANE O GRZE --- *@
-        <dl class="row text-muted mb-4">
-            <dt class="col-sm-3">Deweloper</dt>
-            <dd class="col-sm-9">@(Model.Developer ?? "Nieznany")</dd>
-            <dt class="col-sm-3">Data wydania</dt>
-            <dd class="col-sm-9">@(Model.ReleaseDate ?? "Nieznana")</dd>
-            <dt class="col-sm-3">Data dodania</dt>
-            <dd class="col-sm-9">@Model.DateAddedToLibrary.ToString("dd.MM.yyyy")</dd>
-            <dt class="col-sm-3">Gatunki</dt>
-            <dd class="col-sm-9">@(Model.Genres != null && Model.Genres.Any() ? string.Join(", ", Model.Genres) : "Nieznane")</dd>
-        </dl>
-
-        <hr />
-
-        @* --- OCENY --- *@
-        <div class="mb-4">
-            @if (Model.Ratings != null)
-            {
-                <partial name="_GameRatingPartial" model="Model.Ratings" />
-            }
-        </div>
-
-        @* --- TO-DO LISTA --- *@
-        <div class="card mb-4 border-secondary shadow-sm">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i> To-Do List</h5>
-                <div>
-                    <button class="btn btn-sm btn-outline-warning text-white" onclick="deleteCompletedToDo()">Usuń ukończone</button>
-                    <button class="btn btn-sm btn-outline-danger ms-1 text-white" onclick="resetToDoList()">Reset</button>
-                </div>
-            </div>
-            <div class="card-body bg-light">
-                <div class="input-group mb-3">
-                    <input type="text" id="newToDoInput" class="form-control" placeholder="Dodaj cel...">
-                    <button class="btn btn-success" type="button" onclick="addToDoItem()"><i class="bi bi-plus-lg"></i></button>
-                </div>
-                <ul id="toDoList" class="list-group list-group-flush rounded bg-white">
-                    @foreach (var item in Model.ToDoItems)
-                    {
-                        <li class="list-group-item d-flex justify-content-between align-items-center" id="item-@item.Id">
-                            <div class="form-check flex-grow-1">
-                                <input class="form-check-input" type="checkbox" onchange="toggleToDo(@item.Id, this)" id="todo-check-@item.Id" @(item.IsCompleted ? "checked" : "")>
-                                <label class="form-check-label w-100 @(item.IsCompleted ? "todo-completed" : "")" for="todo-check-@item.Id" style="cursor: pointer;">@item.Content</label>
-                            </div>
-                            <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteToDo(@item.Id)">X</button>
-                        </li>
-                    }
-                </ul>
-                <div id="todo-empty-info" class="text-center text-muted mt-2" style="@(Model.ToDoItems.Any() ? "display:none;" : "") font-size: 0.9em;">
-                    Brak zadań.
-                </div>
-            </div>
-        </div>
-
-        <h3 class="mt-4"><i class="bi bi-trophy"></i> Osiągnięcia</h3>
-        @if (Model.IsSteamGame && !Model.IsSteamConnected)
-        {
-            <div class="alert alert-warning">
-                <i class="bi bi-steam"></i> Połącz konto Steam w profilu, aby pobrać postęp.
-            </div>
-        }
-
-        @if (hasAchievements)
-        {
-            <form>
-                @Html.AntiForgeryToken()
-                <ul class="list-group">
-                    @foreach (var ach in Model.Achievements)
-                    {
-                        var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
-                        var checkboxId = "ach-" + safeId;
-                        bool isSteamUnlocked = Model.SteamUnlockedAchievementIds != null && Model.SteamUnlockedAchievementIds.Contains(ach.ExternalId);
-
-                        <li class="list-group-item d-flex justify-content-between align-items-center achievement-list-item">
-                            <div class="d-flex align-items-center">
-                                <img src="@ach.IconUrl" alt="Ikona" id="img-@safeId" class="achievement-icon rounded @(ach.IsUnlocked ? "unlocked" : "locked")">
-                                <div>
-                                    <strong>@ach.Name</strong>
-                                    <p class="mb-0 text-muted" style="font-size: 0.9rem;">@ach.Description</p>
-                                </div>
-                            </div>
-                            @if (isSteamUnlocked)
-                            {
-                                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Steam</span>
-                            }
-                            else
-                            {
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input achievement-checkbox" type="checkbox" role="switch" id="@checkboxId" data-external-id="@ach.ExternalId" @(ach.IsUnlocked ? "checked" : "")>
-                                    <label class="form-check-label" for="@checkboxId">
-                                        <span class="badge @(ach.IsUnlocked ? "bg-success" : "bg-secondary")">@(ach.IsUnlocked ? "Odblokowane" : "Zablokowane")</span>
-                                    </label>
-                                </div>
-                            }
-                        </li>
-                    }
-                </ul>
-            </form>
-        }
-        else
-        {
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Brak wbudowanych osiągnięć. Ustaw postęp ręcznie suwakiem.
-            </div>
-        }
-    </div>
-</div>
-
-@* --- MODAL USUWANIA GRY --- *@
-<div class="modal fade" id="deleteGameModal" tabindex="-1" aria-labelledby="deleteGameModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content border-danger">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteGameModalLabel"><i class="bi bi-exclamation-triangle-fill"></i> Usuń grę z biblioteki</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <h4 class="text-danger mb-3">Czy na pewno chcesz usunąć tę grę?</h4>
-                <div class="alert alert-danger">
-                    Tej operacji nie można cofnąć. Utracisz wszystkie zapisane postępy i statusy osiągnięć dla tej gry.
-                </div>
-                <hr />
-                <dl class="row">
-                    <dt class="col-sm-4">Gra:</dt>
-                    <dd class="col-sm-8 fw-bold">@Model.Name</dd>
-
-                    <dt class="col-sm-4">Data dodania:</dt>
-                    <dd class="col-sm-8">@Model.DateAddedToLibrary.ToString("dd.MM.yyyy")</dd>
-                </dl>
-            </div>
-            <div class="modal-footer">
-                <form asp-action="Delete" method="post">
-                    <input type="hidden" name="Id" value="@Model.DbId" />
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                    <button type="submit" class="btn btn-danger">Tak, usuń</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>

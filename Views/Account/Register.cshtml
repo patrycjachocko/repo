@@ -4,64 +4,163 @@
     ViewData["Title"] = "Rejestracja";
 }
 
-<div class="container py-5">
-    <div class="row justify-content-center">
+<style>
+    /* --- STYL REJESTRACJI (CYBERPUNK) --- */
+
+    .register-wrapper {
+        min-height: 85vh; /* Centrowanie w pionie */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+    }
+
+    .register-card {
+        background: rgba(26, 26, 32, 0.85); /* Ciemne szkło */
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        box-shadow: 0 0 60px rgba(0, 255, 157, 0.15); /* Zielona poświata */
+        overflow: hidden;
+        position: relative;
+    }
+
+        /* Górna krawędź neonowa (zielono-fioletowa) */
+        .register-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #00ff9d, var(--mid-pink));
+            box-shadow: 0 0 15px #00ff9d;
+        }
+
+    .register-title {
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+        /* Gradient tekstu */
+        background: linear-gradient(45deg, #fff, #00ff9d);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 20px rgba(0, 255, 157, 0.3);
+    }
+
+    /* Pola formularza */
+    .form-floating > .form-control {
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff !important;
+        border-radius: 10px;
+    }
+
+        .form-floating > .form-control:focus {
+            border-color: #00ff9d;
+            box-shadow: 0 0 15px rgba(0, 255, 157, 0.2);
+        }
+
+    .form-floating > label {
+        color: #aaa;
+    }
+
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        color: #00ff9d;
+        opacity: 0.9;
+    }
+
+    /* Przycisk Rejestracji */
+    .btn-register {
+        background: linear-gradient(45deg, #00cc7a, #00ff9d);
+        border: none;
+        color: #000; /* Czarny tekst na jasnym zielonym */
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+        box-shadow: 0 5px 15px rgba(0, 255, 157, 0.2);
+    }
+
+        .btn-register:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(0, 255, 157, 0.5);
+            color: #000;
+        }
+
+    /* Link logowania */
+    .login-link {
+        color: var(--mid-pink);
+        transition: all 0.3s;
+    }
+
+        .login-link:hover {
+            color: #fff;
+            text-shadow: 0 0 10px var(--mid-pink);
+        }
+</style>
+
+<div class="container register-wrapper">
+    <div class="row justify-content-center w-100">
         <div class="col-md-7 col-lg-6 col-xl-5">
 
-            <div class="card border-0 shadow-lg rounded-3">
+            <div class="card register-card">
                 <div class="card-body p-4 p-sm-5">
 
                     <div class="text-center mb-4">
-                        <h2 class="fw-bold text-success">Dołącz do nas!</h2>
-                        <p class="text-muted">Stwórz nowe konto w kilka sekund.</p>
+                        <h2 class="register-title">Dołącz do nas!</h2>
+                        <p class="text-muted small">Stwórz nowe konto w kilka sekund.</p>
                     </div>
 
                     <form asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
 
                         @* Wyświetlanie błędów *@
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-3" role="alert"></div>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger bg-transparent border-danger text-danger py-2 small mb-3" role="alert"></div>
 
                         @* LOGIN *@
                         <div class="form-floating mb-3">
                             <input asp-for="Login" class="form-control" placeholder="Twój unikalny login" required />
                             <label asp-for="Login"><i class="bi bi-person-badge me-2"></i>Login (do logowania)</label>
-                            <span asp-validation-for="Login" class="text-danger small"></span>
+                            <span asp-validation-for="Login" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         @* NAZWA UŻYTKOWNIKA (NICK) *@
                         <div class="form-floating mb-3">
                             <input asp-for="UserName" class="form-control" placeholder="Twój nick" required />
                             <label asp-for="UserName"><i class="bi bi-person me-2"></i>Nazwa wyświetlana</label>
-                            <span asp-validation-for="UserName" class="text-danger small"></span>
+                            <span asp-validation-for="UserName" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         @* HASŁO *@
                         <div class="form-floating mb-3">
-                            <input asp-for="Password" class="form-control" placeholder="Hasło" required />
+                            <input asp-for="Password" class="form-control" type="password" placeholder="Hasło" required />
                             <label asp-for="Password"><i class="bi bi-lock me-2"></i>Hasło</label>
-                            <span asp-validation-for="Password" class="text-danger small"></span>
+                            <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         @* POTWIERDZENIE HASŁA *@
                         <div class="form-floating mb-4">
-                            <input asp-for="ConfirmPassword" class="form-control" placeholder="Powtórz hasło" required />
+                            <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="Powtórz hasło" required />
                             <label asp-for="ConfirmPassword"><i class="bi bi-lock-fill me-2"></i>Powtórz hasło</label>
-                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         @* PRZYCISK REJESTRACJI *@
-                        <div class="d-grid mb-3">
-                            <button type="submit" class="btn btn-success btn-lg fw-bold py-2">
+                        <div class="d-grid mb-4">
+                            <button type="submit" class="btn btn-lg btn-register py-3 rounded-pill">
                                 Stwórz konto
                             </button>
                         </div>
 
-                        <hr class="my-4">
+                        <hr class="border-secondary opacity-25 my-4">
 
                         <div class="text-center">
-                            <p class="text-muted mb-0">Masz już konto?</p>
-                            <a asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="text-decoration-none fw-bold">
-                                Zaloguj się tutaj
+                            <p class="text-muted small mb-1">Masz już konto?</p>
+                            <a asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="text-decoration-none fw-bold login-link">
+                                Zaloguj się tutaj <i class="bi bi-box-arrow-in-right"></i>
                             </a>
                         </div>
 

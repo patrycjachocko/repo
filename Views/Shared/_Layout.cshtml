@@ -10,11 +10,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - GameHub</title>
 
+    @* --- BIBLIOTEKI ZEWNĘTRZNE --- *@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-    @* --- LEAFLET & LEAFLET DRAW CSS --- *@
+    @* LEAFLET *@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
 
@@ -22,51 +23,173 @@
     <link rel="stylesheet" href="~/praca_dyplomowa_zesp.styles.css" asp-append-version="true" />
 
     <style>
-        /* Ciemny pasek nawigacyjny */
+        /* --- GLOBALNY MOTYW GAMEHUB --- */
+        :root {
+            --light-pink: #ffeaf6;
+            --mid-pink: #ff66c4;
+            --deep-purple: #8000ff;
+            --dark-bg: #0b0b0e;
+            --panel-bg: #1a1a20;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- NAVBAR STYLING --- */
         .navbar {
-            background-color: #1a1a20 !important;
-            border-bottom: 1px solid #333 !important;
+            background-color: rgba(11, 11, 14, 0.95) !important;
+            border-bottom: 1px solid rgba(255, 102, 196, 0.2); /* Delikatna różowa linia */
+            box-shadow: 0 0 20px rgba(128, 0, 255, 0.15); /* Fioletowa poświata */
+            backdrop-filter: blur(10px);
+            padding: 0.8rem 1rem;
         }
 
         .navbar-brand {
-            font-weight: bold;
-            color: #fff !important;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            font-size: 1.5rem;
+            /* Gradient znany z Home/Index */
+            background: linear-gradient(90deg, #ffffff 0%, var(--light-pink) 30%, var(--mid-pink) 60%, var(--deep-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(255, 102, 196, 0.3);
+            transition: transform 0.3s ease;
         }
+
+            .navbar-brand:hover {
+                transform: scale(1.05);
+                text-shadow: 0 0 25px rgba(255, 102, 196, 0.6);
+            }
 
         .nav-link {
             color: #ddd !important;
-            transition: color 0.3s;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 0 5px;
         }
 
-            .nav-link:hover {
+            .nav-link:hover, .nav-link:focus, .nav-link.active {
                 color: #fff !important;
-                text-shadow: 0 0 10px rgba(255,255,255,0.5);
+                text-shadow: 0 0 10px var(--mid-pink);
             }
 
-        /* Stopka */
+            /* Efekt podkreślenia przy hover */
+            .nav-link::after {
+                content: '';
+                position: absolute;
+                width: 0;
+                height: 2px;
+                bottom: 0;
+                left: 50%;
+                background: linear-gradient(90deg, var(--mid-pink), var(--deep-purple));
+                transition: all 0.3s ease;
+                transform: translateX(-50%);
+            }
+
+            .nav-link:hover::after {
+                width: 80%;
+            }
+
+        /* --- DROPDOWN MENU --- */
+        .dropdown-menu {
+            background-color: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid var(--mid-pink);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .dropdown-item {
+            color: #ccc;
+            transition: all 0.2s;
+        }
+
+            .dropdown-item:hover {
+                background-color: rgba(128, 0, 255, 0.2);
+                color: #fff;
+                padding-left: 1.5rem; /* Efekt przesunięcia */
+            }
+
+        .dropdown-divider {
+            border-top-color: rgba(255,255,255,0.1);
+        }
+
+        /* --- STOPKA --- */
         footer {
-            background-color: #1a1a20;
-            color: #aaa;
-            border-top: 1px solid #333 !important;
+            margin-top: auto; /* Wypycha stopkę na sam dół */
+            background-color: #08080a;
+            color: var(--text-muted);
+            border-top: 1px solid #222 !important;
+            padding: 20px 0;
+            font-size: 0.9rem;
         }
 
             footer a {
-                color: #ccc;
+                color: var(--mid-pink);
                 text-decoration: none;
+                transition: color 0.3s;
             }
 
                 footer a:hover {
-                    color: #fff;
-                    text-decoration: underline;
+                    color: var(--light-pink);
+                    text-shadow: 0 0 10px var(--mid-pink);
+                    text-decoration: none;
                 }
+
+        /* --- ALERTY (TEMP DATA) --- */
+        .alert {
+            background-color: rgba(26, 26, 32, 0.95);
+            border: none;
+            color: #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border-left: 4px solid;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-success {
+            border-color: #00ff88; /* Neonowa zieleń */
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        }
+
+            .alert-success i {
+                color: #00ff88;
+            }
+
+        .alert-danger {
+            border-color: #ff3366; /* Neonowa czerwień */
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
+        }
+
+            .alert-danger i {
+                color: #ff3366;
+            }
+
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* Dostosowanie kontenera głównego */
+        .main-container {
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
     </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark box-shadow mb-3">
             <div class="container-fluid">
+                @* LOGO - działa jako Home *@
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">GameHub</a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -75,18 +198,20 @@
                 </button>
 
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+                    <ul class="navbar-nav flex-grow-1 align-items-center">
+
+                        @* USUNIĘTO LINK 'HOME' - Logo wystarczy *@
+
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Games" asp-action="Index" asp-route-mode="browse">Przeglądaj Gry</a>
+                            <a class="nav-link" asp-area="" asp-controller="Games" asp-action="Index" asp-route-mode="browse">
+                                <i class="fas fa-gamepad me-1"></i> Przeglądaj Gry
+                            </a>
                         </li>
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" id="guidesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false"
                                asp-controller="Games" asp-action="Index" asp-route-mode="guides">
-                                Guides & Tips
+                                <i class="fas fa-book-open me-1"></i> Guides & Tips
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="guidesDropdown">
                                 @await Component.InvokeAsync("PopularGames")
@@ -96,16 +221,18 @@
                         @if (User.Identity.IsAuthenticated)
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="Library" asp-action="Index">Moja Biblioteka</a>
+                                <a class="nav-link" asp-area="" asp-controller="Library" asp-action="Index">
+                                    <i class="fas fa-layer-group me-1"></i> Moja Biblioteka
+                                </a>
                             </li>
 
-                            @* --- LOGIKA: Jeśli połączony ze Steam, pokaż link obok biblioteki --- *@
+                            @* Logika Steam *@
                             var user = await UserManager.GetUserAsync(User);
                             if (user != null && !string.IsNullOrEmpty(user.SteamId))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: #66c0f4 !important;">
-                                        <i class="bi bi-steam"></i> Biblioteka Steam
+                                    <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: #66c0f4 !important; text-shadow: 0 0 5px rgba(102, 192, 244, 0.4);">
+                                        <i class="fab fa-steam"></i> Biblioteka Steam
                                     </a>
                                 </li>
                             }
@@ -118,11 +245,10 @@
         </nav>
     </header>
 
-    <div class="container">
+    <div class="container main-container">
         <main role="main" class="pb-3">
             @* --- OBSŁUGA KOMUNIKATÓW TEMPDATA --- *@
 
-            @* 1. Komunikaty sukcesu (zielone) *@
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -131,7 +257,6 @@
                 </div>
             }
 
-            @* 2. Komunikaty błędów (czerwone) *@
             @if (TempData["Error"] != null)
             {
                 <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
@@ -139,32 +264,32 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
-            @* --------------------------------------------- *@
 
             @RenderBody()
         </main>
     </div>
 
-    @* --- STOPKA Z LINKIEM DO TICKETÓW --- *@
-    <footer class="border-top footer text-muted mt-5 py-3">
+    @* --- STOPKA --- *@
+    <footer class="border-top footer text-muted">
         <div class="container text-center">
-            &copy; 2025 - GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2025 - GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
 
-            @* Link do ticketów *@
-            | <a asp-controller="Tickets" asp-action="Index">
-                <i class="fas fa-headset"></i> Zgłoś błąd / Kontakt
+            <span class="mx-2 text-secondary">|</span>
+
+            <a asp-controller="Tickets" asp-action="Index">
+                <i class="fas fa-headset me-1"></i> Support / Kontakt
             </a>
         </div>
     </footer>
 
-    @* --- WAŻNE: Załadowanie Modali Logowania/Rejestracji --- *@
+    @* --- MODALE LOGOWANIA --- *@
     <partial name="_AuthModals" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    @* --- LEAFLET & LEAFLET DRAW JS --- *@
+    @* LEAFLET JS *@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 

@@ -1,189 +1,352 @@
 ﻿@using praca_dyplomowa_zesp.Models.Interactions.Reactions
-@* Wstrzykujemy kontekst bazy danych, aby pobrać oceny autorów recenzji *@
 @inject praca_dyplomowa.Data.ApplicationDbContext _context
 @model praca_dyplomowa_zesp.Models.Modules.Games.GameDetailViewModel
 @{
     ViewData["Title"] = Model.Name;
 
-    // Pobieramy ID autorów Top 3 recenzji
     var userIds = Model.TopReviews.Select(r => r.UserId).ToList();
-
-    // Pobieramy ich oceny dla tej gry
     var userRatings = _context.GameRates
         .Where(r => r.IgdbGameId == Model.IgdbGameId && userIds.Contains(r.UserId))
         .ToDictionary(r => r.UserId, r => r.Value);
 }
 
-<h1>@Model.Name</h1>
+<style>
+    /* --- GAME DETAILS STYLE --- */
 
-@* SEKCJA: Szczegóły Gry (Okładka, Info, Akcje) *@
-<div class="row mt-4">
-    <div class="col-md-4">
-        <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid rounded shadow" alt="@Model.Name">
-    </div>
-    <div class="col-md-8">
-        <h3>Szczegóły Gry</h3>
-        <dl class="row">
-            <dt class="col-sm-3">Deweloper</dt>
-            <dd class="col-sm-9">@(Model.Developer ?? "Brak informacji")</dd>
-
-            <dt class="col-sm-3">Data wydania</dt>
-            <dd class="col-sm-9">@(Model.ReleaseDate ?? "Brak informacji")</dd>
-
-            <dt class="col-sm-3">Gatunki</dt>
-            <dd class="col-sm-9">
-                @if (Model.Genres != null && Model.Genres.Any())
-                {
-                    @string.Join(", ", Model.Genres)
-                }
-                else
-                {
-                    <text>Brak informacji</text>
-                }
-            </dd>
-        </dl>
-
-        <hr />
-
-        <h4>Akcje</h4>
-        <div class="d-flex flex-wrap gap-2">
-            <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-primary">
-                Przejdź do poradników
-            </a>
-
-            <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="btn btn-info text-white">
-                <i class="bi bi-chat-left-text"></i> Recenzje społeczności
-            </a>
-
-            @if (User.Identity.IsAuthenticated)
-            {
-                <form asp-controller="Library" asp-action="Create" method="post" class="d-inline">
-                    <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
-                    <button type="submit" class="btn btn-success">Dodaj do biblioteki</button>
-                </form>
-            }
-            else
-            {
-                <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path" class="btn btn-success">
-                    Zaloguj się, aby dodać do biblioteki
-                </a>
-            }
-        </div>
-    </div>
-</div>
-
-@* SEKCJA: Oceny (IGDB / GameHub) - Przesunięta tutaj *@
-<div class="mt-5 mb-4">
-    @if (Model.Ratings != null)
-    {
-        <partial name="_GameRatingPartial" model="Model.Ratings" />
+    /* Tło z rozmytą okładką */
+    .game-hero {
+        position: relative;
+        background-color: #0b0b0e;
+        border-radius: 20px;
+        overflow: hidden;
+        padding: 40px;
+        margin-bottom: 40px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
     }
-</div>
 
-@* SEKCJA: Najpopularniejsze recenzje *@
-<div class="mt-5">
-    <h3>Najpopularniejsze recenzje</h3>
-    <hr />
+    .hero-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('@(Model.CoverUrl ?? "")');
+        background-size: cover;
+        background-position: center;
+        filter: blur(30px) brightness(0.4);
+        z-index: 0;
+    }
 
-    @if (Model.TopReviews != null && Model.TopReviews.Any())
-    {
-        <div class="row">
-            @foreach (var review in Model.TopReviews)
-            {
-                // --- LOGIKA PUNKTACJI ---
-                var likes = review.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
-                var dislikes = review.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
-                var score = likes - dislikes;
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+    }
 
-                string scoreClass = "text-muted";
-                string sign = "";
+    .game-cover {
+        width: 300px;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        transition: transform 0.3s;
+    }
 
-                if (score > 0) { scoreClass = "text-success fw-bold"; sign = "+"; }
-                else if (score < 0) { scoreClass = "text-danger fw-bold"; }
+        .game-cover:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(188, 19, 254, 0.4);
+            border-color: var(--mid-pink);
+        }
 
-                // --- LOGIKA KOLORU ROLI ---
-                string nickClass = "text-primary";
-                var userRole = review.User?.Role?.ToLower();
+    .game-info {
+        flex: 1;
+        color: #fff;
+    }
 
-                if (userRole == "admin") { nickClass = "text-danger fw-bold"; }
-                else if (userRole == "moderator") { nickClass = "text-success fw-bold"; }
+    .game-title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-bottom: 20px;
+        background: linear-gradient(90deg, #fff, var(--light-pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px rgba(255, 102, 196, 0.3);
+    }
 
-                // --- POBIERANIE OCENY ---
-                double authorRating = 0;
-                if (userRatings.ContainsKey(review.UserId))
-                {
-                    authorRating = userRatings[review.UserId];
-                }
+    .info-label {
+        color: var(--neon-blue);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+        display: block;
+    }
 
-                <div class="col-md-4 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                @* AVATAR I NICK *@
-                                <div class="d-flex align-items-center">
-                                    @if (review.User?.ProfilePicture != null)
-                                    {
-                                        <img src="@Url.Action("GetAvatar", "Profile", new { id = review.UserId })"
-                                             alt="Avatar" class="rounded-circle me-2"
-                                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #eee;" />
-                                    }
-                                    else
-                                    {
-                                        <img src="~/uploads/avatars/default_avatar.png"
-                                             alt="Avatar" class="rounded-circle me-2"
-                                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #eee;" />
-                                    }
+    .info-value {
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        color: #ddd;
+    }
 
-                                    <div>
-                                        <strong class="@nickClass">@review.User?.UserName</strong>
+    /* Przyciski Akcji */
+    .action-btn {
+        padding: 12px 25px;
+        border-radius: 30px;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        text-decoration: none;
+    }
 
-                                        @* GWIAZDKA PRZY RECENZJI - Format 0.# *@
-                                        @if (authorRating > 0)
-                                        {
-                                            <span class="badge bg-warning text-dark ms-1 small">
-                                                <i class="fas fa-star"></i>
-                                                @authorRating.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)
-                                            </span>
-                                        }
-                                    </div>
-                                </div>
-                                <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy")</small>
-                            </div>
-                            <p class="card-text text-truncate" style="max-height: 100px; overflow: hidden; white-space: normal;">
-                                @review.Content
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center" style="font-size: 1.1rem;">
-                                <i class="bi bi-hand-thumbs-up text-success"></i>
-                                <span class="mx-2 @scoreClass">@sign@score</span>
-                                <i class="bi bi-hand-thumbs-down text-danger"></i>
-                            </div>
+    .btn-guide {
+        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
+        color: white;
+        box-shadow: 0 5px 15px rgba(188, 19, 254, 0.3);
+    }
 
-                            <a asp-controller="Reviews" asp-action="Index"
-                               asp-route-gameId="@Model.IgdbGameId"
-                               asp-route-gameName="@Model.Name"
-                               class="btn btn-sm btn-outline-primary stretched-link">Czytaj całość</a>
+    .btn-reviews {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    .btn-library {
+        background: linear-gradient(45deg, #00ff9d, #00cc7a);
+        color: #000;
+        box-shadow: 0 5px 15px rgba(0, 255, 157, 0.3);
+    }
+
+    .action-btn:hover {
+        transform: translateY(-3px);
+        filter: brightness(1.2);
+        color: inherit;
+    }
+
+    /* Karty Recenzji */
+    .review-card {
+        background: rgba(26, 26, 32, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        height: 100%;
+        transition: all 0.3s;
+    }
+
+        .review-card:hover {
+            background: rgba(26, 26, 32, 0.9);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+        }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 10px;
+    }
+
+    .avatar-img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid var(--neon-blue);
+    }
+
+    .section-title {
+        color: var(--mid-pink);
+        text-transform: uppercase;
+        font-weight: 800;
+        margin-bottom: 20px;
+        text-shadow: 0 0 15px rgba(255, 102, 196, 0.4);
+    }
+
+    /* Badge w recenzji */
+    .star-rating {
+        color: #ffc107;
+        font-weight: bold;
+    }
+</style>
+
+<div class="container-fluid px-4 py-3">
+
+    @* --- HERO SECTION --- *@
+    <div class="game-hero">
+        <div class="hero-bg"></div>
+
+        <div class="hero-content">
+            <div class="d-flex justify-content-center">
+                <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")"
+                     class="img-fluid game-cover"
+                     alt="@Model.Name">
+            </div>
+
+            <div class="game-info">
+                <h1 class="game-title">@Model.Name</h1>
+
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <span class="info-label">Deweloper</span>
+                        <div class="info-value">@(Model.Developer ?? "Brak danych")</div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <span class="info-label">Data Wydania</span>
+                        <div class="info-value">@(Model.ReleaseDate ?? "TBA")</div>
+                    </div>
+
+                    <div class="col-12">
+                        <span class="info-label">Gatunki</span>
+                        <div class="info-value">
+                            @if (Model.Genres != null && Model.Genres.Any())
+                            {
+                                @foreach (var genre in Model.Genres)
+                                {
+                                    <span class="badge bg-dark border border-secondary me-1">@genre</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">Brak informacji</span>
+                            }
                         </div>
                     </div>
                 </div>
-            }
+
+                <div class="mt-4">
+                    <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="action-btn btn-guide">
+                        <i class="fas fa-book-open"></i> Poradniki
+                    </a>
+
+                    <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="action-btn btn-reviews">
+                        <i class="bi bi-chat-left-text-fill"></i> Recenzje
+                    </a>
+
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <form asp-controller="Library" asp-action="Create" method="post" class="d-inline">
+                            <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
+                            <button type="submit" class="action-btn btn-library">
+                                <i class="fas fa-plus-circle"></i> Do Biblioteki
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path" class="action-btn btn-library">
+                            <i class="fas fa-sign-in-alt"></i> Zaloguj się
+                        </a>
+                    }
+                </div>
+            </div>
         </div>
-        <div class="text-center mt-3">
-            <a asp-controller="Reviews" asp-action="Index"
-               asp-route-gameId="@Model.IgdbGameId"
-               asp-route-gameName="@Model.Name"
-               class="btn btn-outline-secondary">Zobacz wszystkie recenzje</a>
-        </div>
-    }
-    else
+    </div>
+
+    @* --- OCENY --- *@
+    @if (Model.Ratings != null)
     {
-        <div class="alert alert-light text-center">
-            <p class="mb-2">Nikt jeszcze nie zrecenzował tej gry. Podziel się swoją opinią!</p>
+        <div class="mb-5">
+            <partial name="_GameRatingPartial" model="Model.Ratings" />
+        </div>
+    }
+
+    @* --- RECENZJE --- *@
+    <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="section-title">Najpopularniejsze recenzje</h3>
             <a asp-controller="Reviews" asp-action="Index"
                asp-route-gameId="@Model.IgdbGameId"
                asp-route-gameName="@Model.Name"
-               class="btn btn-sm btn-primary">Napisz pierwszą recenzję</a>
+               class="btn btn-sm btn-outline-light rounded-pill px-3">
+                Wszystkie <i class="fas fa-arrow-right ms-1"></i>
+            </a>
         </div>
-    }
+
+        @if (Model.TopReviews != null && Model.TopReviews.Any())
+        {
+            <div class="row g-4">
+                @foreach (var review in Model.TopReviews)
+                {
+                    var likes = review.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
+                    var dislikes = review.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
+                    var score = likes - dislikes;
+
+                    string scoreColor = score > 0 ? "text-success" : (score < 0 ? "text-danger" : "text-muted");
+
+                    // Ocena autora
+                    double authorRating = 0;
+                    if (userRatings.ContainsKey(review.UserId)) { authorRating = userRatings[review.UserId]; }
+
+                    <div class="col-md-4">
+                        <div class="review-card">
+                            <div class="review-header">
+                                <div class="d-flex align-items-center">
+                                    <img src="@(review.User?.ProfilePicture != null ? Url.Action("GetAvatar", "Profile", new { id = review.UserId }) : "/uploads/avatars/default_avatar.png")"
+                                         class="avatar-img me-3" alt="Avatar">
+                                    <div>
+                                        <div class="fw-bold text-white">@review.User?.UserName</div>
+                                        <div class="small text-muted">@review.CreatedAt.ToString("dd.MM.yyyy")</div>
+                                    </div>
+                                </div>
+
+                                @if (authorRating > 0)
+                                {
+                                    <div class="star-rating">
+                                        <i class="fas fa-star me-1"></i>@authorRating.ToString("0.#")
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="review-content mb-3 text-light" style="min-height: 60px;">
+                                @if (review.Content.Length > 150)
+                                {
+                                    @review.Content.Substring(0, 150)
+                        
+                                    <text>...</text>
+                                }
+                                else
+                                {
+                                    @review.Content
+                                }
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <div class="fw-bold @scoreColor">
+                                    <i class="bi bi-hand-thumbs-up-fill me-1"></i> @score
+                                </div>
+                                <a asp-controller="Reviews" asp-action="Index"
+                                   asp-route-gameId="@Model.IgdbGameId"
+                                   asp-route-gameName="@Model.Name"
+                                   class="text-decoration-none text-info small fw-bold">
+                                    CZYTAJ WIĘCEJ
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="p-5 text-center" style="background: rgba(255,255,255,0.05); border-radius: 15px;">
+                <i class="fas fa-comment-slash fa-3x mb-3 text-muted"></i>
+                <h5 class="text-white">Cisza w eterze...</h5>
+                <p class="text-muted">Nikt jeszcze nie napisał recenzji. Bądź pierwszy!</p>
+                <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="btn btn-outline-info mt-2">
+                    Napisz recenzję
+                </a>
+            </div>
+        }
+    </div>
 </div>

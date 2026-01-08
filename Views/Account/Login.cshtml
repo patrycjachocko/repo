@@ -4,58 +4,169 @@
     ViewData["Title"] = "Zaloguj się";
 }
 
-<div class="container py-5">
-    <div class="row justify-content-center">
+<style>
+    /* --- STYL LOGOWANIA --- */
+
+    .login-wrapper {
+        min-height: 80vh; /* Centrowanie w pionie */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .login-card {
+        background: rgba(26, 26, 32, 0.85); /* Ciemne szkło */
+        backdrop-filter: blur(15px); /* Rozmycie tła */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        box-shadow: 0 0 50px rgba(128, 0, 255, 0.15); /* Fioletowa poświata */
+        overflow: hidden;
+        position: relative;
+    }
+
+        /* Górna krawędź neonowa */
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--neon-blue), var(--mid-pink));
+            box-shadow: 0 0 15px var(--mid-pink);
+        }
+
+    .login-title {
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+        /* Gradient tekstu */
+        background: linear-gradient(45deg, #fff, var(--light-pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 20px rgba(255, 102, 196, 0.3);
+    }
+
+    /* Pola formularza */
+    .form-floating > .form-control {
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff !important;
+        border-radius: 10px;
+    }
+
+        .form-floating > .form-control:focus {
+            border-color: var(--mid-pink);
+            box-shadow: 0 0 15px rgba(255, 102, 196, 0.2);
+        }
+
+    .form-floating > label {
+        color: #aaa;
+    }
+
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        color: var(--mid-pink);
+        opacity: 0.8;
+    }
+
+    /* Checkbox */
+    .form-check-input {
+        background-color: rgba(0,0,0,0.3);
+        border-color: #555;
+        cursor: pointer;
+    }
+
+        .form-check-input:checked {
+            background-color: var(--mid-pink);
+            border-color: var(--mid-pink);
+            box-shadow: 0 0 10px var(--mid-pink);
+        }
+
+    /* Przycisk */
+    .btn-login {
+        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
+        border: none;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+        .btn-login:hover {
+            filter: brightness(1.2);
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(188, 19, 254, 0.4);
+            color: white;
+        }
+
+    /* Link rejestracji */
+    .register-link {
+        color: var(--neon-blue);
+        transition: all 0.3s;
+    }
+
+        .register-link:hover {
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+</style>
+
+<div class="container login-wrapper">
+    <div class="row justify-content-center w-100">
         <div class="col-md-6 col-lg-5 col-xl-4">
 
-            <div class="card border-0 shadow-lg rounded-3">
+            <div class="card login-card">
                 <div class="card-body p-4 p-sm-5">
 
                     <div class="text-center mb-4">
-                        <h2 class="fw-bold text-primary">Witaj ponownie!</h2>
-                        <p class="text-muted">Zaloguj się, aby kontynuować.</p>
+                        <h2 class="login-title">Witaj ponownie!</h2>
+                        <p class="text-muted small">Zaloguj się, aby kontynuować przygodę.</p>
                     </div>
 
                     <form asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
 
                         @* Wyświetlanie błędów *@
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-3" role="alert"></div>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger bg-transparent border-danger text-danger py-2 small mb-3" role="alert"></div>
 
                         @* LOGIN *@
                         <div class="form-floating mb-3">
                             <input asp-for="Login" class="form-control" placeholder="Twój login" required />
                             <label asp-for="Login"><i class="bi bi-person me-2"></i>Login</label>
-                            <span asp-validation-for="Login" class="text-danger small"></span>
+                            <span asp-validation-for="Login" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         @* HASŁO *@
                         <div class="form-floating mb-3">
-                            <input asp-for="Password" class="form-control" placeholder="Hasło" required />
+                            <input asp-for="Password" class="form-control" type="password" placeholder="Hasło" required />
                             <label asp-for="Password"><i class="bi bi-lock me-2"></i>Hasło</label>
-                            <span asp-validation-for="Password" class="text-danger small"></span>
+                            <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         @* CHECKBOX *@
-                        <div class="form-check mb-3">
+                        <div class="form-check mb-4">
                             <input class="form-check-input" asp-for="RememberMe" />
-                            <label class="form-check-label text-muted" asp-for="RememberMe">
+                            <label class="form-check-label text-muted small pt-1" asp-for="RememberMe">
                                 Zapamiętaj mnie
                             </label>
                         </div>
 
                         @* PRZYCISK LOGOWANIA *@
-                        <div class="d-grid mb-3">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold py-2">
+                        <div class="d-grid mb-4">
+                            <button type="submit" class="btn btn-lg btn-login py-3 rounded-pill">
                                 Zaloguj się
                             </button>
                         </div>
 
-                        <hr class="my-4">
+                        <hr class="border-secondary opacity-25 my-4">
 
                         <div class="text-center">
-                            <p class="text-muted mb-0">Nie masz jeszcze konta?</p>
-                            <a asp-action="Register" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="text-decoration-none fw-bold">
-                                Zarejestruj się teraz
+                            <p class="text-muted small mb-1">Nie masz jeszcze konta?</p>
+                            <a asp-action="Register" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="text-decoration-none fw-bold register-link">
+                                Zarejestruj się teraz <i class="bi bi-arrow-right-short"></i>
                             </a>
                         </div>
 

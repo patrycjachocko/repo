@@ -7,146 +7,340 @@
     bool isSearchOrFilterActive = !string.IsNullOrEmpty(Model.SearchString) || Model.StatusFilter != "all";
 }
 
-<div class="container-fluid px-4">
+<style>
+    /* --- STYL BIBLIOTEKI --- */
 
-    @* --- Pasek Narzędzi --- *@
-    <div class="d-flex justify-content-between align-items-center mb-4 mt-3 flex-wrap gap-3">
-        <h1 class="mb-0 text-nowrap">@ViewData["Title"]</h1>
+    .library-title {
+        text-transform: uppercase;
+        font-weight: 900;
+        letter-spacing: 2px;
+        background: linear-gradient(90deg, #ffffff 0%, var(--light-pink) 30%, var(--mid-pink) 60%, var(--deep-purple) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 25px rgba(255, 102, 196, 0.4);
+        margin-right: 20px;
+    }
 
-        <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end flex-wrap">
+    /* Toolbar */
+    .library-toolbar {
+        background: rgba(26, 26, 32, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 15px 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
 
-            @* Formularz: Szukaj + Filtruj *@
-            <form asp-action="Index" method="get" class="d-flex gap-2" role="search">
-                <input type="hidden" name="page" value="1" /> @* Reset strony przy filtrowaniu *@
+    .form-control-dark, .form-select-dark {
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #fff !important;
+        border-radius: 10px !important;
+    }
 
-                @* Dropdown Statusu *@
-                <select name="statusFilter" class="form-select" style="width: auto; min-width: 150px; cursor: pointer;" onchange="this.form.submit()">
+        .form-control-dark:focus, .form-select-dark:focus {
+            border-color: var(--neon-blue) !important;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
+        }
+
+    .btn-gradient-primary {
+        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
+        border: none;
+        color: white;
+        font-weight: bold;
+    }
+
+        .btn-gradient-primary:hover {
+            filter: brightness(1.2);
+            color: white;
+            box-shadow: 0 0 15px rgba(188, 19, 254, 0.4);
+        }
+
+    /* --- KARTY GIER --- */
+    .library-card {
+        background-color: #1a1a20;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        position: relative;
+        height: 100%;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .library-card-wrapper {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        height: 100%;
+    }
+
+        .library-card-wrapper:hover .library-card {
+            transform: translateY(-8px) scale(1.02);
+            z-index: 20;
+        }
+
+    /* STATUSY KARTY */
+    .status-completed:hover {
+        border-color: #00ff9d;
+        box-shadow: 0 0 25px rgba(0, 255, 157, 0.3);
+    }
+
+    .status-playing:hover {
+        border-color: #00f3ff;
+        box-shadow: 0 0 25px rgba(0, 243, 255, 0.3);
+    }
+
+    .status-toplay:hover {
+        border-color: #ffc107;
+        box-shadow: 0 0 25px rgba(255, 193, 7, 0.3);
+    }
+
+    .badge-completed {
+        background-color: rgba(0, 255, 157, 0.9);
+        color: #000;
+    }
+
+    .badge-playing {
+        background-color: rgba(0, 243, 255, 0.9);
+        color: #000;
+    }
+
+    .badge-toplay {
+        background-color: rgba(255, 193, 7, 0.9);
+        color: #000;
+    }
+
+    .cover-container {
+        position: relative;
+        padding-top: 140%;
+        overflow: hidden;
+        background-color: #0b0b0e;
+    }
+
+    .cover-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s;
+    }
+
+    .library-card-wrapper:hover .cover-img {
+        transform: scale(1.1);
+    }
+
+    /* --- TYTUŁY GIER --- */
+    .card-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin-top: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: all 0.3s ease;
+        /* ZMIANA: Czysta biel jako baza */
+        color: #fff;
+    }
+
+    /* Kolory aktywowane przy hoverze karty */
+    .library-card-wrapper:hover .title-completed {
+        color: #00ff9d;
+        text-shadow: 0 0 10px rgba(0, 255, 157, 0.6);
+    }
+
+    .library-card-wrapper:hover .title-playing {
+        color: #00f3ff;
+        text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+    }
+
+    .library-card-wrapper:hover .title-toplay {
+        color: #ffc107;
+        text-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+    }
+
+    .status-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-weight: 800;
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        backdrop-filter: blur(4px);
+        text-transform: uppercase;
+        z-index: 10;
+    }
+
+    /* Paginacja */
+    .pagination .page-link {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ccc;
+        margin: 0 5px;
+        border-radius: 5px;
+    }
+
+        .pagination .page-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 0 15px rgba(188, 19, 254, 0.4);
+    }
+
+    .pagination .page-item.disabled .page-link {
+        background-color: transparent;
+        border-color: rgba(255,255,255,0.05);
+        color: #555;
+    }
+
+</style>
+
+<div class="container-fluid px-4 pt-3">
+
+    @* --- NAGŁÓWEK I PASEK NARZĘDZI --- *@
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+
+        <h1 class="library-title mb-0 text-nowrap">@ViewData["Title"]</h1>
+
+        @* Pasek narzędzi *@
+        <div class="library-toolbar d-flex align-items-center gap-3 w-100">
+
+            <form asp-action="Index" method="get" class="d-flex gap-2 flex-grow-1" role="search">
+                <input type="hidden" name="page" value="1" />
+
+                <select name="statusFilter" class="form-select form-select-dark d-none d-sm-block" style="width: 160px; flex-shrink: 0; cursor: pointer;" onchange="this.form.submit()">
                     <!option value="all" @(Model.StatusFilter == "all" ? "selected" : "")>Wszystkie</!option>
                     <!option value="completed" @(Model.StatusFilter == "completed" ? "selected" : "")>✅ Ukończone</!option>
                     <!option value="playing" @(Model.StatusFilter == "playing" ? "selected" : "")>🎮 W trakcie</!option>
                     <!option value="toplay" @(Model.StatusFilter == "toplay" ? "selected" : "")>🆕 Do zagrania</!option>
                 </select>
 
-                <div class="input-group">
-                    <input type="text" name="searchString" value="@Model.SearchString" class="form-control" placeholder="Szukaj gry..." aria-label="Szukaj">
-                    <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
+                <div class="input-group flex-grow-1">
+                    <input type="text" name="searchString" value="@Model.SearchString" class="form-control form-control-dark" placeholder="Szukaj gry..." aria-label="Szukaj">
+                    <button type="submit" class="btn btn-outline-primary" style="border-color: rgba(255,255,255,0.1); color: #fff;"><i class="bi bi-search"></i></button>
                     @if (isSearchOrFilterActive)
                     {
-                        <a asp-action="Index" asp-route-statusFilter="all" asp-route-searchString="" class="btn btn-outline-secondary" title="Resetuj filtry">X</a>
+                        <a asp-action="Index" asp-route-statusFilter="all" asp-route-searchString="" class="btn btn-outline-secondary" title="Resetuj filtry" style="border-color: rgba(255,255,255,0.1);">X</a>
                     }
                 </div>
             </form>
 
-            <div class="vr mx-2 d-none d-md-block"></div>
+            <div class="vr mx-1 d-none d-lg-block bg-secondary opacity-50"></div>
 
-            <a asp-controller="Games" asp-action="Index" class="btn btn-primary text-nowrap">
-                <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Dodaj grę</span>
-            </a>
+            <div class="d-flex gap-2">
+                <a asp-controller="Games" asp-action="Index" class="btn btn-gradient-primary text-nowrap rounded-pill px-3">
+                    <i class="bi bi-plus-lg me-1"></i> <span class="d-none d-xl-inline">Dodaj grę</span>
+                </a>
 
-            @if (!isSearchOrFilterActive && !isResultEmpty)
-            {
-                <form asp-action="ClearLibrary" method="post" onsubmit="return confirm('UWAGA: Czy na pewno chcesz usunąć WSZYSTKIE gry ze swojej biblioteki?');">
-                    <button type="submit" class="btn btn-danger" title="Usuń wszystko">
+                @if (!isSearchOrFilterActive && !isResultEmpty)
+                {
+                    @* ZMIANA: Ukryty formularz do wyczyszczenia biblioteki *@
+                    <form id="clearLibraryForm" asp-action="ClearLibrary" method="post" style="display:none;"></form>
+
+                    @* ZMIANA: Przycisk otwierający Modal zamiast submitu *@
+                    <button type="button" class="btn btn-outline-danger rounded-circle" title="Usuń wszystko"
+                            style="width: 38px; height: 38px; padding: 0;"
+                            data-bs-toggle="modal" data-bs-target="#clearLibraryModal">
                         <i class="bi bi-trash"></i>
                     </button>
-                </form>
-            }
+                }
+            </div>
         </div>
     </div>
 
-    <hr />
-
+    @* --- KOMUNIKATY --- *@
     @if (TempData["StatusMessage"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["StatusMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-success alert-dismissible fade show bg-dark text-white border-success shadow" role="alert">
+            <i class="bi bi-check-circle me-2 text-success"></i> @TempData["StatusMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
         </div>
     }
 
-    @* --- Lista Gier --- *@
-    <div class="row">
+    @* --- LISTA GIER --- *@
+    <div class="row g-4">
         @if (!isResultEmpty)
         {
             @foreach (var game in Model.Games)
             {
-                // LOGIKA KOLORÓW I STATUSÓW
-                string statusClass = "";
-                string badgeText = "";
-                string badgeColor = "";
+                string statusClass = "status-toplay";
+                string titleClass = "title-toplay";
+                string badgeText = "Do zagrania";
+                string badgeClass = "badge-toplay";
 
                 if (game.ProgressPercent == 100)
                 {
                     statusClass = "status-completed";
+                    titleClass = "title-completed";
                     badgeText = "Ukończona";
-                    badgeColor = "bg-success";
+                    badgeClass = "badge-completed";
                 }
                 else if (game.ProgressPercent > 0)
                 {
                     statusClass = "status-playing";
-                    badgeText = "W trakcie";
-                    badgeColor = "bg-info text-dark";
-                }
-                else
-                {
-                    statusClass = "status-toplay";
-                    badgeText = "Do zagrania";
-                    badgeColor = "bg-warning text-dark";
+                    titleClass = "title-playing";
+                    badgeText = $"W trakcie ({game.ProgressPercent}%)";
+                    badgeClass = "badge-playing";
                 }
 
-                // SIATKA: 2 gry (col-6), 4 gry (col-md-3), 6 gier (col-xl-2)
-                <div class="col-6 col-md-3 col-xl-2 mb-4">
-                    <a asp-action="Details" asp-route-id="@game.DbId" class="text-decoration-none text-dark card-link-wrapper">
+                <div class="col-6 col-md-3 col-xl-2">
+                    <a asp-action="Details" asp-route-id="@game.DbId" class="library-card-wrapper">
 
-                        @* Karta z klasą statusu *@
-                        <div class="card h-100 shadow-sm grow-on-hover @statusClass" style="transition: transform 0.2s;">
-
-                            <div style="position: relative; padding-top: 150%; overflow: hidden; background-color: #1b2838; border-top-left-radius: 4px; border-top-right-radius: 4px;">
+                        <div class="library-card @statusClass">
+                            <div class="cover-container">
                                 <img src="@(game.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")"
-                                     class="card-img-top"
-                                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                                     class="cover-img"
                                      alt="@game.Name">
 
-                                @* Badge *@
-                                <span class="badge @badgeColor position-absolute top-0 end-0 m-2 shadow-sm" style="font-size: 0.75rem; opacity: 0.9;">
-                                    @badgeText @if(game.ProgressPercent > 0 && game.ProgressPercent < 100) {
-                                    <span>(@game.ProgressPercent%)</span>
-                                }
-                            </span>
-                        </div>
+                                <span class="status-badge @badgeClass">
+                                    @badgeText
+                                </span>
+                            </div>
 
-                        <div class="card-body p-2">
-                            <h6 class="card-title text-truncate font-weight-bold mt-2 mb-1" title="@game.Name" style="font-size: 0.9rem;">
-                                @game.Name
-                            </h6>
+                            <div class="p-2 text-center">
+                                <h6 class="card-title @titleClass" title="@game.Name">@game.Name</h6>
+                            </div>
                         </div>
-                    </div>
-                </a>
-            </div>
+                    </a>
+                </div>
+            }
         }
-                }
-                else if (isSearchOrFilterActive)
+        else if (isSearchOrFilterActive)
         {
             <div class="col-12">
-                <div class="alert alert-warning text-center">
-                    <h4><i class="bi bi-filter-circle"></i> Brak wyników.</h4>
-                    <p>Nie znaleziono gier pasujących do wybranych filtrów.</p>
-                    <a asp-action="Index" asp-route-statusFilter="all" class="btn btn-outline-dark mt-2">Pokaż wszystkie</a>
+                <div class="library-toolbar text-center py-5">
+                    <i class="bi bi-filter-circle fa-3x mb-3 text-warning opacity-50"></i>
+                    <h4 class="text-white">Brak wyników</h4>
+                    <p class="text-muted">Nie znaleziono gier pasujących do wybranych filtrów.</p>
+                    <a asp-action="Index" asp-route-statusFilter="all" class="btn btn-outline-light mt-2">Pokaż wszystkie</a>
                 </div>
             </div>
         }
         else
         {
             <div class="col-12">
-                <div class="alert alert-info text-center py-5">
-                    <h4><i class="bi bi-controller"></i> Twoja biblioteka jest pusta.</h4>
-                    <p class="mb-4">Zacznij budować swoją kolekcję już teraz!</p>
-                    <a asp-controller="Games" asp-action="Index" class="btn btn-primary btn-lg">
-                        Przeglądaj katalog gier
-                    </a>
-                    <a asp-controller="Profile" asp-action="SteamLibrary" class="btn btn-dark btn-lg ms-2">
-                        <i class="bi bi-steam"></i> Importuj ze Steam
-                    </a>
+                <div class="library-toolbar text-center py-5">
+                    <i class="bi bi-controller fa-3x mb-3 text-info opacity-50"></i>
+                    <h4 class="text-white">Twoja biblioteka jest pusta</h4>
+                    <p class="text-muted mb-4">Wygląda na to, że dopiero zaczynasz przygodę!</p>
+
+                    <div class="d-flex justify-content-center gap-3">
+                        <a asp-controller="Games" asp-action="Index" class="btn btn-gradient-primary btn-lg rounded-pill px-4">
+                            Przeglądaj katalog gier
+                        </a>
+                        <a asp-controller="Profile" asp-action="SteamLibrary" class="btn btn-outline-light btn-lg rounded-pill px-4">
+                            <i class="bi bi-steam me-2"></i> Importuj ze Steam
+                        </a>
+                    </div>
                 </div>
             </div>
         }
@@ -155,72 +349,56 @@
     @* --- PAGINACJA --- *@
     @if (Model.TotalPages > 1)
     {
-        <nav aria-label="Paginacja">
-            <ul class="pagination justify-content-center">
-                @{
-                    var prevDisabled = Model.CurrentPage > 1 ? "" : "disabled";
-                    var nextDisabled = Model.CurrentPage < Model.TotalPages ? "" : "disabled";
+        <div class="mt-5 mb-4">
+            <nav aria-label="Paginacja">
+                <ul class="pagination justify-content-center">
+                    @{
+                        var prevDisabled = Model.CurrentPage > 1 ? "" : "disabled";
+                        var nextDisabled = Model.CurrentPage < Model.TotalPages ? "" : "disabled";
+                        string GetPageUrl(int p) => Url.Action("Index", new { page = p, searchString = Model.SearchString, statusFilter = Model.StatusFilter });
+                    }
 
-                    // Helper URL
-                    string GetPageUrl(int p) => Url.Action("Index", new { page = p, searchString = Model.SearchString, statusFilter = Model.StatusFilter });
-                }
-
-                <li class="page-item @prevDisabled">
-                    <a class="page-link" href="@GetPageUrl(Model.CurrentPage - 1)">Poprzednia</a>
-                </li>
-
-                @for (int i = 1; i <= Model.TotalPages; i++)
-                {
-                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
-                        <a class="page-link" href="@GetPageUrl(i)">@i</a>
+                    <li class="page-item @prevDisabled">
+                        <a class="page-link" href="@GetPageUrl(Model.CurrentPage - 1)"><i class="bi bi-chevron-left"></i></a>
                     </li>
-                }
 
-                <li class="page-item @nextDisabled">
-                    <a class="page-link" href="@GetPageUrl(Model.CurrentPage + 1)">Następna</a>
-                </li>
-            </ul>
-        </nav>
+                    @for (int i = 1; i <= Model.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                            <a class="page-link" href="@GetPageUrl(i)">@i</a>
+                        </li>
+                    }
+
+                    <li class="page-item @nextDisabled">
+                        <a class="page-link" href="@GetPageUrl(Model.CurrentPage + 1)"><i class="bi bi-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
     }
 </div>
 
-<style>
-    /* --- STYLE STATUSÓW --- */
-    .status-completed {
-        border: 1px solid #198754 !important;
-        box-shadow: 0 0 8px rgba(25, 135, 84, 0.15) !important;
-    }
-
-    .status-playing {
-        border: 1px solid #0dcaf0 !important;
-        box-shadow: 0 0 8px rgba(13, 202, 240, 0.2) !important;
-    }
-
-    .status-toplay {
-        border: 1px solid #ffc107 !important;
-        box-shadow: 0 0 8px rgba(255, 193, 7, 0.2) !important;
-    }
-
-    .grow-on-hover:hover {
-        transform: scale(1.05);
-        cursor: pointer;
-        z-index: 10;
-    }
-
-    .status-completed:hover {
-        box-shadow: 0 0 15px rgba(25, 135, 84, 0.4) !important;
-    }
-
-    .status-playing:hover {
-        box-shadow: 0 0 15px rgba(13, 202, 240, 0.5) !important;
-    }
-
-    .status-toplay:hover {
-        box-shadow: 0 0 15px rgba(255, 193, 7, 0.5) !important;
-    }
-
-    .card-link-wrapper:hover {
-        text-decoration: none;
-        color: inherit;
-    }
-</style>
+@* --- MODAL USUWANIA (CYBERPUNK STYLE) --- *@
+<div class="modal fade" id="clearLibraryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background-color: #1a1a20; border: 1px solid #ff3366; box-shadow: 0 0 30px rgba(255, 51, 102, 0.2);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-danger fw-bold text-uppercase">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Strefa Niebezpieczna
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4 text-white">
+                <p class="mb-3 fs-5">Czy na pewno chcesz usunąć <strong>WSZYSTKIE</strong> gry ze swojej biblioteki?</p>
+                <p class="text-muted small">Tej operacji nie można cofnąć. Wszystkie postępy i statusy zostaną utracone.</p>
+            </div>
+            <div class="modal-footer border-secondary justify-content-center">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Anuluj</button>
+                @* Przycisk wywołujący submit ukrytego formularza *@
+                <button type="button" class="btn btn-danger px-4 fw-bold" onclick="document.getElementById('clearLibraryForm').submit()">
+                    <i class="bi bi-trash-fill me-2"></i> Potwierdzam, usuń wszystko
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
