@@ -33,6 +33,7 @@ Aby uruchomić projekt lokalnie, potrzebujesz:
     git clone [https://github.com/patrycjachocko/repo.git)
     cd repo
     ```
+    W przypadku posiadania kodu w postaci archiwum ZIP (lub folderu na dysku), pomiń krok klonowania.
 
 2.  **Konfiguracja sekretów:**
     Otwórz plik `appsettings.json` i uzupełnij klucze API:
