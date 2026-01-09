@@ -11,8 +11,8 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260106183457_migracja")]
-    partial class migracja
+    [Migration("20260109133704_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
