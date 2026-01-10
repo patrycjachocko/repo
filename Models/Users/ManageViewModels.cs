@@ -22,11 +22,4 @@ namespace praca_dyplomowa_zesp.Models.Users
         [Compare("NewPassword", ErrorMessage = "Hasła nie są zgodne.")]
         public string ConfirmPassword { get; set; }
     }
-
-    public class UpdateDescriptionViewModel
-    {
-        [StringLength(500, ErrorMessage = "Opis nie może przekraczać 500 znaków.")]
-        [Display(Name = "O mnie")]
-        public string? Description { get; set; }
-    }
 }

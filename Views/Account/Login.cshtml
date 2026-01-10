@@ -5,113 +5,129 @@
 }
 
 <style>
-    /* --- STYL LOGOWANIA --- */
+    /* --- STYL HEAVY NEON PAGE (LOGIN) --- */
+    :root {
+        --neon-purple: #d900ff;
+        --neon-cyan: #00f3ff;
+        --bg-panel: #0a0a0f;
+    }
 
     .login-wrapper {
-        min-height: 80vh; /* Centrowanie w pionie */
+        min-height: 80vh;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
-    .login-card {
-        background: rgba(26, 26, 32, 0.85); /* Ciemne szkło */
-        backdrop-filter: blur(15px); /* Rozmycie tła */
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        box-shadow: 0 0 50px rgba(128, 0, 255, 0.15); /* Fioletowa poświata */
-        overflow: hidden;
-        position: relative;
+    .neon-card {
+        background-color: var(--bg-panel);
+        border: 2px solid var(--neon-purple);
+        box-shadow: 0 0 30px rgba(217, 0, 255, 0.2), inset 0 0 30px rgba(217, 0, 255, 0.05);
+        border-radius: 0;
     }
 
-        /* Górna krawędź neonowa */
-        .login-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--neon-blue), var(--mid-pink));
-            box-shadow: 0 0 15px var(--mid-pink);
-        }
-
-    .login-title {
+    .neon-title-page {
+        font-family: sans-serif;
         font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 5px;
-        /* Gradient tekstu */
-        background: linear-gradient(45deg, #fff, var(--light-pink));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 20px rgba(255, 102, 196, 0.3);
+        letter-spacing: 3px;
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #fff;
+        text-shadow: 0 0 15px var(--neon-purple), 0 0 30px var(--neon-purple);
     }
 
-    /* Pola formularza */
+    /* INPUTY */
     .form-floating > .form-control {
-        background-color: rgba(0, 0, 0, 0.3) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: #000 !important;
+        border: none;
+        border-bottom: 2px solid #333;
         color: #fff !important;
-        border-radius: 10px;
+        border-radius: 0;
+        font-family: monospace;
     }
-
-        .form-floating > .form-control:focus {
-            border-color: var(--mid-pink);
-            box-shadow: 0 0 15px rgba(255, 102, 196, 0.2);
-        }
 
     .form-floating > label {
-        color: #aaa;
+        color: #666 !important;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 2px;
     }
 
-    .form-floating > .form-control:focus ~ label,
-    .form-floating > .form-control:not(:placeholder-shown) ~ label {
-        color: var(--mid-pink);
-        opacity: 0.8;
+    .form-floating > .form-control:focus {
+        border-color: var(--neon-purple);
+        box-shadow: 0 10px 20px -10px rgba(217, 0, 255, 0.3);
     }
+
+        .form-floating > .form-control:focus ~ label {
+            color: var(--neon-purple) !important;
+            text-shadow: 0 0 5px var(--neon-purple);
+        }
+
+    /* GUZIKI */
+    .btn-neon-solid {
+        border: 2px solid;
+        color: #fff;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        padding: 15px;
+        transition: 0.2s ease-in-out;
+        background: transparent;
+    }
+
+    .btn-solid-purple {
+        border-color: var(--neon-purple);
+        color: var(--neon-purple);
+        box-shadow: 0 0 10px rgba(217, 0, 255, 0.3);
+    }
+
+        .btn-solid-purple:hover {
+            background-color: var(--neon-purple);
+            color: #000;
+            box-shadow: 0 0 30px var(--neon-purple);
+        }
+
+    .btn-solid-cyan {
+        border-color: var(--neon-cyan);
+        color: var(--neon-cyan);
+        box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+        .btn-solid-cyan:hover {
+            background-color: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 30px var(--neon-cyan);
+        }
+
+    .link-glow {
+        text-decoration: none;
+        transition: 0.3s;
+        border-bottom: 1px solid transparent;
+        cursor: pointer;
+        color: #fff;
+    }
+
+        .link-glow:hover {
+            border-color: currentColor;
+            text-shadow: 0 0 10px currentColor;
+        }
 
     /* Checkbox */
     .form-check-input {
-        background-color: rgba(0,0,0,0.3);
-        border-color: #555;
+        background-color: #000;
+        border: 1px solid #555;
         cursor: pointer;
     }
 
         .form-check-input:checked {
-            background-color: var(--mid-pink);
-            border-color: var(--mid-pink);
-            box-shadow: 0 0 10px var(--mid-pink);
-        }
-
-    /* Przycisk */
-    .btn-login {
-        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
-        border: none;
-        color: white;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: all 0.3s;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-
-        .btn-login:hover {
-            filter: brightness(1.2);
-            transform: translateY(-2px);
-            box-shadow: 0 0 20px rgba(188, 19, 254, 0.4);
-            color: white;
-        }
-
-    /* Link rejestracji */
-    .register-link {
-        color: var(--neon-blue);
-        transition: all 0.3s;
-    }
-
-        .register-link:hover {
-            color: #fff;
-            text-shadow: 0 0 10px var(--neon-blue);
+            background-color: var(--neon-purple);
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 10px var(--neon-purple);
         }
 </style>
 
@@ -119,34 +135,26 @@
     <div class="row justify-content-center w-100">
         <div class="col-md-6 col-lg-5 col-xl-4">
 
-            <div class="card login-card">
+            <div class="card neon-card">
                 <div class="card-body p-4 p-sm-5">
 
-                    <div class="text-center mb-4">
-                        <h2 class="login-title">Witaj ponownie!</h2>
-                        <p class="text-muted small">Zaloguj się, aby kontynuować przygodę.</p>
-                    </div>
+                    <h2 class="neon-title-page">Logowanie</h2>
 
                     <form asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger bg-transparent border-danger text-danger py-2 small mb-3"></div>
 
-                        @* Wyświetlanie błędów *@
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger bg-transparent border-danger text-danger py-2 small mb-3" role="alert"></div>
-
-                        @* LOGIN *@
-                        <div class="form-floating mb-3">
-                            <input asp-for="Login" class="form-control" placeholder="Twój login" required />
-                            <label asp-for="Login"><i class="bi bi-person me-2"></i>Login</label>
+                        <div class="form-floating mb-4">
+                            <input asp-for="Login" class="form-control" placeholder="Login" required />
+                            <label asp-for="Login">Login</label>
                             <span asp-validation-for="Login" class="text-danger small mt-1 d-block"></span>
                         </div>
 
-                        @* HASŁO *@
-                        <div class="form-floating mb-3">
+                        <div class="form-floating mb-4">
                             <input asp-for="Password" class="form-control" type="password" placeholder="Hasło" required />
-                            <label asp-for="Password"><i class="bi bi-lock me-2"></i>Hasło</label>
+                            <label asp-for="Password">Hasło</label>
                             <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                         </div>
 
-                        @* CHECKBOX *@
                         <div class="form-check mb-4">
                             <input class="form-check-input" asp-for="RememberMe" />
                             <label class="form-check-label text-muted small pt-1" asp-for="RememberMe">
@@ -154,23 +162,29 @@
                             </label>
                         </div>
 
-                        @* PRZYCISK LOGOWANIA *@
                         <div class="d-grid mb-4">
-                            <button type="submit" class="btn btn-lg btn-login py-3 rounded-pill">
+                            <button type="submit" class="btn btn-neon-solid btn-solid-purple">
                                 Zaloguj się
                             </button>
                         </div>
-
-                        <hr class="border-secondary opacity-25 my-4">
-
-                        <div class="text-center">
-                            <p class="text-muted small mb-1">Nie masz jeszcze konta?</p>
-                            <a asp-action="Register" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="text-decoration-none fw-bold register-link">
-                                Zarejestruj się teraz <i class="bi bi-arrow-right-short"></i>
-                            </a>
-                        </div>
-
                     </form>
+
+                    <div class="text-center text-muted small mb-3" style="letter-spacing: 2px;">LUB</div>
+
+                    <form asp-controller="Account" asp-action="LoginWithSteam" method="post" class="d-grid mb-4">
+                        <button type="submit" class="btn btn-neon-solid btn-solid-cyan">
+                            <i class="bi bi-steam fs-4"></i>
+                            <span>Zaloguj przez Steam</span>
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <p class="text-muted small mb-1">Brak konta?</p>
+                        <a asp-action="Register" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="link-glow fw-bold" style="color: #fff;">
+                            ZAREJESTRUJ SIĘ TERAZ
+                        </a>
+                    </div>
+
                 </div>
             </div>
 

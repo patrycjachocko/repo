@@ -236,7 +236,7 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 finalLogin = $"{nick}{counter++}";
             }
 
-            var randomPassword = "SteamPassword!" + Guid.NewGuid().ToString();
+            //var randomPassword = "SteamPassword!" + Guid.NewGuid().ToString();
 
             var newUser = new User
             {
@@ -258,7 +258,7 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 }
             }
 
-            var createResult = await _userManager.CreateAsync(newUser, randomPassword);
+            var createResult = await _userManager.CreateAsync(newUser);
             if (createResult.Succeeded)
             {
                 await _userManager.AddToRoleAsync(newUser, "User");

@@ -54,7 +54,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            bool isSteamAccount = !string.IsNullOrEmpty(user.SteamId);
+            bool hasPassword = await _userManager.HasPasswordAsync(user);
 
             var viewModel = new ProfileViewModel
             {
@@ -62,7 +62,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 Username = user.UserName,
                 // USUNIĘTO: Description = user.Description,
                 SteamId = user.SteamId,
-                IsCreatedBySteam = isSteamAccount
+                IsCreatedBySteam = !hasPassword
             };
 
             ViewData["StatusMessage"] = TempData["StatusMessage"];
@@ -110,19 +110,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
             TempData["StatusMessage"] = "Pomyślnie połączono konto Steam!";
             return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> UnlinkSteam()
-        {
-            var user = await GetCurrentUserAsync();
-            if (user != null)
-            {
-                user.SteamId = null;
-                await _userManager.UpdateAsync(user);
-                TempData["StatusMessage"] = "Odłączono konto Steam.";
-            }
-            return RedirectToAction("Index");
         }
 
         public async Task<IActionResult> SteamLibrary()
@@ -487,6 +474,79 @@ namespace praca_dyplomowa_zesp.Controllers
             await _userManager.DeleteAsync(user);
 
             return RedirectToAction("Index", "Home");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DisconnectSteam()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
+
+            // 1. Pobierz aktualne logowania, aby znaleźć klucz Steam (ProviderKey)
+            var logins = await _userManager.GetLoginsAsync(user);
+            var steamLogin = logins.FirstOrDefault(x => x.LoginProvider == "Steam");
+
+            IdentityResult result = IdentityResult.Success;
+
+            // Jeśli istnieje powiązanie w tabeli AspNetUserLogins, usuń je
+            if (steamLogin != null)
+            {
+                result = await _userManager.RemoveLoginAsync(user, "Steam", steamLogin.ProviderKey);
+            }
+
+            if (result.Succeeded || steamLogin == null)
+            {
+                // 2. Usuń SteamId z tabeli Users
+                user.SteamId = null;
+                await _userManager.UpdateAsync(user);
+
+                // 3. AKTUALIZACJA POSTĘPU GIER W BIBLIOTECE
+                // Ponieważ odłączyliśmy Steam, musimy przeliczyć procenty dla każdej gry
+                // na podstawie tego, co zostało w lokalnej bazie (UserAchievements).
+
+                var userGames = await _context.GamesInLibraries
+                    .Where(g => g.UserId == user.Id)
+                    .ToListAsync();
+
+                if (userGames.Any())
+                {
+                    foreach (var game in userGames)
+                    {
+                        // Sprawdzamy ile osiągnięć jest w lokalnej bazie dla tej gry
+                        var localStats = await _context.UserAchievements
+                            .Where(ua => ua.UserId == user.Id && ua.IgdbGameId == game.IgdbGameId)
+                            .Select(ua => new { ua.IsUnlocked }) // Pobieramy tylko status
+                            .ToListAsync();
+
+                        int total = localStats.Count;
+                        int unlocked = localStats.Count(x => x.IsUnlocked);
+
+                        if (total > 0)
+                        {
+                            // Przeliczamy na podstawie lokalnych danych
+                            game.CurrentUserStoryProgressPercent = (int)Math.Round((double)unlocked / total * 100);
+                        }
+                        else
+                        {
+                            // Jeśli w bazie nie ma żadnych osiągnięć (bo były czytane "na żywo" ze Steam),
+                            // to po odłączeniu postęp spada do 0.
+                            game.CurrentUserStoryProgressPercent = 0;
+                        }
+                    }
+
+                    // Zapisujemy zaktualizowane procenty do bazy
+                    await _context.SaveChangesAsync();
+                }
+
+                TempData["Success"] = "Konto Steam zostało odłączone. Statystyki gier zostały zaktualizowane.";
+            }
+            else
+            {
+                TempData["Error"] = "Wystąpił błąd podczas usuwania powiązania Steam.";
+            }
+
+            return RedirectToAction(nameof(Index));
         }
     }
 }

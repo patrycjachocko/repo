@@ -222,50 +222,61 @@
         <div class="col-lg-8">
 
             @* 1. INTEGRACJA STEAM *@
-            <div class="profile-card">
-                <div class="card-header-dark">
-                    <h5 class="card-title-text" style="color: #66c0f4;"><i class="bi bi-steam me-2"></i> Integracja Steam</h5>
+            <div class="card bg-dark text-white mb-4 border-secondary">
+                <div class="card-header border-secondary">
+                    <h5 class="mb-0"><i class="bi bi-steam"></i> Integracja Steam</h5>
                 </div>
-                <div class="card-body p-4">
-                    @if (string.IsNullOrEmpty(Model.SteamId))
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.SteamId))
                     {
-                        <div class="steam-box d-flex align-items-center justify-content-between flex-wrap gap-3">
-                            <div>
-                                <p class="mb-0 fw-bold text-white">Połącz konto Steam</p>
-                                <small class="text-white-50">Zaimportuj swoją bibliotekę gier i osiągnięcia.</small>
+                        @if (Model.IsCreatedBySteam)
+                        {
+                            <div class="alert alert-primary d-flex flex-column flex-sm-row justify-content-between align-items-center" style="background-color: rgba(13, 110, 253, 0.2); border-color: #0d6efd;">
+                                <span class="mb-0">
+                                    <i class="bi bi-person-badge-fill me-2"></i> Konto utworzone przez Steam (ID: @Model.SteamId)
+                                </span>
                             </div>
-                            <form asp-action="LinkSteam" method="post">
-                                <button type="submit" class="btn btn-outline-info btn-sm rounded-pill px-3">
-                                    <i class="bi bi-link-45deg me-1"></i> Połącz
+                            <p class="small text-white-50 mb-0">
+                                Logujesz się do serwisu bezpośrednio przez Steam.
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="alert alert-success d-flex flex-column flex-sm-row justify-content-between align-items-center">
+                                <span class="mb-2 mb-sm-0">
+                                    <i class="bi bi-check-circle-fill me-2"></i> Konto połączone (ID: @Model.SteamId)
+                                </span>
+
+                                <form asp-controller="Profile" asp-action="DisconnectSteam" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Czy na pewno chcesz odłączyć Steam? Gry pozostaną, a osiągnięcia zmienią się na manualne.');">
+                                        <i class="bi bi-x-circle"></i> Odłącz
+                                    </button>
+                                </form>
+                            </div>
+                            <p class="small text-white-50 mb-0">
+                                Twoje gry są zsynchronizowane. Kliknij "Odłącz", aby zatrzymać synchronizację.
+                            </p>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-3">
+                            <p class="text-muted mb-3">Połącz konto, aby importować swoją bibliotekę gier i osiągnięcia.</p>
+                            <form asp-controller="Profile" asp-action="LinkSteam" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-primary" style="background-color: #171a21; border-color: #171a21;">
+                                    <i class="bi bi-steam"></i> Połącz z kontem Steam
                                 </button>
                             </form>
                         </div>
                     }
-                    else
-                    {
-                        <div class="steam-box d-flex align-items-center justify-content-between flex-wrap gap-3">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-check-circle-fill fs-3 me-3 text-success"></i>
-                                <div>
-                                    <p class="mb-0 fw-bold" style="color: #66c0f4;">Konto połączone</p>
-                                    <small class="text-white-50">Steam ID: @Model.SteamId</small>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2 flex-wrap">
-                                <a asp-action="SteamLibrary" class="btn btn-outline-info btn-sm rounded-pill px-3">
-                                    <i class="bi bi-collection-play me-1"></i> Biblioteka
-                                </a>
-                                @if (!Model.IsCreatedBySteam)
-                                {
-                                    <form asp-action="UnlinkSteam" method="post" class="d-inline" onsubmit="return confirm('Czy na pewno odłączyć Steam?');">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </form>
-                                }
-                            </div>
-                        </div>
-                    }
+
+                    <div class="mt-4 pt-2 border-top border-secondary text-center">
+                        <small class="text-muted" style="font-size: 0.7em; opacity: 0.6;">
+                            This site is not associated with Valve Corp.
+                        </small>
+                    </div>
                 </div>
             </div>
 

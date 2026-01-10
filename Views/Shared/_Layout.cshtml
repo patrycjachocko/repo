@@ -15,180 +15,19 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-    @* LEAFLET *@
+    @* LEAFLET (Mapy) *@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
 
+    @* --- GŁÓWNY STYL APLIKACJI (High-Tech Cyberpunk) --- *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/praca_dyplomowa_zesp.styles.css" asp-append-version="true" />
-
-    <style>
-        /* --- GLOBALNY MOTYW GAMEHUB --- */
-        :root {
-            --light-pink: #ffeaf6;
-            --mid-pink: #ff66c4;
-            --deep-purple: #8000ff;
-            --dark-bg: #0b0b0e;
-            --panel-bg: #1a1a20;
-            --text-main: #ffffff;
-            --text-muted: #aaaaaa;
-        }
-
-        body {
-            background-color: var(--dark-bg);
-            color: var(--text-main);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* --- NAVBAR STYLING (POPRAWIONY Z-INDEX) --- */
-        .navbar {
-            background-color: rgba(11, 11, 14, 0.95) !important;
-            border-bottom: 1px solid rgba(255, 102, 196, 0.2);
-            box-shadow: 0 0 20px rgba(128, 0, 255, 0.15);
-            backdrop-filter: blur(10px);
-            padding: 0.8rem 1rem;
-            /* KLUCZOWA POPRAWKA: */
-            position: relative; /* Umożliwia działanie z-index */
-            z-index: 10000; /* Wymusza bycie nad wszystkim w body */
-        }
-
-        .navbar-brand {
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 1.5rem;
-            background: linear-gradient(90deg, #ffffff 0%, var(--light-pink) 30%, var(--mid-pink) 60%, var(--deep-purple) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 15px rgba(255, 102, 196, 0.3);
-            transition: transform 0.3s ease;
-        }
-
-            .navbar-brand:hover {
-                transform: scale(1.05);
-                text-shadow: 0 0 25px rgba(255, 102, 196, 0.6);
-            }
-
-        .nav-link {
-            color: #ddd !important;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            position: relative;
-            margin: 0 5px;
-        }
-
-            .nav-link:hover, .nav-link:focus, .nav-link.active {
-                color: #fff !important;
-                text-shadow: 0 0 10px var(--mid-pink);
-            }
-
-            .nav-link::after {
-                content: '';
-                position: absolute;
-                width: 0;
-                height: 2px;
-                bottom: 0;
-                left: 50%;
-                background: linear-gradient(90deg, var(--mid-pink), var(--deep-purple));
-                transition: all 0.3s ease;
-                transform: translateX(-50%);
-            }
-
-            .nav-link:hover::after {
-                width: 80%;
-            }
-
-        /* --- DROPDOWN MENU --- */
-        .dropdown-menu {
-            background-color: var(--panel-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-top: 2px solid var(--mid-pink);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-        }
-
-        .dropdown-item {
-            color: #ccc;
-            transition: all 0.2s;
-        }
-
-            .dropdown-item:hover {
-                background-color: rgba(128, 0, 255, 0.2);
-                color: #fff;
-                padding-left: 1.5rem;
-            }
-
-        .dropdown-divider {
-            border-top-color: rgba(255,255,255,0.1);
-        }
-
-        /* --- STOPKA --- */
-        footer {
-            margin-top: auto;
-            background-color: #08080a;
-            color: var(--text-muted);
-            border-top: 1px solid #222 !important;
-            padding: 20px 0;
-            font-size: 0.9rem;
-        }
-
-            footer a {
-                color: var(--mid-pink);
-                text-decoration: none;
-                transition: color 0.3s;
-            }
-
-                footer a:hover {
-                    color: var(--light-pink);
-                    text-shadow: 0 0 10px var(--mid-pink);
-                    text-decoration: none;
-                }
-
-        /* --- ALERTY --- */
-        .alert {
-            background-color: rgba(26, 26, 32, 0.95);
-            border: none;
-            color: #fff;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            border-left: 4px solid;
-            backdrop-filter: blur(5px);
-        }
-
-        .alert-success {
-            border-color: #00ff88;
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
-        }
-
-            .alert-success i {
-                color: #00ff88;
-            }
-
-        .alert-danger {
-            border-color: #ff3366;
-            box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
-        }
-
-            .alert-danger i {
-                color: #ff3366;
-            }
-
-        .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
-        }
-
-        .main-container {
-            padding-top: 20px;
-            padding-bottom: 40px;
-        }
-    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark mb-3">
             <div class="container-fluid">
+
                 @* LOGO *@
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">GameHub</a>
 
@@ -200,12 +39,14 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1 align-items-center">
 
+                        @* PRZEGLĄDAJ GRY *@
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="Games" asp-action="Index" asp-route-mode="browse">
                                 <i class="fas fa-gamepad me-1"></i> Przeglądaj Gry
                             </a>
                         </li>
 
+                        @* GUIDES & TIPS (Dropdown) *@
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" id="guidesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false"
                                asp-controller="Games" asp-action="Index" asp-route-mode="guides">
@@ -216,6 +57,7 @@
                             </ul>
                         </li>
 
+                        @* MOJA BIBLIOTEKA (Dla zalogowanych) *@
                         @if (User.Identity.IsAuthenticated)
                         {
                             <li class="nav-item">
@@ -224,18 +66,23 @@
                                 </a>
                             </li>
 
-                            var user = await UserManager.GetUserAsync(User);
-                            if (user != null && !string.IsNullOrEmpty(user.SteamId))
+                            @* BIBLIOTEKA STEAM (Jeśli połączono) *@
+                            @* Sprawdzamy czy user ma SteamID *@
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: #66c0f4 !important; text-shadow: 0 0 5px rgba(102, 192, 244, 0.4);">
-                                        <i class="fab fa-steam"></i> Biblioteka Steam
-                                    </a>
-                                </li>
+                                var user = await UserManager.GetUserAsync(User);
+                                if (user != null && !string.IsNullOrEmpty(user.SteamId))
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: var(--neon-cyan) !important;">
+                                            <i class="fab fa-steam me-1"></i> Biblioteka Steam
+                                        </a>
+                                    </li>
+                                }
                             }
                         }
                     </ul>
 
+                    @* PANEL LOGOWANIA *@
                     <partial name="_LoginPartial" />
                 </div>
             </div>
@@ -244,6 +91,7 @@
 
     <div class="container main-container">
         <main role="main" class="pb-3">
+            @* POWIADOMIENIA (ALERTY) *@
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -274,12 +122,14 @@
         </div>
     </footer>
 
+    @* MODALE LOGOWANIA/REJESTRACJI *@
     <partial name="_AuthModals" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
+    @* SKRYPTY MAP *@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 

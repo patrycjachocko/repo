@@ -4,117 +4,6 @@
 @inject SignInManager<User> SignInManager
 @inject UserManager<User> UserManager
 
-<style>
-    /* --- STYL LOGIN PARTIAL (Cyberpunk) --- */
-
-    /* Avatar w menu */
-    .nav-avatar {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid var(--neon-blue);
-        transition: all 0.3s ease;
-        box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-    }
-
-        .nav-avatar:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
-        }
-
-    /* Specjalne ramki dla ról */
-    .avatar-admin {
-        border-color: #ff3366 !important;
-        box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
-    }
-
-    .avatar-mod {
-        border-color: #00ff9d !important;
-        box-shadow: 0 0 10px rgba(0, 255, 157, 0.4);
-    }
-
-    /* Przycisk Steam (Logowanie) */
-    .btn-steam-login {
-        background: linear-gradient(135deg, #171a21, #1b2838);
-        border: 1px solid #66c0f4;
-        color: #c5c3c0;
-        font-weight: 600;
-        font-size: 0.85rem;
-        transition: all 0.3s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 15px;
-        border-radius: 20px;
-    }
-
-        .btn-steam-login:hover {
-            background: #1b2838;
-            color: #fff;
-            box-shadow: 0 0 15px rgba(102, 192, 244, 0.4);
-            transform: translateY(-2px);
-        }
-
-    /* Dropdown Użytkownika */
-    .user-dropdown-toggle {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #fff !important;
-        text-decoration: none;
-        padding: 5px 10px;
-        border-radius: 30px;
-        transition: background 0.3s;
-    }
-
-        .user-dropdown-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-    .user-name {
-        font-weight: 600;
-        max-width: 150px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* --- STYLE DLA RÓL (Panel Admina/Moderatora) --- */
-    .role-link {
-        font-weight: 800;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        transition: text-shadow 0.3s;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    /* Admin - Czerwony */
-    .text-role-admin {
-        color: #ff3366 !important;
-    }
-
-        .text-role-admin:hover {
-            text-shadow: 0 0 15px rgba(255, 51, 102, 0.8);
-            color: #fff !important;
-        }
-
-    /* Moderator - Zielony */
-    .text-role-mod {
-        color: #00ff9d !important;
-    }
-
-        .text-role-mod:hover {
-            text-shadow: 0 0 15px rgba(0, 255, 157, 0.8);
-            color: #fff !important;
-        }
-
-</style>
-
 <ul class="navbar-nav align-items-center">
     @if (SignInManager.IsSignedIn(User))
     {
@@ -123,88 +12,80 @@
         {
             var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
             var isMod = await UserManager.IsInRoleAsync(user, "Moderator");
-            string avatarClass = isAdmin ? "avatar-admin" : (isMod ? "avatar-mod" : "");
+
+            // Logika koloru ramki avatara (korzystamy ze zmiennych CSS)
+            string borderColor = "var(--neon-cyan)"; // Domyślny user
+            if (isAdmin) { borderColor = "var(--neon-pink)"; } // Admin (czerwony/róż)
+            else if (isMod) { borderColor = "var(--neon-green)"; } // Mod (zielony)
 
             bool hasSteam = !string.IsNullOrEmpty(user.SteamId);
 
-            @* --- 1. PANEL ZARZĄDZANIA (Widoczny na pasku dla dużych ekranów) --- *@
+            @* --- 1. PANEL ZARZĄDZANIA (Tylko ikony dla oszczędności miejsca) --- *@
             @if (isAdmin)
             {
-                <li class="nav-item me-3 d-none d-lg-block">
-                    <a class="nav-link role-link text-role-admin" asp-controller="Admin" asp-action="Index">
-                        <i class="fas fa-user-shield"></i> Panel Admina
+                <li class="nav-item me-2 d-none d-lg-block">
+                    <a class="nav-link" asp-controller="Admin" asp-action="Index" title="Panel Admina" style="color: var(--neon-pink) !important;">
+                        <i class="fas fa-user-shield"></i> <span class="d-none d-xl-inline ms-1" style="font-size: 0.8rem;">ADMIN</span>
                     </a>
                 </li>
             }
             else if (isMod)
             {
-                <li class="nav-item me-3 d-none d-lg-block">
-                    <a class="nav-link role-link text-role-mod" asp-controller="Admin" asp-action="Index">
-                        <i class="fas fa-user-check"></i> Panel Moderatora
+                <li class="nav-item me-2 d-none d-lg-block">
+                    <a class="nav-link" asp-controller="Admin" asp-action="Index" title="Panel Moderatora" style="color: var(--neon-green) !important;">
+                        <i class="fas fa-user-check"></i> <span class="d-none d-xl-inline ms-1" style="font-size: 0.8rem;">MOD</span>
                     </a>
                 </li>
             }
 
-            @* --- 2. PRZYCISK "POŁĄCZ STEAM" (Tylko jeśli brak SteamId) --- *@
+            @* --- 2. PRZYCISK "POŁĄCZ STEAM" (Jeśli brak) --- *@
             @if (!hasSteam)
             {
                 <li class="nav-item me-3 d-none d-md-block">
-                    <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3" title="Połącz Steam" style="border-color: #666; color: #aaa;">
-                        <i class="bi bi-steam"></i> <span class="ms-1 small">Połącz</span>
+                    <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-secondary" title="Połącz Steam" style="padding: 5px 15px; font-size: 0.7rem;">
+                        <i class="bi bi-steam"></i> POŁĄCZ
                     </a>
                 </li>
             }
 
             @* --- 3. DROPDOWN UŻYTKOWNIKA --- *@
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle user-dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     @* AVATAR *@
-                    @if (user.ProfilePicture != null)
-                    {
-                        <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Avatar" class="nav-avatar @avatarClass" />
-                    }
-                    else
-                    {
-                        <img src="~/uploads/avatars/default_avatar.png" alt="Avatar" class="nav-avatar @avatarClass" />
-                    }
-                    <span class="user-name d-none d-sm-block">@user.UserName</span>
+                    <div style="position: relative;">
+                        @if (user.ProfilePicture != null)
+                        {
+                            <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Avatar"
+                                 class="rounded-circle"
+                                 style="width: 35px; height: 35px; object-fit: cover; border: 2px solid @borderColor; box-shadow: 0 0 10px @borderColor;" />
+                        }
+                        else
+                        {
+                            <img src="~/uploads/avatars/default_avatar.png" alt="Avatar"
+                                 class="rounded-circle"
+                                 style="width: 35px; height: 35px; object-fit: cover; border: 2px solid @borderColor; box-shadow: 0 0 10px @borderColor;" />
+                        }
+                    </div>
+                    <span class="d-none d-sm-block text-uppercase" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 1px;">
+                        @user.UserName
+                    </span>
                 </a>
 
-                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow-lg border-secondary" aria-labelledby="userDropdown" style="min-width: 220px;">
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="userDropdown">
 
-                    @* HEADER DROPDOWNU *@
+                    @* HEADER *@
                     <li>
                         <div class="px-3 py-2">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Zalogowano jako</small>
-                            <span class="fw-bold text-white">@user.UserName</span>
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Zalogowano jako</small>
+                            <span class="fw-bold text-white" style="font-family: 'Orbitron', sans-serif;">@user.UserName</span>
                         </div>
                     </li>
-                    <li><hr class="dropdown-divider bg-secondary"></li>
+                    <li><hr class="dropdown-divider"></li>
 
-                    @* PANEL ADMINA/MODERATORA (W DROPDOWNIE TEŻ) *@
-                    @if (isAdmin)
-                    {
-                        <li>
-                            <a class="dropdown-item fw-bold text-role-admin" asp-controller="Admin" asp-action="Index">
-                                <i class="fas fa-user-shield me-2"></i> Panel Admina
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider bg-secondary"></li>
-                    }
-                    else if (isMod)
-                    {
-                        <li>
-                            <a class="dropdown-item fw-bold text-role-mod" asp-controller="Admin" asp-action="Index">
-                                <i class="fas fa-user-check me-2"></i> Panel Moderatora
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider bg-secondary"></li>
-                    }
-
-                    @* MENU GŁÓWNE *@
+                    @* OPCJE *@
                     <li>
                         <a class="dropdown-item" asp-controller="Profile" asp-action="Index">
-                            <i class="bi bi-person-circle me-2 text-info"></i> Mój Profil
+                            <i class="bi bi-person-circle me-2 text-primary"></i> Mój Profil
                         </a>
                     </li>
                     <li>
@@ -213,77 +94,50 @@
                         </a>
                     </li>
 
-                    @* BIBLIOTEKA STEAM (Widoczna tylko gdy połączono) *@
                     @if (hasSteam)
                     {
                         <li>
-                            <a class="dropdown-item" asp-controller="Profile" asp-action="SteamLibrary" style="color: #66c0f4;">
+                            <a class="dropdown-item" asp-controller="Profile" asp-action="SteamLibrary" style="color: var(--neon-cyan) !important;">
                                 <i class="bi bi-steam me-2"></i> Biblioteka Steam
                             </a>
                         </li>
                     }
 
-                    <li><hr class="dropdown-divider bg-secondary"></li>
+                    <li><hr class="dropdown-divider"></li>
 
-                    @* ZGŁOŚ PROBLEM (NOWE) *@
                     <li>
                         <a class="dropdown-item" asp-controller="Tickets" asp-action="Index">
                             <i class="fas fa-headset me-2 text-muted"></i> Zgłoś problem
                         </a>
                     </li>
 
-                    <li><hr class="dropdown-divider bg-secondary"></li>
+                    <li><hr class="dropdown-divider"></li>
 
                     @* WYLOGUJ *@
                     <li>
                         <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">
-                            <button type="submit" class="dropdown-item text-warning">
-                                <i class="bi bi-box-arrow-right me-2"></i> Wyloguj się
+                            <button type="submit" class="dropdown-item text-danger fw-bold">
+                                <i class="bi bi-box-arrow-right me-2"></i> WYLOGUJ
                             </button>
                         </form>
                     </li>
                 </ul>
             </li>
         }
-        else
-        {
-            @* --- AWARYJNE WYLOGOWANIE --- *@
-            <li class="nav-item">
-                <form class="form-inline" asp-controller="Account" asp-action="Logout">
-                    <button type="submit" class="btn btn-sm btn-danger fw-bold">
-                        <i class="fas fa-exclamation-triangle me-1"></i> Błąd sesji (Wyloguj)
-                    </button>
-                </form>
-            </li>
-        }
     }
     else
     {
-        @* --- 4. NIEZALOGOWANY --- *@
+        @* --- 4. NIEZALOGOWANY (Czysto i nowocześnie) --- *@
 
-        @* Przycisk Steam *@
-        <li class="nav-item me-2 d-none d-sm-block">
-            <form asp-controller="Account" asp-action="LoginWithSteam" method="post">
-                <button type="submit" class="btn-steam-login">
-                    <i class="bi bi-steam fs-6"></i>
-                    <span>Zaloguj</span>
-                </button>
-            </form>
-        </li>
-
-        @* Separator *@
-        <li class="nav-item d-none d-sm-block mx-2 text-secondary">|</li>
-
-        @* Linki tekstowe *@
         <li class="nav-item">
-            <a class="nav-link text-white fw-bold px-3" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">
-                Zaloguj
+            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">
+                ZALOGUJ
             </a>
         </li>
-        <li class="nav-item">
-            <a class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" href="#" data-bs-toggle="modal" data-bs-target="#registerModal"
-               style="border-color: var(--mid-pink); color: var(--mid-pink);">
-                Rejestracja
+        <li class="nav-item ms-2">
+            @* Używamy klasy .btn-primary z Twojego site.css - fioletowy, hollow neon *@
+            <a class="btn btn-sm btn-primary" href="#" data-bs-toggle="modal" data-bs-target="#registerModal" style="padding: 6px 20px;">
+                <i class="bi bi-person-plus me-1"></i> REJESTRACJA
             </a>
         </li>
     }

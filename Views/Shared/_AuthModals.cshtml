@@ -1,232 +1,150 @@
 ﻿@using praca_dyplomowa_zesp.Models.Users
 
+@* Ten widok jest teraz bardzo lekki. 
+   Wszystkie style (inputy, fonty, tła) są w wwwroot/css/site.css.
+   Tutaj tylko klasy pomocnicze dla kolorów ramek.
+*@
+
 <style>
-    /* --- STYL MODALI (Cyberpunk Glow) --- */
-
-    /* 1. Tło (Ciemne, bez blura dla wydajności) */
-    .modal-backdrop.show {
-        background-color: rgba(0, 0, 0, 0.9) !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        opacity: 1 !important;
+    /* Specyficzne kolory ramek dla modali Auth (można też przenieść do site.css) */
+    .auth-purple {
+        border: 2px solid var(--neon-purple);
+        box-shadow: 0 0 25px rgba(217, 0, 255, 0.15);
     }
 
-    /* 2. Baza Modala */
-    .modal-content {
-        background: #16161c;
-        color: #fff;
-        border-radius: 20px;
-        transition: box-shadow 0.3s ease;
+    .auth-green {
+        border: 2px solid var(--neon-green);
+        box-shadow: 0 0 25px rgba(0, 255, 157, 0.15);
     }
 
-    /* --- NOWE: SPECJALNE POŚWIATY (GLOW) --- */
-
-    /* Poświata dla Logowania (Fioletowo-Różowa) */
-    .login-glow {
-        border: 1px solid rgba(188, 19, 254, 0.4); /* Wyraźniejsza krawędź */
-        box-shadow: 0 0 60px rgba(188, 19, 254, 0.15); /* Delikatne światło dookoła */
-    }
-
-    /* Poświata dla Rejestracji (Zielono-Cyjanowa) */
-    .register-glow {
-        border: 1px solid rgba(0, 255, 157, 0.4); /* Wyraźniejsza krawędź */
-        box-shadow: 0 0 60px rgba(0, 255, 157, 0.15); /* Delikatne światło dookoła */
-    }
-
-    /* --- INPUTY --- */
-    .form-floating > .form-control {
-        background-color: #0b0b0e !important;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #fff !important;
-        border-radius: 12px;
-    }
-
-        .form-floating > .form-control:focus {
-            background-color: #000 !important;
-            border-color: var(--mid-pink);
-            box-shadow: 0 0 15px rgba(255, 102, 196, 0.2);
-        }
-
-    .form-floating > label {
-        color: #888 !important;
-    }
-
-    .form-floating > .form-control:focus ~ label,
-    .form-floating > .form-control:not(:placeholder-shown) ~ label {
-        color: var(--mid-pink) !important;
-        opacity: 0.9;
-    }
-
-    /* --- TYTUŁY --- */
-    .auth-title {
-        font-weight: 800;
+    /* Separator - specyficzny dla tego layoutu */
+    .auth-separator {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        color: #666;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.7rem;
+        margin: 1.5rem 0;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 5px;
     }
 
-    .title-login {
-        background: linear-gradient(90deg, #fff, #ff66c4, #bc13fe);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 25px rgba(188, 19, 254, 0.4);
-    }
-
-    .title-register {
-        background: linear-gradient(90deg, #fff, #00ff9d);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 25px rgba(0, 255, 157, 0.4);
-    }
-
-    /* --- PRZYCISKI --- */
-    .btn-login {
-        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
-        border: none;
-        color: white;
-        transition: all 0.3s;
-        box-shadow: 0 5px 15px rgba(188, 19, 254, 0.3);
-    }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 25px rgba(255, 102, 196, 0.6);
-            color: white;
-            filter: brightness(1.1);
+        .auth-separator::before, .auth-separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #333;
         }
 
-    .btn-register {
-        background: linear-gradient(45deg, #006633, #00ff9d);
-        border: none;
-        color: #000;
-        transition: all 0.3s;
-        font-weight: 800;
-        box-shadow: 0 5px 15px rgba(0, 255, 157, 0.2);
-    }
-
-        .btn-register:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 25px rgba(0, 255, 157, 0.6);
-            color: #000;
+        .auth-separator::before {
+            margin-right: 10px;
         }
 
-    .modal-header .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
-    }
-
-    .switch-link {
-        transition: all 0.3s;
-        text-decoration: none;
-    }
-
-        .switch-link:hover {
-            text-shadow: 0 0 10px currentColor;
-            text-decoration: underline;
+        .auth-separator::after {
+            margin-left: 10px;
         }
 </style>
 
-@* --- MODAL LOGOWANIA (Fioletowy Glow) --- *@
+@* --- MODAL LOGOWANIA --- *@
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        @* Dodano klasę login-glow *@
-        <div class="modal-content login-glow">
+        <div class="modal-content auth-purple">
             <div class="modal-header border-bottom-0 pb-0">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4 p-sm-5 pt-0">
 
-                <div class="text-center mb-4">
-                    <h2 class="auth-title title-login">Witaj Ponownie!</h2>
-                    <p class="text-white-50 small">Zaloguj się do świata gier.</p>
-                </div>
+                <h2 class="text-center mb-4" style="color: #fff; text-shadow: 0 0 10px var(--neon-purple);">DOSTĘP<br>AUTORYZOWANY</h2>
 
                 <form asp-controller="Account" asp-action="Login" method="post">
                     <input type="hidden" name="returnUrl" class="current-url-input" />
 
                     <div class="form-floating mb-3">
                         <input name="Login" type="text" class="form-control" placeholder="Login" required />
-                        <label><i class="bi bi-person me-2"></i>Login</label>
+                        <label>LOGIN / ID</label>
                     </div>
 
                     <div class="form-floating mb-3">
                         <input name="Password" type="password" class="form-control" placeholder="Hasło" required />
-                        <label><i class="bi bi-lock me-2"></i>Hasło</label>
+                        <label>KOD DOSTĘPU</label>
                     </div>
 
                     <div class="form-check mb-4">
-                        <input class="form-check-input bg-dark border-secondary" type="checkbox" name="RememberMe" value="true" id="loginRememberMe" />
-                        <label class="form-check-label text-white-50 small" for="loginRememberMe">
-                            Zapamiętaj mnie
+                        <input class="form-check-input" type="checkbox" name="RememberMe" value="true" id="loginRememberMe" />
+                        <label class="form-check-label text-muted small pt-1 text-uppercase" for="loginRememberMe">
+                            PODTRZYMAJ SESJĘ
                         </label>
                     </div>
 
-                    <div class="d-grid mb-4">
-                        <button type="submit" class="btn btn-login btn-lg fw-bold py-2 rounded-pill">ZALOGUJ SIĘ</button>
-                    </div>
-
-                    <hr class="border-secondary opacity-25">
-
-                    <div class="text-center mt-3">
-                        <p class="text-white-50 mb-1 small">Nie masz jeszcze konta?</p>
-                        <button type="button" class="btn btn-link switch-link fw-bold p-0" style="color: #00ff9d;" onclick="switchToRegister()">
-                            Stwórz darmowe konto
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            INICJALIZACJA
                         </button>
                     </div>
                 </form>
+
+                <div class="auth-separator">ALTERNATYWNE POŁĄCZENIE</div>
+
+                <form asp-controller="Account" asp-action="LoginWithSteam" method="post" class="d-grid mb-4">
+                    <input type="hidden" name="returnUrl" class="current-url-input" />
+                    <button type="submit" class="btn btn-secondary btn-lg" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">
+                        <i class="bi bi-steam fs-5 me-2"></i> ŁĄCZE STEAM
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <a href="#" onclick="switchToRegister()" style="color: var(--neon-green); font-weight: 700; text-transform: uppercase;">
+                        >> NOWY PROFIL UŻYTKOWNIKA <<
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-@* --- MODAL REJESTRACJI (Zielony Glow) --- *@
+@* --- MODAL REJESTRACJI --- *@
 <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        @* Dodano klasę register-glow *@
-        <div class="modal-content register-glow">
+        <div class="modal-content auth-green">
             <div class="modal-header border-bottom-0 pb-0">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4 p-sm-5 pt-0">
 
-                <div class="text-center mb-4">
-                    <h2 class="auth-title title-register">Dołącz do Nas!</h2>
-                    <p class="text-white-50 small">Stwórz konto w kilka sekund.</p>
-                </div>
+                <h2 class="text-center mb-4" style="color: #fff; text-shadow: 0 0 10px var(--neon-green);">NOWY<br>UŻYTKOWNIK</h2>
 
                 <form asp-controller="Account" asp-action="Register" method="post">
                     <input type="hidden" name="returnUrl" class="current-url-input" />
 
                     <div class="form-floating mb-3">
                         <input name="Login" type="text" class="form-control" placeholder="Login" required />
-                        <label><i class="bi bi-person-badge me-2"></i>Login (do logowania)</label>
+                        <label>USTAW ID (LOGIN)</label>
                     </div>
 
                     <div class="form-floating mb-3">
                         <input name="UserName" type="text" class="form-control" placeholder="Nick" required />
-                        <label><i class="bi bi-person me-2"></i>Nazwa wyświetlana</label>
+                        <label>NAZWA WYŚWIETLANA</label>
                     </div>
 
                     <div class="form-floating mb-3">
                         <input name="Password" type="password" class="form-control" placeholder="Hasło" required />
-                        <label><i class="bi bi-lock me-2"></i>Hasło</label>
+                        <label>KOD DOSTĘPU</label>
                     </div>
 
                     <div class="form-floating mb-4">
                         <input name="ConfirmPassword" type="password" class="form-control" placeholder="Powtórz hasło" required />
-                        <label><i class="bi bi-lock-fill me-2"></i>Powtórz hasło</label>
+                        <label>POTWIERDŹ KOD</label>
                     </div>
 
                     <div class="d-grid mb-4">
-                        <button type="submit" class="btn btn-register btn-lg fw-bold py-2 rounded-pill">ZAREJESTRUJ SIĘ</button>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            REJESTRACJA SYSTEMU
+                        </button>
                     </div>
 
-                    <hr class="border-secondary opacity-25">
-
                     <div class="text-center mt-3">
-                        <p class="text-white-50 mb-1 small">Masz już konto?</p>
-                        <button type="button" class="btn btn-link switch-link fw-bold p-0" style="color: #66c0f4;" onclick="switchToLogin()">
-                            Zaloguj się tutaj
-                        </button>
+                        <a href="#" onclick="switchToLogin()" style="color: var(--neon-purple); font-weight: 700; text-transform: uppercase;">
+                            >> POWRÓT DO LOGOWANIA <<
+                        </a>
                     </div>
                 </form>
             </div>
@@ -235,14 +153,11 @@
 </div>
 
 <script>
-    // 1. Płynne przełączanie między modalami
     function switchToRegister() {
         var loginModalEl = document.getElementById('loginModal');
         var registerModalEl = document.getElementById('registerModal');
-
         var loginModal = bootstrap.Modal.getInstance(loginModalEl);
         loginModal.hide();
-
         setTimeout(function() {
             var registerModal = new bootstrap.Modal(registerModalEl);
             registerModal.show();
@@ -252,22 +167,17 @@
     function switchToLogin() {
         var registerModalEl = document.getElementById('registerModal');
         var loginModalEl = document.getElementById('loginModal');
-
         var registerModal = bootstrap.Modal.getInstance(registerModalEl);
         registerModal.hide();
-
         setTimeout(function() {
             var loginModal = new bootstrap.Modal(loginModalEl);
             loginModal.show();
         }, 300);
     }
 
-    // 2. Automatyczne pobieranie URL powrotnego
     document.addEventListener("DOMContentLoaded", function() {
         var currentUrl = window.location.pathname + window.location.search;
         var inputs = document.querySelectorAll('.current-url-input');
-        inputs.forEach(function(input) {
-            input.value = currentUrl;
-        });
+        inputs.forEach(function(input) { input.value = currentUrl; });
     });
 </script>

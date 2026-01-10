@@ -30,7 +30,7 @@ Aby uruchomić projekt lokalnie, potrzebujesz:
 
 1.  **Sklonuj repozytorium:**
     ```bash
-    git clone [https://github.com/patrycjachocko/repo.git)
+    git clone 
     cd repo
     ```
     W przypadku posiadania kodu w postaci archiwum ZIP (lub folderu na dysku), pomiń krok klonowania.

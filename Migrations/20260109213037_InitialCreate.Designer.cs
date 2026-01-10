@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260109133704_InitialCreate")]
+    [Migration("20260109213037_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
