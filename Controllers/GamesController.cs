@@ -274,10 +274,12 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (string.IsNullOrEmpty(query)) return RedirectToAction("Index");
 
-            var safeQuery = query.Replace("\"", "").Trim();
+            // 1. Użycie tego samego czyszczenia nazwy co przy imporcie
+            var cleanName = CleanSteamGameName(query);
 
-            // Pobieramy więcej wyników, żeby móc filtrować
-            var igdbQuery = $"fields id, name, category, version_parent; search \"{safeQuery}\"; where parent_game = null; limit 20;";
+            // 2. Zapytanie identyczne jak w 'Etap 2' importu (z aggregated_rating)
+            // Zmieniono limit na 10 (jak w imporcie), aby nie pobierać za dużo śmieci
+            var igdbQuery = $"fields id, name, category, version_parent, aggregated_rating; search \"{cleanName}\"; where parent_game = null; limit 10;";
 
             try
             {
@@ -287,18 +289,26 @@ namespace praca_dyplomowa_zesp.Controllers
                     ? new List<ApiGame>()
                     : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
-                // Stosujemy to samo filtrowanie co w Index
-                var foundGame = games.FirstOrDefault(g =>
+                // 3. Rozszerzone filtrowanie (takie samo jak w imporcie)
+                var validCandidates = games.Where(g =>
                     g.Category == 0 &&
                     g.Version_parent == null &&
                     !string.IsNullOrEmpty(g.Name) &&
                     !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
-                    !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase)
-                );
+                    !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
+                    !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
+                    !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
+                ).ToList();
 
-                if (foundGame != null)
+                if (validCandidates.Any())
                 {
-                    return RedirectToAction("Details", new { id = foundGame.Id });
+                    // 4. Wybór najlepszego kandydata (tego z oceną krytyków), jeśli istnieje
+                    var bestMatch = validCandidates.FirstOrDefault(g => g.Aggregated_rating != null) ?? validCandidates.FirstOrDefault();
+
+                    if (bestMatch != null)
+                    {
+                        return RedirectToAction("Details", new { id = bestMatch.Id });
+                    }
                 }
             }
             catch (Exception ex)
@@ -306,8 +316,17 @@ namespace praca_dyplomowa_zesp.Controllers
                 Console.WriteLine($"Błąd podczas wyszukiwania gry ze Steam: {ex.Message}");
             }
 
-            TempData["ErrorMessage"] = $"Nie udało się automatycznie dopasować gry '{query}'. Spróbuj znaleźć ją na liście poniżej.";
-            return RedirectToAction("Index", new { searchString = query });
+            // Jeśli nie znaleziono idealnego dopasowania, przekieruj do wyszukiwarki z czystą nazwą
+            TempData["ErrorMessage"] = $"Nie udało się automatycznie dopasować gry '{cleanName}'. Spróbuj znaleźć ją na liście poniżej.";
+            return RedirectToAction("Index", new { searchString = cleanName });
+        }
+
+        // --- METODA POMOCNICZA SKOPIOWANA Z ProfileController ---
+        private string CleanSteamGameName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            // Usuwanie znaków handlowych i cudzysłowów
+            return name.Replace("\"", "").Replace("™", "").Replace("®", "").Replace("©", "").Trim();
         }
 
         [HttpPost]

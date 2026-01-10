@@ -62,41 +62,41 @@
         margin-bottom: 0;
         text-align: center;
         z-index: 20;
+        /* Przesuwamy treść do góry */
+        transform: translateY(-5vh);
     }
 
-    .hero-title {
-        /* Standardowy rozmiar dla długich tekstów (np. "Twoje Centrum Gier") */
-        font-size: clamp(1.5rem, 4vh, 3.5rem);
-        font-weight: 800;
-        margin-bottom: 0.5vh;
+    /* STATYCZNE NEONOWE LOGO */
+    .neon-logo {
+        font-size: clamp(4rem, 10vh, 8rem);
+        font-weight: 900;
         text-transform: uppercase;
-        background: linear-gradient(90deg, #ffffff 0%, var(--light-pink) 30%, var(--mid-pink) 60%, var(--deep-purple) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 35px rgba(255, 102, 196, 0.4);
+        color: #fff;
+        margin-bottom: 0;
+        letter-spacing: 5px;
+        line-height: 1;
+        /* Statyczny efekt neonu (bez mrugania) */
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 102, 196, 0.5), 0 0 40px rgba(255, 102, 196, 0.5), 0 0 80px rgba(255, 102, 196, 0.8), 0 0 120px rgba(128, 0, 255, 0.8);
     }
-
-        /* ZMIANA 1: Specjalna klasa dla napisu GAMEHUB */
-        .hero-title.brand-big {
-            /* Znacznie większa czcionka, bo słowo jest krótkie */
-            font-size: clamp(3rem, 10vh, 7rem);
-            letter-spacing: 10px; /* Szeroki rozstaw liter dla efektu "Cinematic" */
-            font-weight: 900; /* Extra gruby font */
-            margin-bottom: 0; /* Reset marginesu */
-        }
 
     .hero-subtitle {
-        font-size: clamp(0.8rem, 2vh, 1.2rem);
+        font-size: clamp(0.9rem, 2vh, 1.3rem);
         color: #ccc;
         font-weight: 300;
-        letter-spacing: 1px;
-        margin-top: 10px;
+        letter-spacing: 2px;
+        margin-top: 20px;
+        text-transform: uppercase;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
     }
 
     /* --- SWIPER --- */
     .swiper {
         width: 100%;
-        padding-top: 40px;
+        /* --- ZMIANA: NAPRAWA UCINANIA POŚWIATY --- */
+        /* Zwiększamy padding-top (było 40px), żeby zrobić miejsce na poświatę wewnątrz kontenera */
+        padding-top: 100px;
+        /* Podciągamy cały slider do góry marginesem, żeby optycznie był w tym samym miejscu */
+        margin-top: -60px;
         padding-bottom: 60px;
         -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
         mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
@@ -109,11 +109,10 @@
         height: 50vh;
         aspect-ratio: 2/3;
         width: auto;
-        margin: 0 45px;
+        margin: 0;
         border-radius: 20px;
         position: relative;
         background-color: #1a1a20;
-        /* Styl nieaktywnych kart */
         border: 2px solid rgba(160, 60, 255, 0.8);
         box-shadow: 0 5px 20px rgba(0,0,0,0.8);
         filter: brightness(0.7);
@@ -123,33 +122,28 @@
         transition: transform 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease;
     }
 
-    @@media (min-width: 1600px) {
-        .swiper-slide {
-            height: 60vh;
-        }
-    }
-
     @@media (max-width: 576px) {
         .swiper-slide {
             height: 45vh;
             aspect-ratio: 2/3;
-            margin: 0 15px;
+            margin: 0;
         }
 
-        .hero-title {
-            padding: 0 10px;
+        .neon-logo {
+            font-size: clamp(3rem, 7vh, 5rem);
         }
-            /* Dostosowanie dla GAMEHUB na telefonie */
-            .hero-title.brand-big {
-                font-size: clamp(2.5rem, 6vh, 4rem);
-                letter-spacing: 4px;
-            }
 
         .swiper {
-            padding-top: 30px;
+            /* Na telefonie też poprawiamy */
+            padding-top: 80px;
+            margin-top: -40px;
             padding-bottom: 50px;
             -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
             mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+        }
+
+        .hero-content {
+            transform: translateY(-2vh);
         }
     }
 
@@ -165,12 +159,11 @@
     .swiper-slide-active {
         filter: brightness(1.0);
         border: 3px solid var(--mid-pink);
-        /* Światło boczne (trapez) */
+        /* Ta poświata była ucinana, teraz ma miejsce w paddingu */
         box-shadow: -80px 0 90px -40px rgba(255, 102, 196, 0.6), 80px 0 90px -40px rgba(255, 102, 196, 0.6), 0 0 20px var(--mid-pink);
         z-index: 100;
     }
 
-        /* Refleks świetlny z góry */
         .swiper-slide-active::after {
             content: '';
             position: absolute;
@@ -258,15 +251,13 @@
 
 <div class="hero-section">
     <div class="hero-content">
+        <h1 class="neon-logo">GAMEHUB</h1>
         @if (User.Identity.IsAuthenticated)
         {
-            <h1 class="hero-title">Twoje Centrum Gier</h1>
-            <p class="hero-subtitle">Kontynuuj przygodę lub odkryj coś nowego</p>
+            <p class="hero-subtitle">Witaj ponownie w centrum rozgrywki</p>
         }
         else
         {
-            @* ZMIANA 2: Nowy napis z klasą powiększającą *@
-            <h1 class="hero-title brand-big">GAMEHUB</h1>
             <p class="hero-subtitle">Zaloguj się, aby zarządzać swoją kolekcją</p>
         }
     </div>
@@ -314,14 +305,16 @@
         loop: true,
         loopedSlides: 6,
         speed: 700,
+
         coverflowEffect: {
             rotate: 0,
-            stretch: 0,
-            depth: 150,
+            stretch: -75, // Zachowany odstęp
+            depth: 0,
             modifier: 1,
             slideShadows: true,
-            scale: 0.85
+            scale: 1
         },
+
         autoplay: {
             delay: 3000,
             disableOnInteraction: false,

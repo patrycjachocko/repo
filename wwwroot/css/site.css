@@ -10,6 +10,15 @@
     --neon-cyan: #00f3ff;
     --neon-green: #00ff9d;
     --neon-pink: #ff0055;
+    /* --- NOWE KOLORY --- */
+    --neon-yellow: #ffee00;
+    --neon-red: #ff3333;
+    /* --- ZMIENNE Z HOME --- */
+    --light-pink: #ffeaf6;
+    --mid-pink: #ff66c4;
+    --deep-purple: #8000ff;
+    --dark-bg: #0b0b0e;
+    --purple-glow-bg: #1a0524;
     /* --- TŁA --- */
     --bg-body: #050507;
     --bg-panel: #0a0a0c;
@@ -127,13 +136,100 @@ hr {
     font-family: 'Rajdhani', sans-serif;
     font-weight: 600;
     padding: 10px 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
 }
 
+    /* --- ZMIANA: USUNIĘTO PADDING-LEFT ABY NIE BYŁO RUCHU --- */
     .dropdown-item:hover {
         background-color: rgba(255, 255, 255, 0.05);
-        color: var(--neon-purple);
-        padding-left: 25px;
+        /* padding-left: 25px; <--- USUNIĘTE */
     }
+
+/* =========================================
+   NEON DROPDOWN ITEMS (KOLORY I POŚWIATA)
+   ========================================= */
+
+/* 1. RÓŻOWY (Admin) */
+.item-neon-pink i {
+    color: var(--neon-pink);
+    transition: 0.3s;
+}
+
+.item-neon-pink:hover {
+    color: var(--neon-pink) !important;
+    text-shadow: 0 0 8px var(--neon-pink);
+    box-shadow: inset 3px 0 0 var(--neon-pink);
+}
+
+/* 2. ZIELONY (Mod / Biblioteka) */
+.item-neon-green i {
+    color: var(--neon-green);
+    transition: 0.3s;
+}
+
+.item-neon-green:hover {
+    color: var(--neon-green) !important;
+    text-shadow: 0 0 8px var(--neon-green);
+    box-shadow: inset 3px 0 0 var(--neon-green);
+}
+
+/* 3. CYJAN (Profil) */
+.item-neon-cyan i {
+    color: var(--neon-cyan);
+    transition: 0.3s;
+}
+
+.item-neon-cyan:hover {
+    color: var(--neon-cyan) !important;
+    text-shadow: 0 0 8px var(--neon-cyan);
+    box-shadow: inset 3px 0 0 var(--neon-cyan);
+}
+
+/* 4. FIOLET (Steam / Domyślny) */
+.item-neon-purple i {
+    color: var(--neon-purple);
+    transition: 0.3s;
+}
+
+.item-neon-purple:hover {
+    color: var(--neon-purple) !important;
+    text-shadow: 0 0 8px var(--neon-purple);
+    box-shadow: inset 3px 0 0 var(--neon-purple);
+}
+
+/* 5. ŻÓŁTY (Support) */
+.item-neon-yellow i {
+    color: var(--neon-yellow);
+    transition: 0.3s;
+}
+
+.item-neon-yellow:hover {
+    color: var(--neon-yellow) !important;
+    text-shadow: 0 0 8px var(--neon-yellow);
+    box-shadow: inset 3px 0 0 var(--neon-yellow);
+}
+
+/* 6. CZERWONY (Wyloguj) */
+.item-neon-red {
+    color: #ff8888;
+}
+
+    .item-neon-red i {
+        color: var(--neon-red);
+        transition: 0.3s;
+    }
+
+    .item-neon-red:hover {
+        color: var(--neon-red) !important;
+        text-shadow: 0 0 8px var(--neon-red);
+        box-shadow: inset 3px 0 0 var(--neon-red);
+    }
+
+/* =========================================
+   END NEON DROPDOWN ITEMS
+   ========================================= */
 
 /* --- 4. GŁÓWNY KONTENER I ALERTY --- */
 .main-container {
@@ -273,6 +369,11 @@ hr {
         background-color: transparent !important;
         transform: translateY(-2px);
     }
+
+/* --- FIX DLA PRZYCISKU STEAM (BRAK PODSKAKIWANIA) --- */
+.btn-static:hover {
+    transform: none !important;
+}
 
 /* PRIMARY - FIOLET */
 .btn-primary {
