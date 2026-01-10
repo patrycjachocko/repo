@@ -1,639 +1,610 @@
-﻿/* ==========================================================================
-   GAMEHUB - FUTURE ARCADE / CYBERPUNK THEME (DYNAMIC LINKS VERSION)
-   ========================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+﻿/* =========================================
+   GLÓWNE ZMIENNE I KONFIGURACJA
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-    /* --- PALETA NEONOWA --- */
-    --neon-purple: #bd00ff;
+    /* Paleta kolorów Neon */
     --neon-cyan: #00f3ff;
-    --neon-green: #00ff9d;
     --neon-pink: #ff0055;
-    /* --- NOWE KOLORY --- */
-    --neon-yellow: #ffee00;
+    --neon-green: #00ff9d;
+    --neon-purple: #bd00ff;
     --neon-red: #ff3333;
-    /* --- ZMIENNE Z HOME --- */
-    --light-pink: #ffeaf6;
-    --mid-pink: #ff66c4;
-    --deep-purple: #8000ff;
-    --dark-bg: #0b0b0e;
-    --purple-glow-bg: #1a0524;
-    /* --- TŁA --- */
+    /* Tła */
     --bg-body: #050507;
     --bg-panel: #0a0a0c;
-    --bg-input: #000000;
-    /* --- TEKST I RAMKI --- */
-    --text-main: #e0e0e0;
-    --text-muted: #888899;
     --border-tech: #333333;
+    /* Czcionka */
+    --font-main: 'Exo 2', sans-serif;
+    /* Zmienna dynamiczna dla rangi (globalna) */
+    --role-color: var(--neon-cyan);
 }
 
-/* --- 2. BAZA I TYPOGRAFIA --- */
-html, body {
+/* =========================================
+   STYL BAZOWY (BODY I CZCIONKI)
+   ========================================= */
+
+/* Ważne: ustawiamy wysokość html, żeby body miało się do czego odnieść */
+html {
     height: 100%;
 }
 
 body {
     background-color: var(--bg-body);
-    background-image: radial-gradient(circle at 50% 0%, #1a1020 0%, #050507 60%);
-    color: var(--text-main);
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 500;
-    font-size: 16px;
-    letter-spacing: 0.5px;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+    background-image: radial-gradient(circle at 50% 0%, #1a1020 0%, #050507 80%);
+    background-attachment: fixed;
+    color: #e0e0e0;
+    /* --- FIX STOPKI (Sticky Footer - Metoda Flexbox) --- */
+    min-height: 100vh; /* Minimalna wysokość to 100% okna */
+    display: flex; /* Włączamy Flexbox */
+    flex-direction: column; /* Układ pionowy */
+    margin: 0;
+    font-family: var(--font-main);
+    position: relative; /* Zapobiega dziwnym przesunięciom */
 }
 
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase;
-    color: #fff;
-    margin-bottom: 1.2rem;
-    letter-spacing: 2px;
-}
-
-h1 {
-    font-weight: 900;
-    text-shadow: 0 0 20px rgba(189, 0, 255, 0.4);
-}
-
-a {
-    color: var(--neon-cyan);
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-
-    a:hover {
-        color: var(--neon-purple);
-        text-shadow: 0 0 8px var(--neon-purple);
-        text-decoration: none;
-    }
-
-hr {
-    border: 0;
-    height: 1px;
-    background-color: #333;
-    opacity: 0.5;
-    margin: 2rem 0;
-}
-
-/* --- 3. NAVBAR --- */
-.navbar {
-    background-color: rgba(10, 10, 12, 0.95) !important;
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--neon-purple);
-    box-shadow: 0 0 25px rgba(189, 0, 255, 0.15);
-    padding: 0.8rem 1rem;
-    z-index: 1030;
-}
-
-.navbar-brand {
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 900;
-    font-size: 1.6rem;
-    color: #fff !important;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 0 0 10px var(--neon-purple);
-    transition: transform 0.3s;
-}
-
-    .navbar-brand:hover {
-        transform: scale(1.05);
-    }
-
-.nav-link {
-    color: #ccc !important;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: 0.3s;
-    margin: 0 8px;
-    border-bottom: 2px solid transparent;
-}
-
-    .nav-link:hover, .nav-link.active {
-        color: #fff !important;
-        text-shadow: 0 0 8px var(--neon-purple);
-        border-bottom-color: var(--neon-purple);
-    }
-
-.dropdown-menu {
-    background-color: var(--bg-panel);
-    border: 1px solid #444;
-    border-top: 2px solid var(--neon-purple);
-    border-radius: 0;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-    margin-top: 10px;
-}
-
-.dropdown-item {
-    color: #ccc;
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 600;
-    padding: 10px 20px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-}
-
-    /* --- ZMIANA: USUNIĘTO PADDING-LEFT ABY NIE BYŁO RUCHU --- */
-    .dropdown-item:hover {
-        background-color: rgba(255, 255, 255, 0.05);
-        /* padding-left: 25px; <--- USUNIĘTE */
-    }
-
-/* =========================================
-   NEON DROPDOWN ITEMS (KOLORY I POŚWIATA)
-   ========================================= */
-
-/* 1. RÓŻOWY (Admin) */
-.item-neon-pink i {
-    color: var(--neon-pink);
-    transition: 0.3s;
-}
-
-.item-neon-pink:hover {
-    color: var(--neon-pink) !important;
-    text-shadow: 0 0 8px var(--neon-pink);
-    box-shadow: inset 3px 0 0 var(--neon-pink);
-}
-
-/* 2. ZIELONY (Mod / Biblioteka) */
-.item-neon-green i {
-    color: var(--neon-green);
-    transition: 0.3s;
-}
-
-.item-neon-green:hover {
-    color: var(--neon-green) !important;
-    text-shadow: 0 0 8px var(--neon-green);
-    box-shadow: inset 3px 0 0 var(--neon-green);
-}
-
-/* 3. CYJAN (Profil) */
-.item-neon-cyan i {
-    color: var(--neon-cyan);
-    transition: 0.3s;
-}
-
-.item-neon-cyan:hover {
-    color: var(--neon-cyan) !important;
-    text-shadow: 0 0 8px var(--neon-cyan);
-    box-shadow: inset 3px 0 0 var(--neon-cyan);
-}
-
-/* 4. FIOLET (Steam / Domyślny) */
-.item-neon-purple i {
-    color: var(--neon-purple);
-    transition: 0.3s;
-}
-
-.item-neon-purple:hover {
-    color: var(--neon-purple) !important;
-    text-shadow: 0 0 8px var(--neon-purple);
-    box-shadow: inset 3px 0 0 var(--neon-purple);
-}
-
-/* 5. ŻÓŁTY (Support) */
-.item-neon-yellow i {
-    color: var(--neon-yellow);
-    transition: 0.3s;
-}
-
-.item-neon-yellow:hover {
-    color: var(--neon-yellow) !important;
-    text-shadow: 0 0 8px var(--neon-yellow);
-    box-shadow: inset 3px 0 0 var(--neon-yellow);
-}
-
-/* 6. CZERWONY (Wyloguj) */
-.item-neon-red {
-    color: #ff8888;
-}
-
-    .item-neon-red i {
-        color: var(--neon-red);
-        transition: 0.3s;
-    }
-
-    .item-neon-red:hover {
-        color: var(--neon-red) !important;
-        text-shadow: 0 0 8px var(--neon-red);
-        box-shadow: inset 3px 0 0 var(--neon-red);
-    }
-
-/* =========================================
-   END NEON DROPDOWN ITEMS
-   ========================================= */
-
-/* --- 4. GŁÓWNY KONTENER I ALERTY --- */
+/* To jest kontener z treścią strony. 
+   flex: 1 sprawia, że ten element rozciąga się, by zająć całe wolne miejsce,
+   spychając stopkę na sam dół. */
 .main-container {
-    padding-top: 30px;
-    padding-bottom: 50px;
-    flex: 1;
+    flex: 1 0 auto; /* Ważne: 1=grow, 0=shrink, auto=basis */
+    width: 100%;
 }
 
-.alert {
-    background-color: rgba(15, 15, 20, 0.95);
-    border: 1px solid #333;
-    border-left-width: 4px;
-    color: #eee;
-    border-radius: 0;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 600;
+/* Wymuszenie czcionki wszędzie */
+h1, h2, h3, h4, h5, h6, p, span, a, div, button, input {
+    font-family: var(--font-main) !important;
 }
 
-.alert-success {
-    border-left-color: var(--neon-green);
-}
-
-.alert-danger {
-    border-left-color: var(--neon-pink);
-}
-
-.btn-close {
-    filter: invert(1);
-    opacity: 0.6;
-}
-
-/* --- 5. ELEMENTY FORMULARZY --- */
-.form-control, .form-select {
-    background-color: var(--bg-input) !important;
-    border: 1px solid var(--border-tech);
-    border-radius: 0;
-    color: #fff !important;
-    font-family: 'Rajdhani', monospace;
-    font-size: 1.1rem;
+/* Elementy pogrubione (Nagłówki, Przyciski) */
+h1, h2, h3, h4, h5, h6, .btn, .nav-link {
+    font-weight: 700 !important;
     letter-spacing: 1px;
-    padding: 1rem 0.75rem !important;
-    transition: all 0.3s;
-    height: 3.5rem !important;
+    text-transform: uppercase;
 }
 
-    .form-control:focus, .form-select:focus {
+/* =========================================
+   STOPKA (FOOTER) - POPRAWIONA
+   ========================================= */
+footer.footer {
+    /* KLUCZOWA ZMIANA: Nadpisujemy position: absolute z szablonów */
+    position: relative !important;
+    flex-shrink: 0; /* Zapobiega zgniataniu stopki */
+    /* Usuwamy linię */
+    border: none !important;
+    /* Wygląd */
+    padding: 10px 0 !important;
+    line-height: 1;
+    font-size: 0.8rem;
+    background: transparent;
+    opacity: 0.7;
+    width: 100%;
+}
+
+/* =========================================
+   FORMULARZE (TECH STYLE)
+   ========================================= */
+.form-floating {
+    position: relative;
+}
+
+.form-control-tech {
+    background: #050507;
+    border: 1px solid #444;
+    color: #fff;
+    font-weight: 400 !important;
+    height: 50px;
+}
+
+    .form-control-tech:focus {
+        background: #000;
         border-color: var(--neon-purple);
-        box-shadow: inset 0 0 10px rgba(189, 0, 255, 0.2);
-        background-color: #050505 !important;
+        box-shadow: 0 0 10px rgba(189, 0, 255, 0.2);
+        color: #fff;
     }
 
-    .form-control::placeholder {
-        color: transparent !important;
+    .form-control-tech::placeholder {
+        color: transparent;
     }
 
 .form-floating > label {
-    color: #666 !important;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
     padding: 1rem 0.75rem;
-    transition: all 0.3s ease-in-out;
+    pointer-events: none;
+    border: 1px solid transparent;
     transform-origin: 0 0;
+    transition: opacity .1s ease-in-out, transform .1s ease-in-out;
+    color: #888;
+    text-transform: uppercase;
+    font-size: 0.85rem;
 }
 
 .form-floating > .form-control:focus ~ label,
 .form-floating > .form-control:not(:placeholder-shown) ~ label {
-    color: var(--neon-purple) !important;
-    text-shadow: 0 0 5px rgba(189, 0, 255, 0.5);
     opacity: 1;
     transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
-}
-
-.form-floating > .form-control:focus,
-.form-floating > .form-control:not(:placeholder-shown) {
-    padding-top: 1.625rem !important;
-    padding-bottom: 0.625rem !important;
-}
-
-/* --- 6. CHECKBOX --- */
-.form-check-input {
-    flex-shrink: 0 !important;
-    width: 1.4em;
-    height: 1.4em;
-    margin-top: 0.15em;
-    margin-right: 0.6em;
-    background-color: #000 !important;
-    border: 1px solid #444;
-    border-radius: 0 !important;
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s ease-in-out;
-}
-
-    .form-check-input:hover {
-        border-color: #888;
-    }
-
-    .form-check-input:checked {
-        background-color: transparent !important;
-        border-color: var(--neon-purple);
-        box-shadow: inset 0 0 8px rgba(189, 0, 255, 0.5);
-    }
-
-        .form-check-input:checked::after {
-            content: '✔';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: var(--neon-purple);
-            font-size: 0.9em;
-            font-weight: 900;
-            text-shadow: 0 0 5px var(--neon-purple);
-        }
-
-/* --- 7. GUZIKI (DYNAMIC GLOW) --- */
-.btn {
-    border-radius: 0;
-    font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-weight: 700;
-    padding: 12px 24px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--neon-purple);
     background-color: transparent;
-    border: 1px solid transparent;
-    position: relative;
-    overflow: hidden;
+    font-weight: 700;
+    text-shadow: 0 0 5px rgba(189, 0, 255, 0.3);
 }
+
+/* =========================================
+   PRZYCISKI (BUTTONS)
+   ========================================= */
+.btn {
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+    .btn:not(.btn-edit-avatar):not(.btn-close):not(.btn-sm) {
+        height: 50px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 30px;
+    }
 
     .btn:hover {
-        background-color: transparent !important;
-        transform: translateY(-2px);
+        transform: none !important;
     }
 
-/* --- FIX DLA PRZYCISKU STEAM (BRAK PODSKAKIWANIA) --- */
-.btn-static:hover {
-    transform: none !important;
+/* Zapisz - domyślnie używa koloru rangi */
+.btn-save-custom {
+    border: 1px solid var(--role-color);
+    color: var(--role-color);
+    background: transparent;
+    width: 100%;
 }
 
-/* PRIMARY - FIOLET */
-.btn-primary {
-    border-color: var(--neon-purple);
+    .btn-save-custom:hover {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        box-shadow: inset 0 0 20px var(--role-color);
+        text-shadow: 0 0 8px var(--role-color);
+    }
+
+/* Neon Primary */
+.btn-neon-primary {
+    border: 1px solid var(--neon-purple);
     color: var(--neon-purple);
-    box-shadow: inset 0 0 10px rgba(189, 0, 255, 0.1);
+    background: transparent;
 }
 
-    .btn-primary:hover {
-        color: #fff !important;
-        border-color: var(--neon-purple) !important;
-        box-shadow: inset 0 0 25px rgba(189, 0, 255, 0.7), 0 0 15px rgba(189, 0, 255, 0.4);
-        text-shadow: 0 0 10px var(--neon-purple);
+    .btn-neon-primary:hover {
+        background: rgba(189, 0, 255, 0.15);
+        color: #fff;
+        box-shadow: inset 0 0 20px var(--neon-purple);
+        text-shadow: 0 0 8px var(--neon-purple);
     }
 
-/* SECONDARY - CYJAN */
-.btn-secondary {
-    border-color: var(--neon-cyan);
+/* Danger */
+.btn-danger-custom {
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    background: transparent;
+}
+
+    .btn-danger-custom:hover {
+        background: rgba(255, 51, 51, 0.15);
+        color: #fff;
+        box-shadow: inset 0 0 20px rgba(255, 51, 51, 0.6);
+        text-shadow: 0 0 8px var(--neon-red);
+    }
+
+/* Steam Connect */
+.btn-steam-connect {
+    background: rgba(0, 243, 255, 0.05);
+    border: 1px solid var(--neon-cyan);
     color: var(--neon-cyan);
-    box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1);
+    box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.2);
 }
 
-    .btn-secondary:hover {
-        color: #fff !important;
-        border-color: var(--neon-cyan) !important;
-        box-shadow: inset 0 0 25px rgba(0, 243, 255, 0.7), 0 0 15px rgba(0, 243, 255, 0.4);
-        text-shadow: 0 0 10px var(--neon-cyan);
+    .btn-steam-connect:hover {
+        background: rgba(0, 243, 255, 0.15);
+        color: #fff;
+        border-color: var(--neon-cyan);
+        box-shadow: inset 0 0 25px rgba(0, 243, 255, 0.5);
+        text-shadow: 0 0 8px var(--neon-cyan);
     }
 
-/* SUCCESS - ZIELONY */
-.btn-success {
-    border-color: var(--neon-green);
-    color: var(--neon-green);
-    box-shadow: inset 0 0 10px rgba(0, 255, 157, 0.1);
+/* Steam Disconnect */
+.btn-steam-disconnect {
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    background: transparent;
+    box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.2);
 }
 
-    .btn-success:hover {
-        color: #fff !important;
-        border-color: var(--neon-green) !important;
-        box-shadow: inset 0 0 25px rgba(0, 255, 157, 0.7), 0 0 15px rgba(0, 255, 157, 0.4);
-        text-shadow: 0 0 10px var(--neon-green);
+    .btn-steam-disconnect:hover {
+        color: #fff;
+        background: rgba(0, 243, 255, 0.1);
+        box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.6);
+        text-shadow: 0 0 5px var(--neon-cyan);
     }
 
-/* DANGER - RÓŻ */
-.btn-danger {
-    border-color: var(--neon-pink);
-    color: var(--neon-pink);
-    box-shadow: inset 0 0 10px rgba(255, 0, 85, 0.1);
+/* Ghost Cancel */
+.btn-ghost-cancel {
+    border: none;
+    background: transparent;
+    color: #aaa;
 }
 
-    .btn-danger:hover {
-        color: #fff !important;
-        border-color: var(--neon-pink) !important;
-        box-shadow: inset 0 0 25px rgba(255, 0, 85, 0.7), 0 0 15px rgba(255, 0, 85, 0.4);
-        text-shadow: 0 0 10px var(--neon-pink);
+    .btn-ghost-cancel:hover {
+        color: #fff;
+        text-shadow: 0 0 10px rgba(255,255,255,0.9);
+        background: transparent !important;
+        box-shadow: none;
     }
 
-/* --- 8. KARTY (HUD PANELS) --- */
-.card {
-    background-color: var(--bg-panel);
-    border: 1px solid #222;
-    border-radius: 0;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+/* Ołówek */
+.btn-edit-avatar {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(10, 10, 12, 0.95);
+    border: 2px solid var(--role-color);
+    color: var(--role-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,0,0,0.8);
+    transition: all 0.3s;
+}
+
+    .btn-edit-avatar:hover {
+        background: rgba(10, 10, 12, 0.95);
+        color: #fff;
+        box-shadow: inset 0 0 20px var(--role-color);
+        text-shadow: 0 0 5px #fff;
+        transform: none !important;
+    }
+
+/* =========================================
+   KARTY I PANELE
+   ========================================= */
+.profile-sidebar-card {
+    background: rgba(10, 10, 12, 0.95);
+    border: 1px solid var(--border-tech);
+    border-radius: 4px;
     position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
 }
 
-    .card::before {
+    .profile-sidebar-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, var(--neon-purple), transparent);
-        opacity: 0.3;
-        transition: 0.3s;
+        height: 4px;
+        background: var(--role-color);
+        box-shadow: 0 0 15px var(--role-color);
     }
 
-    .card:hover::before {
-        opacity: 1;
-        box-shadow: 0 0 10px var(--neon-purple);
-    }
-
-    .card:hover {
-        border-color: #443355;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-    }
-
-.card-header {
-    background-color: rgba(255,255,255,0.02);
-    border-bottom: 1px solid #333;
-    font-family: 'Orbitron', sans-serif;
+.steam-card {
+    background: rgba(20, 30, 45, 0.7);
+    border: 1px solid var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.15), inset 0 0 20px rgba(0, 243, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
     color: #fff;
-}
-
-.card-footer {
-    background-color: rgba(0,0,0,0.2);
-    border-top: 1px solid #333;
-}
-
-/* --- 9. TABELE --- */
-.table {
-    color: #ccc;
-    border-color: #333;
-}
-
-    .table thead th {
-        background-color: #111;
-        color: var(--neon-cyan);
-        font-family: 'Orbitron', sans-serif;
-        text-transform: uppercase;
-        border-bottom: 2px solid var(--neon-cyan);
-        letter-spacing: 1px;
-    }
-
-.table-hover tbody tr:hover {
-    background-color: rgba(189, 0, 255, 0.05);
-    color: #fff;
-    box-shadow: inset 5px 0 0 var(--neon-purple);
-}
-
-/* --- 10. PAGINATION & SCROLL --- */
-.page-link {
-    background-color: var(--bg-panel);
-    border-color: #333;
-    color: #ccc;
-}
-
-    .page-link:hover {
-        border-color: var(--neon-purple);
-        color: #fff;
-        box-shadow: 0 0 10px rgba(189, 0, 255, 0.3);
-    }
-
-.page-item.active .page-link {
-    background-color: var(--neon-purple);
-    border-color: var(--neon-purple);
-    color: #fff;
-}
-
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: #000;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #333;
-    border: 1px solid #000;
-}
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--neon-purple);
-    }
-
-/* --- 12. STOPKA --- */
-.footer {
-    background-color: #020103;
-    border-top: 1px solid #333;
-    color: #666;
-    font-size: 0.85rem;
-    padding: 30px 0;
-    text-align: center;
-}
-
-/* --- 13. MODALE (AUTH) --- */
-.modal-content {
-    background-color: #050505 !important;
-    color: #ccc !important;
-    border-radius: 0;
-    border: 1px solid #333;
-    box-shadow: 0 0 50px rgba(0,0,0,0.8);
-}
-
-.auth-theme-purple {
-    border: 1px solid var(--neon-purple);
-    box-shadow: 0 0 20px rgba(189, 0, 255, 0.1);
-}
-
-.auth-theme-green {
-    border: 1px solid var(--neon-green);
-    box-shadow: 0 0 20px rgba(0, 255, 157, 0.1);
-}
-
-.auth-title {
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-align: center;
     margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-    line-height: 1.2;
+}
+
+    .steam-card::after {
+        content: '\F585';
+        font-family: bootstrap-icons !important;
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        font-size: 150px;
+        color: var(--neon-cyan);
+        opacity: 0.1;
+        pointer-events: none;
+        transform: rotate(15deg);
+    }
+
+.settings-card {
+    background: rgba(15, 10, 20, 0.8);
+    border: 1px solid var(--neon-purple);
+    box-shadow: 0 0 10px rgba(189, 0, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+}
+
+.danger-zone {
+    border: 1px solid var(--neon-red);
+    background: rgba(20, 5, 5, 0.8);
+    box-shadow: 0 0 10px rgba(255, 51, 51, 0.1);
+}
+
+    .danger-zone:hover {
+        box-shadow: 0 0 20px rgba(255, 51, 51, 0.2);
+    }
+
+.steam-header, .settings-header {
+    padding: 15px 20px;
     color: #fff;
-    text-shadow: 0 0 10px rgba(255,255,255,0.1);
 }
 
-.auth-separator {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    color: #555;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.7rem;
-    margin: 2rem 0;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+.steam-header {
+    border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+    background: rgba(0, 243, 255, 0.05);
+    text-shadow: 0 0 10px var(--neon-cyan);
 }
 
-    .auth-separator::before, .auth-separator::after {
-        content: '';
-        flex: 1;
-        border-bottom: 1px solid #333;
-    }
-
-    .auth-separator::before {
-        margin-right: 15px;
-    }
-
-    .auth-separator::after {
-        margin-left: 15px;
-    }
-
-/* LINKI PRZEŁĄCZANIA - TERAZ JAKO GUZIKI GLOW */
-.auth-switch-link {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-    /* Wygląd guzika */
-    display: inline-block;
-    padding: 10px 25px;
-    border: 1px solid transparent;
+.settings-header {
+    background: rgba(189, 0, 255, 0.05);
+    border-bottom: 1px solid rgba(189, 0, 255, 0.3);
+    text-shadow: 0 0 5px var(--neon-purple);
 }
 
-    /* Hover dla linków - używa currentColor (zielony lub fioletowy) */
-    .auth-switch-link:hover {
-        letter-spacing: 2px;
-        border-color: currentColor;
-        box-shadow: inset 0 0 15px currentColor, 0 0 5px currentColor; /* Glow do środka */
-        text-shadow: 0 0 8px currentColor;
-        transform: translateY(-2px);
-        text-decoration: none;
-    }
+/* =========================================
+   ALERTY I MODALE
+   ========================================= */
+.alert-neon {
+    border: none;
+    color: #fff;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    border-left: 5px solid transparent;
+    font-weight: 600;
+}
 
-/* Pomocnicze do przycisków w modalach (dziedziczą szerokość) */
-.btn-auth-action, .btn-auth-steam {
+.alert-neon-success {
+    background: rgba(0, 255, 157, 0.1);
+    border-left-color: var(--neon-green);
+    box-shadow: 0 0 15px rgba(0, 255, 157, 0.1);
+}
+
+.alert-neon-danger {
+    background: rgba(255, 0, 85, 0.1);
+    border-left-color: var(--neon-pink);
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.1);
+}
+
+.modal-content {
+    background-color: #0b0b0e;
+    color: #fff;
+}
+
+.modal-header, .modal-footer {
+    border-color: #333;
+}
+
+/* =========================================
+   ELEMENTY PROFILOWE
+   ========================================= */
+.avatar-container {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 40px auto 20px;
+}
+
+.profile-avatar {
     width: 100%;
-    padding: 15px;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid var(--role-color);
+    box-shadow: 0 0 30px var(--role-color), inset 0 0 20px var(--role-color);
 }
 
-.btn-auth-steam {
+.role-badge {
+    display: inline-block;
+    padding: 5px 15px;
+    border: 1px solid var(--role-color);
+    color: var(--role-color);
+    background: rgba(0,0,0,0.3);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+/* =========================================
+   STRONA GŁÓWNA (HERO & SWIPER)
+   ========================================= */
+
+/* Blokada przewijania tylko na stronie głównej */
+body.home-page {
+    height: 100vh;
+    overflow: hidden;
+    /* DEFINIUJEMY KOLOR PRZEWODNI DLA HOME (PINK) 
+       Ale NIE nadpisujemy --role-color, żeby zachować logikę aplikacji */
+    --home-theme: var(--neon-pink);
+}
+
+    /* Ukrycie stopki tylko na stronie głównej */
+    body.home-page footer {
+        display: none !important;
+    }
+
+    /* Specyficzna nawigacja dla Home */
+    body.home-page .navbar {
+        margin-bottom: 0 !important;
+        background-color: rgba(11, 11, 14, 0.95) !important;
+        border-bottom: 1px solid #333;
+        z-index: 100;
+        height: 60px;
+    }
+
+    body.home-page .main-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body.home-page main {
+        padding-bottom: 0 !important;
+        height: calc(100vh - 60px);
+    }
+
+/* HERO SECTION */
+.hero-section {
+    width: 100%;
+    height: 100%;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
-    gap: 10px;
+    align-items: center;
+    background: radial-gradient(circle at center, #1a0524 0%, var(--bg-body) 90%);
+    overflow: hidden;
+    position: relative;
+}
+
+.hero-content {
+    margin-bottom: 0;
+    text-align: center;
+    z-index: 20;
+    transform: translateY(-5vh);
+    position: relative;
+}
+
+/* NEONOWE LOGO */
+.neon-logo {
+    font-size: clamp(4rem, 10vh, 8rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #fff;
+    margin-bottom: 0;
+    letter-spacing: 5px;
+    line-height: 1;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 102, 196, 0.5), 0 0 40px rgba(255, 102, 196, 0.5), 0 0 80px rgba(255, 102, 196, 0.8), 0 0 120px rgba(128, 0, 255, 0.8);
+}
+
+.hero-subtitle {
+    font-size: clamp(0.9rem, 2vh, 1.3rem);
+    color: #ccc;
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-top: 20px;
+    text-transform: uppercase;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+}
+
+/* --- SWIPER FIX --- */
+
+body.home-page .swiper {
+    width: 100%;
+    padding-top: 60px !important;
+    padding-bottom: 60px !important;
+    margin-top: -20px;
+    overflow: visible !important;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+}
+
+body.home-page .swiper-slide {
+    height: 50vh !important;
+    width: auto !important;
+    aspect-ratio: 2/3 !important;
+    background-position: center;
+    background-size: cover;
+    margin: 0;
+    border-radius: 20px;
+    position: relative;
+    background-color: #1a1a20;
+    border: 2px solid rgba(160, 60, 255, 0.8);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+    filter: brightness(0.7);
+    overflow: hidden;
+    transition: transform 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease;
+}
+
+    body.home-page .swiper-slide img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
+
+/* AKTYWNA KARTA */
+body.home-page .swiper-slide-active {
+    filter: brightness(1.0);
+    /* Używamy koloru tematycznego HOME, a nie rangi */
+    border: 3px solid var(--home-theme) !important;
+    box-shadow: -50px 0 70px -30px rgba(255, 0, 85, 0.4), 50px 0 70px -30px rgba(255, 0, 85, 0.4), 0 0 20px var(--home-theme);
+    z-index: 100;
+    transform: scale(1.05);
+}
+
+/* INFO O GRZE (Tytuł i guzik) */
+body.home-page .game-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    /* Odległości: Góra Prawa Dół Lewa */
+    padding: 20px 15px 25px 15px;
+    background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 60%, transparent 100%);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: all 0.4s ease-in-out;
+    text-align: center;
+    z-index: 20;
+}
+
+body.home-page .swiper-slide-active .game-info {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+body.home-page .game-title {
+    font-size: clamp(1rem, 2.5vh, 1.4rem);
+    font-weight: 800;
+    color: white;
+    margin-bottom: 15px;
+    text-shadow: 0 2px 5px rgba(0,0,0,1);
+    line-height: 1.2;
+}
+
+/* --- SPECIFIC BUTTON OVERRIDE FOR HOME PAGE --- */
+/* Wymuszamy, aby guzik na stronie głównej używał koloru tematycznego HOME, a nie RANGI */
+body.home-page .btn-save-custom {
+    border-color: var(--home-theme) !important;
+    color: var(--home-theme) !important;
+}
+
+    body.home-page .btn-save-custom:hover {
+        box-shadow: inset 0 0 20px var(--home-theme) !important;
+        text-shadow: 0 0 8px var(--home-theme) !important;
+        color: #fff !important;
+    }
+
+/* MEDIA QUERIES */
+@media (max-width: 768px) {
+    body.home-page .swiper-slide {
+        height: 40vh !important;
+    }
+
+    .neon-logo {
+        font-size: clamp(3rem, 7vh, 5rem);
+    }
+
+    body.home-page .swiper {
+        padding-top: 40px !important;
+        margin-top: 0;
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+        mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    }
+
+    .hero-content {
+        transform: translateY(0);
+        margin-bottom: 20px;
+    }
 }

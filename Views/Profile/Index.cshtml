@@ -8,7 +8,7 @@
     bool isAdmin = User.IsInRole("Admin");
     bool isMod = User.IsInRole("Moderator");
 
-    string roleColor = "var(--neon-cyan)"; // Domyślny (User)
+    string roleColor = "var(--neon-cyan)";
     string roleName = "Użytkownik";
     string roleIcon = "bi-person";
 
@@ -26,19 +26,175 @@
     }
 }
 
+@* --- IMPORT JEDNEJ CZCIONKI (Exo 2) --- *@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
 <style>
-    /* --- GLOBALNE NADPISANIE DLA PROFILU --- */
-    .btn:hover {
-        transform: none !important;
+    /* --- DEFINICJE ZMIENNYCH --- */
+    :root {
+        --neon-cyan: #00f3ff;
+        --neon-pink: #ff0055;
+        --neon-green: #00ff9d;
+        --neon-purple: #bd00ff;
+        --neon-red: #ff3333;
+        --bg-body: #050507;
+        --bg-panel: #0a0a0c;
+        --border-tech: #333333;
+        /* JEDNA CZCIONKA DO WSZYSTKIEGO */
+        --font-main: 'Exo 2', sans-serif;
     }
 
-    /* --- ALERTY NEONOWE --- */
+    /* --- TŁO STRONY --- */
+    body {
+        background-color: var(--bg-body);
+        background-image: radial-gradient(circle at 50% 0%, #1a1020 0%, #050507 80%);
+        background-attachment: fixed;
+        color: #e0e0e0;
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    /* --- GLOBALNY RESET CZCIONEK W TYM WIDOKU --- */
+    .profile-container * {
+        font-family: var(--font-main) !important; /* Wymuszamy jedną czcionkę wszędzie */
+        font-weight: 400; /* Domyślna waga normalna */
+    }
+
+    /* --- ELEMENTY POGRUBIONE (Nagłówki, Tytuły, Guziki) --- */
+    .profile-container h1,
+    .profile-container h2,
+    .profile-container h3,
+    .profile-container h4,
+    .profile-container h5,
+    .profile-container h6,
+    .steam-header span,
+    .settings-header,
+    .danger-zone h6,
+    .modal-title,
+    .role-badge,
+    .card-title-text,
+    .profile-container .btn { /* Guziki też pogrubione */
+        font-weight: 700 !important; /* MOCNE POGRUBIENIE */
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+        /* --- STANDARYZACJA GUZIKÓW --- */
+        .profile-container .btn:not(.btn-edit-avatar):not(.btn-close) {
+            height: 50px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            padding: 0 30px;
+            transition: all 0.3s ease;
+        }
+
+        .profile-container .btn:hover {
+            transform: none !important;
+        }
+
+    /* --- STYL GUZIKÓW --- */
+
+    /* 1. Zapisz Avatar */
+    .btn-save-custom {
+        border: 1px solid @roleColor;
+        color: @roleColor;
+        background: transparent;
+        width: 100%;
+    }
+
+        .btn-save-custom:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            box-shadow: inset 0 0 20px @roleColor;
+            text-shadow: 0 0 8px @roleColor;
+        }
+
+    /* 2. Zmień Hasło */
+    .btn-neon-primary {
+        border: 1px solid var(--neon-purple);
+        color: var(--neon-purple);
+        background: transparent;
+    }
+
+        .btn-neon-primary:hover {
+            background: rgba(189, 0, 255, 0.15);
+            color: #fff;
+            box-shadow: inset 0 0 20px var(--neon-purple);
+            text-shadow: 0 0 8px var(--neon-purple);
+        }
+
+    /* 3. Połącz Steam */
+    .btn-steam-connect {
+        background: rgba(0, 243, 255, 0.05);
+        border: 1px solid var(--neon-cyan);
+        color: var(--neon-cyan);
+        box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.2);
+    }
+
+        .btn-steam-connect:hover {
+            background: rgba(0, 243, 255, 0.15);
+            color: #fff;
+            border-color: var(--neon-cyan);
+            box-shadow: inset 0 0 25px rgba(0, 243, 255, 0.5);
+            text-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+    /* 4. Odłącz Steam */
+    .btn-steam-disconnect {
+        border: 1px solid var(--neon-cyan);
+        color: var(--neon-cyan);
+        background: transparent;
+        box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.2);
+    }
+
+        .btn-steam-disconnect:hover {
+            color: #fff;
+            background: rgba(0, 243, 255, 0.1);
+            box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.6);
+            text-shadow: 0 0 5px var(--neon-cyan);
+        }
+
+    /* 5. Usuń Konto */
+    .btn-danger-custom {
+        border: 1px solid var(--neon-red);
+        color: var(--neon-red);
+        background: transparent;
+    }
+
+        .btn-danger-custom:hover {
+            background: rgba(255, 51, 51, 0.15);
+            color: #fff;
+            box-shadow: inset 0 0 20px rgba(255, 51, 51, 0.6);
+            text-shadow: 0 0 8px var(--neon-red);
+        }
+
+    /* 6. ANULUJ (Modal) */
+    .btn-ghost-cancel {
+        border: none;
+        background: transparent;
+        color: #aaa;
+        transition: all 0.3s ease;
+    }
+
+        .btn-ghost-cancel:hover {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.9);
+            background: transparent !important;
+            box-shadow: none;
+        }
+
+    /* --- ALERTY --- */
     .alert-neon {
         border: none;
         color: #fff;
         backdrop-filter: blur(5px);
         box-shadow: 0 5px 20px rgba(0,0,0,0.5);
         border-left: 5px solid transparent;
+        font-weight: 600;
     }
 
     .alert-neon-success {
@@ -53,8 +209,63 @@
         box-shadow: 0 0 15px rgba(255, 0, 85, 0.1);
     }
 
-    /* --- STYL LOKALNY PROFILU --- */
+    /* --- FLOATING LABELS (PŁYWAJĄCE ETYKIETY - FIOLETOWE) --- */
+    .form-floating {
+        position: relative;
+    }
 
+        .form-floating > .form-control-tech {
+            height: 50px;
+            padding: 1.25rem 0.75rem 0.25rem 0.75rem;
+            line-height: 1.5;
+        }
+
+        .form-floating > label {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            padding: 1rem 0.75rem;
+            pointer-events: none;
+            border: 1px solid transparent;
+            transform-origin: 0 0;
+            transition: opacity .1s ease-in-out, transform .1s ease-in-out;
+            color: #888;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        /* Kiedy input jest aktywny -> FIOLET (pasuje do settings-card) */
+        .form-floating > .form-control:focus ~ label,
+        .form-floating > .form-control:not(:placeholder-shown) ~ label {
+            opacity: 1;
+            transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+            color: var(--neon-purple); /* ZMIANA NA FIOLET */
+            background-color: transparent;
+            font-weight: 700;
+            text-shadow: 0 0 5px rgba(189, 0, 255, 0.3);
+        }
+
+    /* Input style -> FIOLETOWY GLOW */
+    .form-control-tech {
+        background: #050507;
+        border: 1px solid #444;
+        color: #fff;
+        font-weight: 400 !important;
+    }
+
+        .form-control-tech:focus {
+            background: #000;
+            border-color: var(--neon-purple); /* ZMIANA NA FIOLET */
+            box-shadow: 0 0 10px rgba(189, 0, 255, 0.2); /* ZMIANA NA FIOLET */
+            color: #fff;
+        }
+
+        .form-control-tech::placeholder {
+            color: transparent;
+        }
+
+    /* --- RESZTA STYLI --- */
     .profile-sidebar-card {
         background: rgba(10, 10, 12, 0.95);
         border: 1px solid var(--border-tech);
@@ -93,7 +304,7 @@
         transition: transform 0.3s ease;
     }
 
-    /* --- GUZIK EDYCJI AVATARA (OŁÓWEK) --- */
+    /* Guzik edycji (Ołówek) */
     .btn-edit-avatar {
         position: absolute;
         bottom: 5px;
@@ -101,7 +312,8 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: var(--bg-panel);
+        /* Tło takie samo jak panel user (ten sam kolor i przezroczystość) */
+        background: rgba(10, 10, 12, 0.95);
         border: 2px solid @roleColor;
         color: @roleColor;
         display: flex;
@@ -112,13 +324,13 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.8);
     }
 
-        /* ZMIANA: Tło czarne, bez prześwitów */
         .btn-edit-avatar:hover {
-            background: #000; /* Czarne tło */
+            background: rgba(10, 10, 12, 0.95); /* Tło bez zmian */
             color: #fff;
-            /* Poświata do środka + Poświata na zewnątrz */
-            box-shadow: inset 0 0 15px @roleColor, 0 0 15px @roleColor;
+            /* Świecenie TYLKO do środka */
+            box-shadow: inset 0 0 20px @roleColor;
             text-shadow: 0 0 5px #fff;
+            transform: none !important;
         }
 
     .role-badge {
@@ -127,15 +339,11 @@
         border: 1px solid @roleColor;
         color: @roleColor;
         background: rgba(0,0,0,0.3);
-        font-family: 'Orbitron', sans-serif;
-        font-size: 0.8rem;
-        letter-spacing: 2px;
-        text-transform: uppercase;
+        font-size: 0.9rem;
         margin-bottom: 20px;
         box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
     }
 
-    /* --- STEAM CARD --- */
     .steam-card {
         background: rgba(20, 30, 45, 0.7);
         border: 1px solid var(--neon-cyan);
@@ -143,6 +351,8 @@
         position: relative;
         overflow: hidden;
         border-radius: 4px;
+        color: #fff;
+        margin-bottom: 1.5rem;
     }
 
         .steam-card::after {
@@ -162,77 +372,26 @@
         border-bottom: 1px solid rgba(0, 243, 255, 0.3);
         padding: 15px 20px;
         background: rgba(0, 243, 255, 0.05);
+        color: #fff;
+        text-shadow: 0 0 10px var(--neon-cyan);
     }
 
-    /* Guzik POŁĄCZ STEAM (Cyan glow) */
-    .btn-steam-connect {
-        background: rgba(0, 243, 255, 0.05);
-        border: 1px solid var(--neon-cyan);
-        color: var(--neon-cyan);
-        box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.2);
-        transition: 0.3s;
-    }
-
-        .btn-steam-connect:hover {
-            background: rgba(0, 243, 255, 0.15);
-            color: #fff;
-            border-color: var(--neon-cyan);
-            box-shadow: inset 0 0 25px rgba(0, 243, 255, 0.5), 0 0 15px rgba(0, 243, 255, 0.3);
-            text-shadow: 0 0 8px var(--neon-cyan);
-        }
-
-    /* Guzik ODŁĄCZ STEAM (Cyjanowy) */
-    .btn-steam-disconnect {
-        border: 1px solid var(--neon-cyan);
-        color: var(--neon-cyan);
-        background: transparent;
-        box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.2);
-        transition: all 0.3s ease;
-    }
-
-        .btn-steam-disconnect:hover {
-            color: #fff;
-            background: rgba(0, 243, 255, 0.1);
-            box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.6), 0 0 10px rgba(0, 243, 255, 0.4);
-            border-color: var(--neon-cyan);
-            text-shadow: 0 0 5px var(--neon-cyan);
-        }
-
-    /* Guzik ANULUJ w modalu */
-    .btn-ghost-cancel {
-        border: none;
-        background: transparent;
-        color: #aaa;
-        font-weight: 600;
-        letter-spacing: 1px;
-        transition: all 0.3s ease;
-    }
-
-        .btn-ghost-cancel:hover {
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255,255,255,0.8);
-            background: rgba(255,255,255,0.05);
-        }
-
-    /* --- POZOSTAŁE SEKCJE --- */
     .settings-card {
         background: rgba(15, 10, 20, 0.8);
         border: 1px solid var(--neon-purple);
         box-shadow: 0 0 10px rgba(189, 0, 255, 0.1);
         border-radius: 4px;
-        margin-bottom: 20px;
+        margin-bottom: 1.5rem;
     }
 
     .settings-header {
         background: rgba(189, 0, 255, 0.05);
         padding: 15px 20px;
         border-bottom: 1px solid rgba(189, 0, 255, 0.3);
-        font-family: 'Orbitron', sans-serif;
         color: #fff;
         text-shadow: 0 0 5px var(--neon-purple);
     }
 
-    /* --- DANGER ZONE & GUZIK USUWANIA --- */
     .danger-zone {
         border: 1px solid var(--neon-red);
         background: rgba(20, 5, 5, 0.8);
@@ -243,52 +402,17 @@
             box-shadow: 0 0 20px rgba(255, 51, 51, 0.2);
         }
 
-    /* Guzik USUŃ KONTO */
-    .btn-danger-custom {
-        border: 1px solid var(--neon-red);
-        color: var(--neon-red);
-        background: transparent;
-        transition: 0.3s;
-    }
-
-        .btn-danger-custom:hover {
-            background: rgba(255, 51, 51, 0.15);
-            color: #fff;
-            box-shadow: inset 0 0 20px rgba(255, 51, 51, 0.6);
+        .danger-zone h6 {
             text-shadow: 0 0 8px var(--neon-red);
         }
 
-    /* --- GUZIK ZAPISYWANIA AVATARA --- */
-    .btn-save-custom {
-        border: 1px solid @roleColor;
-        color: @roleColor;
-        background: transparent;
-        transition: 0.3s;
-    }
-
-        .btn-save-custom:hover {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            box-shadow: inset 0 0 20px @roleColor;
-            text-shadow: 0 0 8px @roleColor;
-        }
-
-    .form-control-tech {
-        background: #050507;
-        border: 1px solid #444;
+    .modal-content {
         color: #fff;
     }
 
-        .form-control-tech:focus {
-            background: #000;
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
-            color: #fff;
-        }
-
 </style>
 
-<div class="container py-5">
+<div class="container py-5 profile-container">
 
     @* --- POWIADOMIENIA --- *@
     @if (ViewData["StatusMessage"] != null)
@@ -308,13 +432,10 @@
 
     <div class="row g-4 align-items-start">
 
-        @* ==========================
-           LEWA KOLUMNA: PROFIL I AVATAR
-           ========================== *@
+        @* LEWA KOLUMNA *@
         <div class="col-lg-4">
             <div class="profile-sidebar-card text-center pb-4">
 
-                @* AVATAR *@
                 <div class="avatar-container">
                     <img src="@Url.Action("GetAvatar", "Profile", new { id = Model.UserId, v = DateTime.Now.Ticks })"
                          alt="Avatar"
@@ -329,21 +450,19 @@
                     </button>
                 </div>
 
-                @* NAZWA I ROLA *@
-                <h3 class="text-white fw-bold mb-1" style="font-family: 'Rajdhani', sans-serif; letter-spacing: 1px;">@Model.Username</h3>
+                <h3 class="text-white mb-1">@Model.Username</h3>
 
                 <div class="role-badge">
                     <i class="@roleIcon me-2"></i>@roleName
                 </div>
 
-                @* FORMULARZ ZMIANY AVATARA *@
                 <div class="collapse px-4 mt-3" id="avatarUploadCollapse">
                     <div class="p-3 rounded" style="background: rgba(255,255,255,0.05); border: 1px dashed @roleColor;">
                         <form asp-action="ChangeAvatar" method="post" enctype="multipart/form-data">
                             <label class="form-label small text-muted mb-2">Wybierz plik (JPG/PNG)</label>
                             <input type="file" name="avatarFile" class="form-control form-control-sm form-control-tech mb-3" required />
 
-                            <button type="submit" class="btn btn-sm w-100 fw-bold btn-save-custom">
+                            <button type="submit" class="btn btn-sm btn-save-custom">
                                 <i class="bi bi-upload me-1"></i> ZAPISZ
                             </button>
                         </form>
@@ -353,15 +472,13 @@
             </div>
         </div>
 
-        @* ==========================
-           PRAWA KOLUMNA: USTAWIENIA
-           ========================== *@
+        @* PRAWA KOLUMNA *@
         <div class="col-lg-8">
 
             @* 1. INTEGRACJA STEAM *@
-            <div class="steam-card mb-4">
+            <div class="steam-card">
                 <div class="steam-header d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-uppercase text-white" style="letter-spacing: 1px; text-shadow: 0 0 10px var(--neon-cyan);">
+                    <span>
                         <i class="bi bi-steam me-2"></i> Integracja Steam
                     </span>
                     @if (!string.IsNullOrEmpty(Model.SteamId))
@@ -396,7 +513,7 @@
                             <div class="col-md-4 text-end mt-3 mt-md-0">
                                 @if (!Model.IsCreatedBySteam)
                                 {
-                                    <button type="button" class="btn btn-sm btn-steam-disconnect rounded-0 px-3 py-2" data-bs-toggle="modal" data-bs-target="#disconnectSteamModal">
+                                    <button type="button" class="btn btn-steam-disconnect" data-bs-toggle="modal" data-bs-target="#disconnectSteamModal">
                                         ODŁĄCZ KONTO
                                     </button>
                                 }
@@ -410,12 +527,20 @@
 
                             <form asp-controller="Profile" asp-action="LinkSteam" method="post">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-steam-connect px-5 py-2">
+                                <button type="submit" class="btn btn-steam-connect">
                                     <i class="bi bi-steam me-2"></i> POŁĄCZ ZE STEAM
                                 </button>
                             </form>
                         </div>
                     }
+
+                    @* --- DISCLAIMER STEAM (Zawsze widoczny) --- *@
+                    <div class="mt-4 pt-3 border-top" style="border-color: rgba(255,255,255,0.1) !important;">
+                        <p class="text-white-50 text-center small mb-0" style="font-size: 0.75rem; font-style: italic;">
+                            This site is not associated with Valve Corp.
+                        </p>
+                    </div>
+
                 </div>
             </div>
 
@@ -429,21 +554,34 @@
                     <div class="p-4">
                         <form asp-action="ChangePassword" method="post">
                             <div class="row g-3">
+
+                                @* --- FLOATING LABEL: OBECNE HASŁO --- *@
                                 <div class="col-md-4">
-                                    <label class="form-label small text-muted text-uppercase">Obecne hasło</label>
-                                    <input type="password" name="changePasswordModel.OldPassword" class="form-control form-control-tech" />
+                                    <div class="form-floating">
+                                        <input type="password" name="changePasswordModel.OldPassword" class="form-control form-control-tech" id="oldPass" placeholder="Obecne hasło" />
+                                        <label for="oldPass">Obecne hasło</label>
+                                    </div>
                                 </div>
+
+                                @* --- FLOATING LABEL: NOWE HASŁO --- *@
                                 <div class="col-md-4">
-                                    <label class="form-label small text-muted text-uppercase">Nowe hasło</label>
-                                    <input type="password" name="changePasswordModel.NewPassword" class="form-control form-control-tech" />
+                                    <div class="form-floating">
+                                        <input type="password" name="changePasswordModel.NewPassword" class="form-control form-control-tech" id="newPass" placeholder="Nowe hasło" />
+                                        <label for="newPass">Nowe hasło</label>
+                                    </div>
                                 </div>
+
+                                @* --- FLOATING LABEL: POTWIERDŹ HASŁO --- *@
                                 <div class="col-md-4">
-                                    <label class="form-label small text-muted text-uppercase">Potwierdź</label>
-                                    <input type="password" name="changePasswordModel.ConfirmPassword" class="form-control form-control-tech" />
+                                    <div class="form-floating">
+                                        <input type="password" name="changePasswordModel.ConfirmPassword" class="form-control form-control-tech" id="confirmPass" placeholder="Potwierdź" />
+                                        <label for="confirmPass">Potwierdź</label>
+                                    </div>
                                 </div>
+
                             </div>
                             <div class="mt-4 text-end">
-                                <button type="submit" class="btn btn-sm btn-primary px-4">ZATWIERDŹ ZMIANĘ</button>
+                                <button type="submit" class="btn btn-neon-primary">ZATWIERDŹ ZMIANĘ</button>
                             </div>
                         </form>
                     </div>
@@ -453,15 +591,15 @@
             @* 3. STREFA NIEBEZPIECZNA *@
             @if (!isAdmin)
             {
-                <div class="settings-card danger-zone mt-5">
+                <div class="settings-card danger-zone">
                     <div class="p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
-                            <h6 class="text-danger fw-bold mb-1 text-uppercase" style="font-family: 'Orbitron', sans-serif; text-shadow: 0 0 8px var(--neon-red);">
+                            <h6 class="text-danger mb-1 text-uppercase">
                                 <i class="bi bi-radioactive me-2"></i> Strefa Niebezpieczna
                             </h6>
                             <small class="text-white-50">Trwałe usunięcie konta i wszystkich danych.</small>
                         </div>
-                        <button type="button" class="btn btn-sm btn-danger-custom px-4 rounded-0" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        <button type="button" class="btn btn-danger-custom" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
                             USUŃ KONTO
                         </button>
                     </div>
@@ -479,7 +617,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="background-color: #0b0b0e; border: 1px solid var(--neon-red); box-shadow: 0 0 50px rgba(255, 51, 51, 0.2);">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title text-danger fw-bold text-uppercase" style="font-family: 'Orbitron', sans-serif;">
+                    <h5 class="modal-title text-danger">
                         <i class="bi bi-exclamation-octagon-fill me-2"></i> Potwierdzenie
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -490,9 +628,9 @@
                     <p class="text-muted small">Tej operacji nie można cofnąć. Stracisz dostęp do swojej biblioteki.</p>
                 </div>
                 <div class="modal-footer border-secondary justify-content-center">
-                    <button type="button" class="btn btn-outline-light px-4" data-bs-dismiss="modal">ANULUJ</button>
+                    <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">ANULUJ</button>
                     <form asp-action="DeleteAccount" method="post">
-                        <button type="submit" class="btn btn-danger px-4">POTWIERDZAM</button>
+                        <button type="submit" class="btn btn-danger-custom px-4">POTWIERDZAM</button>
                     </form>
                 </div>
             </div>
@@ -505,7 +643,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="background-color: #0b0b0e; border: 1px solid var(--neon-cyan); box-shadow: 0 0 50px rgba(0, 243, 255, 0.2);">
             <div class="modal-header border-secondary">
-                <h5 class="modal-title fw-bold text-uppercase" style="color: var(--neon-cyan); font-family: 'Orbitron', sans-serif;">
+                <h5 class="modal-title" style="color: var(--neon-cyan);">
                     <i class="bi bi-steam me-2"></i> Odłączanie Steam
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>

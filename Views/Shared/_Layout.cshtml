@@ -3,6 +3,23 @@
 @inject UserManager<User> UserManager
 @inject SignInManager<User> SignInManager
 
+@{
+    // --- GLOBALNA LOGIKA KOLORÓW RANGI (NEON) ---
+    // Domyślny kolor (Użytkownik / Gość)
+    string globalRoleColor = "var(--neon-cyan)";
+
+    if (User.IsInRole("Admin"))
+    {
+        // Admin -> Czerwony
+        globalRoleColor = "var(--neon-red)";
+    }
+    else if (User.IsInRole("Moderator"))
+    {
+        // Moderator -> Zielony
+        globalRoleColor = "var(--neon-green)";
+    }
+}
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -23,7 +40,10 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/praca_dyplomowa_zesp.styles.css" asp-append-version="true" />
 </head>
-<body>
+
+@* --- TU DZIEJE SIĘ MAGIA: WSTRZYKUJEMY KOLOR RANGI DO ZMIENNEJ CSS --- *@
+<body style="--role-color: @globalRoleColor;">
+
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark mb-3">
             <div class="container-fluid">
@@ -73,7 +93,8 @@
                                 if (user != null && !string.IsNullOrEmpty(user.SteamId))
                                 {
                                     <li class="nav-item">
-                                        <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: var(--neon-cyan) !important;">
+                                        @* ZMIANA: Używamy var(--role-color) zamiast sztywnego cyjanu *@
+                                        <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: var(--role-color) !important;">
                                             <i class="fab fa-steam me-1"></i> Biblioteka Steam
                                         </a>
                                     </li>
