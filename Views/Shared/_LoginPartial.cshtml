@@ -39,7 +39,8 @@
                     <div style="position: relative;">
                         @if (user.ProfilePicture != null)
                         {
-                            <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id })" alt="Avatar"
+                            @* ZMIANA: Dodano v = DateTime.Now.Ticks, żeby wymusić odświeżenie *@
+                            <img src="@Url.Action("GetAvatar", "Profile", new { id = user.Id, v = DateTime.Now.Ticks })" alt="Avatar"
                                  class="rounded-circle"
                                  style="width: 35px; height: 35px; object-fit: cover; border: 2px solid @borderColor; box-shadow: 0 0 10px @borderColor;" />
                         }
