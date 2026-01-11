@@ -1,29 +1,37 @@
-﻿/* =========================================
-   GLÓWNE ZMIENNE I KONFIGURACJA
-   ========================================= */
+﻿/* ==========================================================================
+   1. ZMIENNE I KONFIGURACJA (VARIABLES & CONFIG)
+   ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-    /* Paleta kolorów Neon - POPRAWIONA */
+    /* --- PALETA NEONOWA (KOLORY) --- */
+    /* Kolory Rang (Użytkownicy) */
     --neon-cyan: #00f3ff;
-    /* ZMIANA: Zamiast czerwonego #ff0055, dajemy prawdziwy NEON PINK (Hot Magenta) */
-    --neon-pink: #ff00cc;
     --neon-green: #00ff9d;
-    --neon-purple: #bd00ff;
     --neon-red: #ff3333;
-    /* Tła */
-    --bg-body: #050507;
-    --bg-panel: #0a0a0c;
-    --border-tech: #333333;
-    /* Czcionka */
+    /* Kolory Przewodnie Strony (Motyw) */
+    --neon-pink: #ff00cc; /* Hot Pink / Magenta */
+    --neon-purple: #bd00ff;
+    /* Dodatkowe kolory (Utility) */
+    --neon-yellow: #f2ff00;
+    --neon-grey: #e0e6ed;
+    /* --- TŁA (DARKER PANELS) --- */
+    /* TŁO STRONY: Ciemny, głęboki fiolet (baza) */
+    --bg-body: #120a1a;
+    /* TŁO PANELI: Jeszcze ciemniejsze, prawie czarne (wklęsłe) */
+    --bg-panel: #050208;
+    /* Obramowania techniczne */
+    --border-tech: #2a1f3d;
+    /* --- TYPOGRAFIA --- */
     --font-main: 'Exo 2', sans-serif;
-    /* Zmienna dynamiczna dla rangi (globalna) */
+    /* --- ZMIENNE LOGICZNE --- */
+    /* Domyślny kolor rangi (nadpisywany dynamicznie w Layout) */
     --role-color: var(--neon-cyan);
 }
 
-/* =========================================
-   STYL BAZOWY (BODY I CZCIONKI)
-   ========================================= */
+/* ==========================================================================
+   2. STYL BAZOWY (RESET & BASE STYLES)
+   ========================================================================== */
 
 html {
     height: 100%;
@@ -31,10 +39,11 @@ html {
 
 body {
     background-color: var(--bg-body);
-    background-image: radial-gradient(circle at 50% 0%, #1a1020 0%, #050507 80%);
+    /* Delikatny gradient dla tła strony */
+    background-image: radial-gradient(circle at 50% 0%, #1e102b 0%, var(--bg-body) 85%);
     background-attachment: fixed;
     color: #e0e0e0;
-    /* Sticky Footer Fix */
+    /* Sticky Footer Fix (Flexbox) */
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -43,25 +52,167 @@ body {
     position: relative;
 }
 
+/* Kontener główny - wypełnia przestrzeń, spychając stopkę */
 .main-container {
     flex: 1 0 auto;
     width: 100%;
 }
 
-/* Typografia */
+/* Wymuszenie czcionki */
 h1, h2, h3, h4, h5, h6, p, span, a, div, button, input {
     font-family: var(--font-main) !important;
 }
 
+/* Elementy pogrubione (Uppercase) */
 h1, h2, h3, h4, h5, h6, .btn, .nav-link {
     font-weight: 700 !important;
     letter-spacing: 1px;
     text-transform: uppercase;
 }
 
-/* =========================================
-   STOPKA (FOOTER)
-   ========================================= */
+/* ==========================================================================
+   3. PASEK NAWIGACJI (NAVBAR)
+   ========================================================================== */
+
+.navbar {
+    /* --- POZYCJA (STICKY) --- */
+    position: sticky; /* Przykleja pasek do góry */
+    top: 0;
+    width: 100%;
+    z-index: 1000; /* Zawsze na wierzchu */
+    /* --- WYGLĄD (GLASS & NEON) --- */
+    background-color: rgba(5, 2, 8, 0.8) !important; /* Półprzezroczyste tło */
+    backdrop-filter: blur(15px); /* Mocniejsze rozmycie tła pod spodem */
+    /* Grubsza różowa linia na dole */
+    border-bottom: 2px solid var(--neon-pink);
+    /* Różowa poświata pod paskiem */
+    box-shadow: 0 5px 20px -5px rgba(255, 0, 204, 0.5);
+    transition: all 0.3s ease;
+}
+
+/* Logo Neonowe */
+.navbar-brand {
+    font-family: var(--font-main);
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    color: #fff !important;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 0 0 10px rgba(255, 0, 204, 0.5), 0 0 20px rgba(255, 0, 204, 0.5), 0 0 40px rgba(189, 0, 255, 0.8);
+    transition: transform 0.3s ease;
+}
+
+    .navbar-brand:hover {
+        transform: scale(1.05);
+    }
+
+/* Linki w nawigacji */
+.navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 5px;
+}
+
+    .navbar-nav .nav-link:hover {
+        color: #fff !important;
+        text-shadow: 0 0 10px var(--neon-pink); /* Różowe świecenie tekstu */
+    }
+
+/* --- Specjalne przyciski w pasku (Login/Rejestracja) --- */
+
+/* Guzik "Zaloguj" (Link z ramką) */
+.nav-link[data-bs-target="#loginModal"] {
+    padding: 8px 20px !important;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px -5px rgba(255, 0, 204, 0.5);
+    transition: all 0.3s ease;
+}
+
+    .nav-link[data-bs-target="#loginModal"]:hover {
+        background: rgba(255, 0, 204, 0.1);
+        box-shadow: 0 0 20px rgba(255, 0, 204, 0.8), inset 0 0 10px rgba(255, 0, 204, 0.2);
+        color: #fff !important;
+        text-shadow: 0 0 5px #fff;
+    }
+
+/* Guzik "Rejestracja" (btn-primary w pasku) */
+.navbar .btn-primary {
+    background: transparent !important;
+    border: 1px solid var(--neon-pink) !important;
+    color: var(--neon-pink) !important;
+    box-shadow: 0 0 10px rgba(255, 0, 204, 0.3);
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+    .navbar .btn-primary:hover {
+        background: var(--neon-pink) !important;
+        color: #fff !important;
+        box-shadow: 0 0 25px rgba(255, 0, 204, 0.8);
+        transform: translateY(-2px);
+    }
+
+/* --- Dropdown Menu --- */
+.dropdown-menu-dark {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+
+.dropdown-item {
+    color: #ccc;
+    font-size: 0.9rem;
+    padding: 10px 20px;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+    .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        padding-left: 25px; /* Efekt przesunięcia */
+    }
+
+    /* Kolorowe paski przy hover w dropdownie */
+    .dropdown-item.item-neon-pink:hover {
+        border-left-color: var(--neon-pink);
+        text-shadow: 0 0 8px var(--neon-pink);
+    }
+
+    .dropdown-item.item-neon-green:hover {
+        border-left-color: var(--neon-green);
+        text-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .dropdown-item.item-neon-cyan:hover {
+        border-left-color: var(--neon-cyan);
+        text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .dropdown-item.item-neon-purple:hover {
+        border-left-color: var(--neon-purple);
+        text-shadow: 0 0 8px var(--neon-purple);
+    }
+
+    .dropdown-item.item-neon-red:hover {
+        border-left-color: var(--neon-red);
+        text-shadow: 0 0 8px var(--neon-red);
+    }
+
+    .dropdown-item.item-neon-yellow:hover {
+        border-left-color: var(--neon-yellow);
+        text-shadow: 0 0 8px var(--neon-yellow);
+    }
+
+.dropdown-divider {
+    border-top-color: var(--border-tech);
+}
+
+/* ==========================================================================
+   4. STOPKA (FOOTER)
+   ========================================================================== */
+
 footer.footer {
     position: relative !important;
     flex-shrink: 0;
@@ -70,20 +221,36 @@ footer.footer {
     line-height: 1;
     font-size: 0.8rem;
     background: transparent;
-    opacity: 0.7;
+    opacity: 0.9;
     width: 100%;
 }
 
-/* =========================================
-   FORMULARZE
-   ========================================= */
+    footer.footer a {
+        color: var(--neon-pink) !important;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+        footer.footer a:hover {
+            color: #fff !important;
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+
+    footer.footer .text-secondary {
+        color: #666 !important;
+    }
+
+/* ==========================================================================
+   5. FORMULARZE (INPUTS)
+   ========================================================================== */
+
 .form-floating {
     position: relative;
 }
 
 .form-control-tech {
-    background: #050507;
-    border: 1px solid #444;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-tech);
     color: #fff;
     font-weight: 400 !important;
     height: 50px;
@@ -100,6 +267,7 @@ footer.footer {
         color: transparent;
     }
 
+/* Pływające etykiety */
 .form-floating > label {
     position: absolute;
     top: 0;
@@ -125,9 +293,10 @@ footer.footer {
     text-shadow: 0 0 5px rgba(189, 0, 255, 0.3);
 }
 
-/* =========================================
-   PRZYCISKI
-   ========================================= */
+/* ==========================================================================
+   6. PRZYCISKI (BUTTONS)
+   ========================================================================== */
+
 .btn {
     border-radius: 4px;
     transition: all 0.3s ease;
@@ -145,7 +314,9 @@ footer.footer {
         transform: none !important;
     }
 
-/* Zapisz (Domyślny dynamiczny) */
+/* --- WARIANTY GUZIKÓW --- */
+
+/* Zapisz (Dynamiczny - kolor rangi) */
 .btn-save-custom {
     border: 1px solid var(--role-color);
     color: var(--role-color);
@@ -154,7 +325,7 @@ footer.footer {
 }
 
     .btn-save-custom:hover {
-        background: rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.05);
         color: #fff;
         box-shadow: inset 0 0 20px var(--role-color);
         text-shadow: 0 0 8px var(--role-color);
@@ -174,7 +345,7 @@ footer.footer {
         text-shadow: 0 0 8px var(--neon-purple);
     }
 
-/* Danger */
+/* Danger (Czerwony) */
 .btn-danger-custom {
     border: 1px solid var(--neon-red);
     color: var(--neon-red);
@@ -233,7 +404,7 @@ footer.footer {
         box-shadow: none;
     }
 
-/* Ołówek */
+/* Edycja Avatara (Ołówek) */
 .btn-edit-avatar {
     position: absolute;
     bottom: 5px;
@@ -241,7 +412,7 @@ footer.footer {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(10, 10, 12, 0.95);
+    background: var(--bg-panel);
     border: 2px solid var(--role-color);
     color: var(--role-color);
     display: flex;
@@ -253,18 +424,20 @@ footer.footer {
 }
 
     .btn-edit-avatar:hover {
-        background: rgba(10, 10, 12, 0.95);
+        background: var(--bg-panel);
         color: #fff;
         box-shadow: inset 0 0 20px var(--role-color);
         text-shadow: 0 0 5px #fff;
         transform: none !important;
     }
 
-/* =========================================
-   KARTY I PANELE
-   ========================================= */
+/* ==========================================================================
+   7. KARTY, PANELE I MODALE
+   ========================================================================== */
+
+/* Panel Profilu */
 .profile-sidebar-card {
-    background: rgba(10, 10, 12, 0.95);
+    background: var(--bg-panel);
     border: 1px solid var(--border-tech);
     border-radius: 4px;
     position: relative;
@@ -283,8 +456,9 @@ footer.footer {
         box-shadow: 0 0 15px var(--role-color);
     }
 
+/* Karta Steam */
 .steam-card {
-    background: rgba(20, 30, 45, 0.7);
+    background: rgba(19, 10, 28, 0.8); /* Półprzezroczysty fiolet */
     border: 1px solid var(--neon-cyan);
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.15), inset 0 0 20px rgba(0, 243, 255, 0.05);
     position: relative;
@@ -307,17 +481,35 @@ footer.footer {
         transform: rotate(15deg);
     }
 
+.steam-header {
+    border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+    background: rgba(0, 243, 255, 0.05);
+    text-shadow: 0 0 10px var(--neon-cyan);
+    padding: 15px 20px;
+    color: #fff;
+}
+
+/* Karta Ustawień */
 .settings-card {
-    background: rgba(15, 10, 20, 0.8);
+    background: var(--bg-panel);
     border: 1px solid var(--neon-purple);
     box-shadow: 0 0 10px rgba(189, 0, 255, 0.1);
     border-radius: 4px;
     margin-bottom: 1.5rem;
 }
 
+.settings-header {
+    background: rgba(189, 0, 255, 0.05);
+    border-bottom: 1px solid rgba(189, 0, 255, 0.3);
+    text-shadow: 0 0 5px var(--neon-purple);
+    padding: 15px 20px;
+    color: #fff;
+}
+
+/* Danger Zone */
 .danger-zone {
     border: 1px solid var(--neon-red);
-    background: rgba(20, 5, 5, 0.8);
+    background: rgba(30, 0, 0, 0.4);
     box-shadow: 0 0 10px rgba(255, 51, 51, 0.1);
 }
 
@@ -325,26 +517,18 @@ footer.footer {
         box-shadow: 0 0 20px rgba(255, 51, 51, 0.2);
     }
 
-.steam-header, .settings-header {
-    padding: 15px 20px;
+/* Modale */
+.modal-content {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
     color: #fff;
 }
 
-.steam-header {
-    border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-    background: rgba(0, 243, 255, 0.05);
-    text-shadow: 0 0 10px var(--neon-cyan);
+.modal-header, .modal-footer {
+    border-color: var(--border-tech);
 }
 
-.settings-header {
-    background: rgba(189, 0, 255, 0.05);
-    border-bottom: 1px solid rgba(189, 0, 255, 0.3);
-    text-shadow: 0 0 5px var(--neon-purple);
-}
-
-/* =========================================
-   ALERTY I MODALE
-   ========================================= */
+/* Alerty */
 .alert-neon {
     border: none;
     color: #fff;
@@ -366,18 +550,10 @@ footer.footer {
     box-shadow: 0 0 15px rgba(255, 0, 85, 0.1);
 }
 
-.modal-content {
-    background-color: #0b0b0e;
-    color: #fff;
-}
+/* ==========================================================================
+   8. ELEMENTY PROFILOWE (AVATAR, BADGE)
+   ========================================================================== */
 
-.modal-header, .modal-footer {
-    border-color: #333;
-}
-
-/* =========================================
-   ELEMENTY PROFILOWE
-   ========================================= */
 .avatar-container {
     position: relative;
     width: 160px;
@@ -405,27 +581,20 @@ footer.footer {
     box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
 }
 
-/* =========================================
-   STRONA GŁÓWNA (HERO & SWIPER)
-   ========================================= */
+/* ==========================================================================
+   9. STRONA GŁÓWNA (HOME PAGE - HERO & SWIPER)
+   ========================================================================== */
 
+/* Specyficzne style tylko dla body z klasą .home-page */
 body.home-page {
     height: 100vh;
     overflow: hidden;
-    /* TEMAT PRZEWODNI HOME: RÓŻOWY */
+    /* Kolor przewodni strony głównej (Hot Pink) */
     --home-theme: var(--neon-pink);
 }
 
     body.home-page footer {
         display: none !important;
-    }
-
-    body.home-page .navbar {
-        margin-bottom: 0 !important;
-        background-color: rgba(11, 11, 14, 0.95) !important;
-        border-bottom: 1px solid #333;
-        z-index: 100;
-        height: 60px;
     }
 
     body.home-page .main-container {
@@ -440,7 +609,7 @@ body.home-page {
         height: calc(100vh - 60px);
     }
 
-/* HERO */
+/* Hero Section */
 .hero-section {
     width: 100%;
     height: 100%;
@@ -448,7 +617,8 @@ body.home-page {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background: radial-gradient(circle at center, #1a0524 0%, var(--bg-body) 90%);
+    /* Gradient od fioletu w dół */
+    background: radial-gradient(circle at center, #230f36 0%, var(--bg-body) 90%);
     overflow: hidden;
     position: relative;
 }
@@ -461,7 +631,7 @@ body.home-page {
     position: relative;
 }
 
-/* LOGO */
+/* Logo Home */
 .neon-logo {
     font-size: clamp(4rem, 10vh, 8rem);
     font-weight: 900;
@@ -470,7 +640,7 @@ body.home-page {
     margin-bottom: 0;
     letter-spacing: 5px;
     line-height: 1;
-    /* Cień dopasowany do nowego koloru --neon-pink */
+    /* Neon Pink Shadow */
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 0, 204, 0.5), 0 0 40px rgba(255, 0, 204, 0.5), 0 0 80px rgba(255, 0, 204, 0.8), 0 0 120px rgba(189, 0, 255, 0.8);
 }
 
@@ -484,7 +654,7 @@ body.home-page {
     text-shadow: 0 2px 5px rgba(0,0,0,0.8);
 }
 
-/* SWIPER */
+/* --- SWIPER SLIDER --- */
 body.home-page .swiper {
     width: 100%;
     padding-top: 60px !important;
@@ -504,14 +674,15 @@ body.home-page .swiper-slide {
     margin: 0;
     border-radius: 20px;
     position: relative;
-    background-color: #1a1a20;
-    border: 2px solid rgba(189, 0, 255, 0.6); /* Delikatny fiolet na nieaktywne */
+    background-color: var(--bg-panel);
+    border: 2px solid rgba(189, 0, 255, 0.4);
     box-shadow: 0 5px 20px rgba(0,0,0,0.8);
     filter: brightness(0.7);
     overflow: hidden;
     transition: transform 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease;
 }
 
+    /* Łączymy .swiper-slide i .swiper-slide img dla spójności */
     body.home-page .swiper-slide img {
         display: block;
         width: 100%;
@@ -520,24 +691,22 @@ body.home-page .swiper-slide {
         transition: transform 0.6s ease;
     }
 
-/* AKTYWNA KARTA - RÓŻOWY NEON */
+/* Aktywna karta - Używa --home-theme (Neon Pink) */
 body.home-page .swiper-slide-active {
     filter: brightness(1.0);
     border: 3px solid var(--home-theme) !important;
-    /* Piękna różowa poświata (Magenta) */
     box-shadow: -50px 0 70px -30px rgba(255, 0, 204, 0.4), 50px 0 70px -30px rgba(255, 0, 204, 0.4), 0 0 20px var(--home-theme);
     z-index: 100;
     transform: scale(1.05);
 }
 
-/* INFO */
+/* Info o grze */
 body.home-page .game-info {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    /* ZMIANA: Zmniejszyliśmy dolny padding z 25px na 10px, guzik idzie niżej */
-    padding: 20px 15px 10px 15px;
+    padding: 20px 15px 12px 15px; /* Guzik niżej */
     background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 60%, transparent 100%);
     opacity: 0;
     visibility: hidden;
@@ -557,12 +726,12 @@ body.home-page .game-title {
     font-size: clamp(1rem, 2.5vh, 1.4rem);
     font-weight: 800;
     color: white;
-    margin-bottom: 12px; /* Trochę mniej, żeby guzik był bliżej tytułu */
+    margin-bottom: 12px;
     text-shadow: 0 2px 5px rgba(0,0,0,1);
     line-height: 1.2;
 }
 
-/* GUZIK NA STRONIE GŁÓWNEJ */
+/* Nadpisanie guzika dla Home Page */
 body.home-page .btn-save-custom {
     border-color: var(--home-theme) !important;
     color: var(--home-theme) !important;
@@ -574,7 +743,7 @@ body.home-page .btn-save-custom {
         color: #fff !important;
     }
 
-/* MOBILE */
+/* Media Queries (Mobile) */
 @media (max-width: 768px) {
     body.home-page .swiper-slide {
         height: 40vh !important;
