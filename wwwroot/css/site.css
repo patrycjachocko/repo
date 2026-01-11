@@ -4,9 +4,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-    /* Paleta kolorów Neon */
+    /* Paleta kolorów Neon - POPRAWIONA */
     --neon-cyan: #00f3ff;
-    --neon-pink: #bd00ff; /*ogar tutaj ten kolorsdafasdfsdafsdafasdfasdf*/
+    /* ZMIANA: Zamiast czerwonego #ff0055, dajemy prawdziwy NEON PINK (Hot Magenta) */
+    --neon-pink: #ff00cc;
     --neon-green: #00ff9d;
     --neon-purple: #bd00ff;
     --neon-red: #ff3333;
@@ -24,7 +25,6 @@
    STYL BAZOWY (BODY I CZCIONKI)
    ========================================= */
 
-/* Ważne: ustawiamy wysokość html, żeby body miało się do czego odnieść */
 html {
     height: 100%;
 }
@@ -34,29 +34,25 @@ body {
     background-image: radial-gradient(circle at 50% 0%, #1a1020 0%, #050507 80%);
     background-attachment: fixed;
     color: #e0e0e0;
-    /* --- FIX STOPKI (Sticky Footer - Metoda Flexbox) --- */
-    min-height: 100vh; /* Minimalna wysokość to 100% okna */
-    display: flex; /* Włączamy Flexbox */
-    flex-direction: column; /* Układ pionowy */
+    /* Sticky Footer Fix */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     margin: 0;
     font-family: var(--font-main);
-    position: relative; /* Zapobiega dziwnym przesunięciom */
+    position: relative;
 }
 
-/* To jest kontener z treścią strony. 
-   flex: 1 sprawia, że ten element rozciąga się, by zająć całe wolne miejsce,
-   spychając stopkę na sam dół. */
 .main-container {
-    flex: 1 0 auto; /* Ważne: 1=grow, 0=shrink, auto=basis */
+    flex: 1 0 auto;
     width: 100%;
 }
 
-/* Wymuszenie czcionki wszędzie */
+/* Typografia */
 h1, h2, h3, h4, h5, h6, p, span, a, div, button, input {
     font-family: var(--font-main) !important;
 }
 
-/* Elementy pogrubione (Nagłówki, Przyciski) */
 h1, h2, h3, h4, h5, h6, .btn, .nav-link {
     font-weight: 700 !important;
     letter-spacing: 1px;
@@ -64,15 +60,12 @@ h1, h2, h3, h4, h5, h6, .btn, .nav-link {
 }
 
 /* =========================================
-   STOPKA (FOOTER) - POPRAWIONA
+   STOPKA (FOOTER)
    ========================================= */
 footer.footer {
-    /* KLUCZOWA ZMIANA: Nadpisujemy position: absolute z szablonów */
     position: relative !important;
-    flex-shrink: 0; /* Zapobiega zgniataniu stopki */
-    /* Usuwamy linię */
+    flex-shrink: 0;
     border: none !important;
-    /* Wygląd */
     padding: 10px 0 !important;
     line-height: 1;
     font-size: 0.8rem;
@@ -82,7 +75,7 @@ footer.footer {
 }
 
 /* =========================================
-   FORMULARZE (TECH STYLE)
+   FORMULARZE
    ========================================= */
 .form-floating {
     position: relative;
@@ -133,7 +126,7 @@ footer.footer {
 }
 
 /* =========================================
-   PRZYCISKI (BUTTONS)
+   PRZYCISKI
    ========================================= */
 .btn {
     border-radius: 4px;
@@ -152,7 +145,7 @@ footer.footer {
         transform: none !important;
     }
 
-/* Zapisz - domyślnie używa koloru rangi */
+/* Zapisz (Domyślny dynamiczny) */
 .btn-save-custom {
     border: 1px solid var(--role-color);
     color: var(--role-color);
@@ -167,7 +160,7 @@ footer.footer {
         text-shadow: 0 0 8px var(--role-color);
     }
 
-/* Neon Primary */
+/* Neon Primary (Fiolet) */
 .btn-neon-primary {
     border: 1px solid var(--neon-purple);
     color: var(--neon-purple);
@@ -416,21 +409,17 @@ footer.footer {
    STRONA GŁÓWNA (HERO & SWIPER)
    ========================================= */
 
-/* Blokada przewijania tylko na stronie głównej */
 body.home-page {
     height: 100vh;
     overflow: hidden;
-    /* DEFINIUJEMY KOLOR PRZEWODNI DLA HOME (PINK) 
-       Ale NIE nadpisujemy --role-color, żeby zachować logikę aplikacji */
+    /* TEMAT PRZEWODNI HOME: RÓŻOWY */
     --home-theme: var(--neon-pink);
 }
 
-    /* Ukrycie stopki tylko na stronie głównej */
     body.home-page footer {
         display: none !important;
     }
 
-    /* Specyficzna nawigacja dla Home */
     body.home-page .navbar {
         margin-bottom: 0 !important;
         background-color: rgba(11, 11, 14, 0.95) !important;
@@ -451,7 +440,7 @@ body.home-page {
         height: calc(100vh - 60px);
     }
 
-/* HERO SECTION */
+/* HERO */
 .hero-section {
     width: 100%;
     height: 100%;
@@ -472,7 +461,7 @@ body.home-page {
     position: relative;
 }
 
-/* NEONOWE LOGO */
+/* LOGO */
 .neon-logo {
     font-size: clamp(4rem, 10vh, 8rem);
     font-weight: 900;
@@ -481,7 +470,8 @@ body.home-page {
     margin-bottom: 0;
     letter-spacing: 5px;
     line-height: 1;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 102, 196, 0.5), 0 0 40px rgba(255, 102, 196, 0.5), 0 0 80px rgba(255, 102, 196, 0.8), 0 0 120px rgba(128, 0, 255, 0.8);
+    /* Cień dopasowany do nowego koloru --neon-pink */
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 0, 204, 0.5), 0 0 40px rgba(255, 0, 204, 0.5), 0 0 80px rgba(255, 0, 204, 0.8), 0 0 120px rgba(189, 0, 255, 0.8);
 }
 
 .hero-subtitle {
@@ -494,8 +484,7 @@ body.home-page {
     text-shadow: 0 2px 5px rgba(0,0,0,0.8);
 }
 
-/* --- SWIPER FIX --- */
-
+/* SWIPER */
 body.home-page .swiper {
     width: 100%;
     padding-top: 60px !important;
@@ -516,7 +505,7 @@ body.home-page .swiper-slide {
     border-radius: 20px;
     position: relative;
     background-color: #1a1a20;
-    border: 2px solid rgba(160, 60, 255, 0.8);
+    border: 2px solid rgba(189, 0, 255, 0.6); /* Delikatny fiolet na nieaktywne */
     box-shadow: 0 5px 20px rgba(0,0,0,0.8);
     filter: brightness(0.7);
     overflow: hidden;
@@ -531,24 +520,24 @@ body.home-page .swiper-slide {
         transition: transform 0.6s ease;
     }
 
-/* AKTYWNA KARTA */
+/* AKTYWNA KARTA - RÓŻOWY NEON */
 body.home-page .swiper-slide-active {
     filter: brightness(1.0);
-    /* Używamy koloru tematycznego HOME, a nie rangi */
     border: 3px solid var(--home-theme) !important;
-    box-shadow: -50px 0 70px -30px rgba(255, 0, 85, 0.4), 50px 0 70px -30px rgba(255, 0, 85, 0.4), 0 0 20px var(--home-theme);
+    /* Piękna różowa poświata (Magenta) */
+    box-shadow: -50px 0 70px -30px rgba(255, 0, 204, 0.4), 50px 0 70px -30px rgba(255, 0, 204, 0.4), 0 0 20px var(--home-theme);
     z-index: 100;
     transform: scale(1.05);
 }
 
-/* INFO O GRZE (Tytuł i guzik) */
+/* INFO */
 body.home-page .game-info {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    /* Odległości: Góra Prawa Dół Lewa */
-    padding: 20px 15px 25px 15px;
+    /* ZMIANA: Zmniejszyliśmy dolny padding z 25px na 10px, guzik idzie niżej */
+    padding: 20px 15px 10px 15px;
     background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 60%, transparent 100%);
     opacity: 0;
     visibility: hidden;
@@ -568,13 +557,12 @@ body.home-page .game-title {
     font-size: clamp(1rem, 2.5vh, 1.4rem);
     font-weight: 800;
     color: white;
-    margin-bottom: 15px;
+    margin-bottom: 12px; /* Trochę mniej, żeby guzik był bliżej tytułu */
     text-shadow: 0 2px 5px rgba(0,0,0,1);
     line-height: 1.2;
 }
 
-/* --- SPECIFIC BUTTON OVERRIDE FOR HOME PAGE --- */
-/* Wymuszamy, aby guzik na stronie głównej używał koloru tematycznego HOME, a nie RANGI */
+/* GUZIK NA STRONIE GŁÓWNEJ */
 body.home-page .btn-save-custom {
     border-color: var(--home-theme) !important;
     color: var(--home-theme) !important;
@@ -586,7 +574,7 @@ body.home-page .btn-save-custom {
         color: #fff !important;
     }
 
-/* MEDIA QUERIES */
+/* MOBILE */
 @media (max-width: 768px) {
     body.home-page .swiper-slide {
         height: 40vh !important;
