@@ -4,66 +4,57 @@
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-    /* --- PALETA NEONOWA (KOLORY) --- */
-    /* Kolory Rang (Użytkownicy) */
+    /* --- PALETA NEONOWA --- */
     --neon-cyan: #00f3ff;
     --neon-green: #00ff9d;
     --neon-red: #ff3333;
-    /* Kolory Przewodnie Strony (Motyw) */
-    --neon-pink: #ff00cc; /* Hot Pink / Magenta */
+    --neon-pink: #ff00cc;
     --neon-purple: #bd00ff;
-    /* Dodatkowe kolory (Utility) */
     --neon-yellow: #f2ff00;
     --neon-grey: #e0e6ed;
-    /* --- TŁA (DARKER PANELS) --- */
-    /* TŁO STRONY: Ciemny, głęboki fiolet (baza) */
+    /* --- TŁA --- */
     --bg-body: #120a1a;
-    /* TŁO PANELI: Jeszcze ciemniejsze, prawie czarne (wklęsłe) */
     --bg-panel: #050208;
-    /* Obramowania techniczne */
     --border-tech: #2a1f3d;
     /* --- TYPOGRAFIA --- */
     --font-main: 'Exo 2', sans-serif;
     /* --- ZMIENNE LOGICZNE --- */
-    /* Domyślny kolor rangi (nadpisywany dynamicznie w Layout) */
     --role-color: var(--neon-cyan);
+    /* --- GLOBALNE ZAOKRĄGLENIE --- */
+    --radius-main: 15px;
 }
 
 /* ==========================================================================
    2. STYL BAZOWY (RESET & BASE STYLES)
    ========================================================================== */
-
 html {
     height: 100%;
 }
 
 body {
     background-color: var(--bg-body);
-    /* Delikatny gradient dla tła strony */
-    background-image: radial-gradient(circle at 50% 0%, #1e102b 0%, var(--bg-body) 85%);
+    /* NOWE TŁO: Vignette (Jasny środek, czarne rogi) */
+    background-image: radial-gradient(circle at center, #2e1a45 0%, var(--bg-body) 50%, #000000 100%);
     background-attachment: fixed;
     color: #e0e0e0;
-    /* Sticky Footer Fix (Flexbox) */
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     margin: 0;
     font-family: var(--font-main);
     position: relative;
+    overflow-x: hidden;
 }
 
-/* Kontener główny - wypełnia przestrzeń, spychając stopkę */
 .main-container {
     flex: 1 0 auto;
     width: 100%;
 }
 
-/* Wymuszenie czcionki */
 h1, h2, h3, h4, h5, h6, p, span, a, div, button, input {
     font-family: var(--font-main) !important;
 }
 
-/* Elementy pogrubione (Uppercase) */
 h1, h2, h3, h4, h5, h6, .btn, .nav-link {
     font-weight: 700 !important;
     letter-spacing: 1px;
@@ -73,31 +64,26 @@ h1, h2, h3, h4, h5, h6, .btn, .nav-link {
 /* ==========================================================================
    3. PASEK NAWIGACJI (NAVBAR)
    ========================================================================== */
-
 .navbar {
-    /* --- POZYCJA (STICKY) --- */
-    position: sticky; /* Przykleja pasek do góry */
+    position: sticky;
     top: 0;
     width: 100%;
-    z-index: 1000; /* Zawsze na wierzchu */
-    /* --- WYGLĄD (GLASS & NEON) --- */
-    background-color: rgba(5, 2, 8, 0.8) !important; /* Półprzezroczyste tło */
-    backdrop-filter: blur(15px); /* Mocniejsze rozmycie tła pod spodem */
-    /* Grubsza różowa linia na dole */
+    z-index: 1000;
+    background-color: rgba(5, 2, 8, 0.85) !important;
+    backdrop-filter: blur(12px);
     border-bottom: 2px solid var(--neon-pink);
-    /* Różowa poświata pod paskiem */
-    box-shadow: 0 5px 20px -5px rgba(255, 0, 204, 0.5);
+    box-shadow: 0 5px 20px -5px rgba(255, 0, 204, 0.4);
     transition: all 0.3s ease;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
 }
 
-/* Logo Neonowe */
 .navbar-brand {
-    font-family: var(--font-main);
     font-weight: 900;
     font-size: 1.5rem;
     letter-spacing: 2px;
     color: #fff !important;
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 0 0 10px rgba(255, 0, 204, 0.5), 0 0 20px rgba(255, 0, 204, 0.5), 0 0 40px rgba(189, 0, 255, 0.8);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 0 0 10px rgba(255, 0, 204, 0.5), 0 0 40px rgba(189, 0, 255, 0.8);
     transition: transform 0.3s ease;
 }
 
@@ -105,45 +91,39 @@ h1, h2, h3, h4, h5, h6, .btn, .nav-link {
         transform: scale(1.05);
     }
 
-/* Linki w nawigacji */
 .navbar-nav .nav-link {
     color: rgba(255, 255, 255, 0.8) !important;
     font-size: 0.9rem;
     transition: all 0.3s ease;
-    position: relative;
     margin: 0 5px;
 }
 
     .navbar-nav .nav-link:hover {
         color: #fff !important;
-        text-shadow: 0 0 10px var(--neon-pink); /* Różowe świecenie tekstu */
+        text-shadow: 0 0 10px var(--neon-pink);
     }
 
-/* --- Specjalne przyciski w pasku (Login/Rejestracja) --- */
-
-/* Guzik "Zaloguj" (Link z ramką) */
 .nav-link[data-bs-target="#loginModal"] {
     padding: 8px 20px !important;
-    border-radius: 4px;
+    border-radius: var(--radius-main);
+    border: 1px solid rgba(255, 0, 204, 0.3);
     box-shadow: 0 4px 15px -5px rgba(255, 0, 204, 0.5);
-    transition: all 0.3s ease;
 }
 
     .nav-link[data-bs-target="#loginModal"]:hover {
         background: rgba(255, 0, 204, 0.1);
-        box-shadow: 0 0 20px rgba(255, 0, 204, 0.8), inset 0 0 10px rgba(255, 0, 204, 0.2);
+        border-color: var(--neon-pink);
+        box-shadow: 0 0 20px rgba(255, 0, 204, 0.8);
         color: #fff !important;
-        text-shadow: 0 0 5px #fff;
     }
 
-/* Guzik "Rejestracja" (btn-primary w pasku) */
 .navbar .btn-primary {
     background: transparent !important;
     border: 1px solid var(--neon-pink) !important;
     color: var(--neon-pink) !important;
     box-shadow: 0 0 10px rgba(255, 0, 204, 0.3);
     font-weight: 700;
-    transition: all 0.3s ease;
+    border-radius: var(--radius-main);
 }
 
     .navbar .btn-primary:hover {
@@ -153,16 +133,15 @@ h1, h2, h3, h4, h5, h6, .btn, .nav-link {
         transform: translateY(-2px);
     }
 
-/* --- Dropdown Menu --- */
 .dropdown-menu-dark {
     background-color: var(--bg-panel);
     border: 1px solid var(--border-tech);
     box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    border-radius: var(--radius-main);
 }
 
 .dropdown-item {
     color: #ccc;
-    font-size: 0.9rem;
     padding: 10px 20px;
     transition: all 0.2s;
     border-left: 3px solid transparent;
@@ -171,10 +150,9 @@ h1, h2, h3, h4, h5, h6, .btn, .nav-link {
     .dropdown-item:hover {
         background-color: rgba(255, 255, 255, 0.05);
         color: #fff;
-        padding-left: 25px; /* Efekt przesunięcia */
+        padding-left: 25px;
     }
 
-    /* Kolorowe paski przy hover w dropdownie */
     .dropdown-item.item-neon-pink:hover {
         border-left-color: var(--neon-pink);
         text-shadow: 0 0 8px var(--neon-pink);
@@ -210,9 +188,8 @@ h1, h2, h3, h4, h5, h6, .btn, .nav-link {
 }
 
 /* ==========================================================================
-   4. STOPKA (FOOTER)
+   4. STOPKA & 5. FORMULARZE
    ========================================================================== */
-
 footer.footer {
     position: relative !important;
     flex-shrink: 0;
@@ -240,10 +217,6 @@ footer.footer {
         color: #666 !important;
     }
 
-/* ==========================================================================
-   5. FORMULARZE (INPUTS)
-   ========================================================================== */
-
 .form-floating {
     position: relative;
 }
@@ -254,6 +227,7 @@ footer.footer {
     color: #fff;
     font-weight: 400 !important;
     height: 50px;
+    border-radius: var(--radius-main);
 }
 
     .form-control-tech:focus {
@@ -267,7 +241,6 @@ footer.footer {
         color: transparent;
     }
 
-/* Pływające etykiety */
 .form-floating > label {
     position: absolute;
     top: 0;
@@ -294,11 +267,10 @@ footer.footer {
 }
 
 /* ==========================================================================
-   6. PRZYCISKI (BUTTONS)
+   6. PRZYCISKI
    ========================================================================== */
-
 .btn {
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     transition: all 0.3s ease;
 }
 
@@ -314,9 +286,6 @@ footer.footer {
         transform: none !important;
     }
 
-/* --- WARIANTY GUZIKÓW --- */
-
-/* Zapisz (Dynamiczny - kolor rangi) */
 .btn-save-custom {
     border: 1px solid var(--role-color);
     color: var(--role-color);
@@ -331,7 +300,6 @@ footer.footer {
         text-shadow: 0 0 8px var(--role-color);
     }
 
-/* Neon Primary (Fiolet) */
 .btn-neon-primary {
     border: 1px solid var(--neon-purple);
     color: var(--neon-purple);
@@ -345,7 +313,6 @@ footer.footer {
         text-shadow: 0 0 8px var(--neon-purple);
     }
 
-/* Danger (Czerwony) */
 .btn-danger-custom {
     border: 1px solid var(--neon-red);
     color: var(--neon-red);
@@ -359,7 +326,6 @@ footer.footer {
         text-shadow: 0 0 8px var(--neon-red);
     }
 
-/* Steam Connect */
 .btn-steam-connect {
     background: rgba(0, 243, 255, 0.05);
     border: 1px solid var(--neon-cyan);
@@ -375,7 +341,6 @@ footer.footer {
         text-shadow: 0 0 8px var(--neon-cyan);
     }
 
-/* Steam Disconnect */
 .btn-steam-disconnect {
     border: 1px solid var(--neon-cyan);
     color: var(--neon-cyan);
@@ -390,7 +355,6 @@ footer.footer {
         text-shadow: 0 0 5px var(--neon-cyan);
     }
 
-/* Ghost Cancel */
 .btn-ghost-cancel {
     border: none;
     background: transparent;
@@ -404,7 +368,6 @@ footer.footer {
         box-shadow: none;
     }
 
-/* Edycja Avatara (Ołówek) */
 .btn-edit-avatar {
     position: absolute;
     bottom: 5px;
@@ -432,14 +395,12 @@ footer.footer {
     }
 
 /* ==========================================================================
-   7. KARTY, PANELE I MODALE
+   7, 8, 9. KARTY, PROFILE, HOME
    ========================================================================== */
-
-/* Panel Profilu */
 .profile-sidebar-card {
     background: var(--bg-panel);
     border: 1px solid var(--border-tech);
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     position: relative;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0,0,0,0.6);
@@ -456,14 +417,13 @@ footer.footer {
         box-shadow: 0 0 15px var(--role-color);
     }
 
-/* Karta Steam */
 .steam-card {
-    background: rgba(19, 10, 28, 0.8); /* Półprzezroczysty fiolet */
+    background: rgba(19, 10, 28, 0.8);
     border: 1px solid var(--neon-cyan);
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.15), inset 0 0 20px rgba(0, 243, 255, 0.05);
     position: relative;
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     color: #fff;
     margin-bottom: 1.5rem;
 }
@@ -489,12 +449,11 @@ footer.footer {
     color: #fff;
 }
 
-/* Karta Ustawień */
 .settings-card {
     background: var(--bg-panel);
     border: 1px solid var(--neon-purple);
     box-shadow: 0 0 10px rgba(189, 0, 255, 0.1);
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     margin-bottom: 1.5rem;
 }
 
@@ -506,21 +465,21 @@ footer.footer {
     color: #fff;
 }
 
-/* Danger Zone */
 .danger-zone {
     border: 1px solid var(--neon-red);
     background: rgba(30, 0, 0, 0.4);
     box-shadow: 0 0 10px rgba(255, 51, 51, 0.1);
+    border-radius: var(--radius-main);
 }
 
     .danger-zone:hover {
         box-shadow: 0 0 20px rgba(255, 51, 51, 0.2);
     }
 
-/* Modale */
 .modal-content {
     background-color: var(--bg-panel);
     border: 1px solid var(--border-tech);
+    border-radius: var(--radius-main);
     color: #fff;
 }
 
@@ -528,7 +487,6 @@ footer.footer {
     border-color: var(--border-tech);
 }
 
-/* Alerty */
 .alert-neon {
     border: none;
     color: #fff;
@@ -536,6 +494,7 @@ footer.footer {
     box-shadow: 0 5px 20px rgba(0,0,0,0.5);
     border-left: 5px solid transparent;
     font-weight: 600;
+    border-radius: var(--radius-main);
 }
 
 .alert-neon-success {
@@ -549,10 +508,6 @@ footer.footer {
     border-left-color: var(--neon-pink);
     box-shadow: 0 0 15px rgba(255, 0, 85, 0.1);
 }
-
-/* ==========================================================================
-   8. ELEMENTY PROFILOWE (AVATAR, BADGE)
-   ========================================================================== */
 
 .avatar-container {
     position: relative;
@@ -579,17 +534,12 @@ footer.footer {
     font-size: 0.9rem;
     margin-bottom: 20px;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    border-radius: var(--radius-main);
 }
 
-/* ==========================================================================
-   9. STRONA GŁÓWNA (HOME PAGE - HERO & SWIPER)
-   ========================================================================== */
-
-/* Specyficzne style tylko dla body z klasą .home-page */
 body.home-page {
     height: 100vh;
-    overflow: hidden;
-    /* Kolor przewodni strony głównej (Hot Pink) */
+    overflow-x: hidden;
     --home-theme: var(--neon-pink);
 }
 
@@ -609,7 +559,6 @@ body.home-page {
         height: calc(100vh - 60px);
     }
 
-/* Hero Section */
 .hero-section {
     width: 100%;
     height: 100%;
@@ -617,8 +566,7 @@ body.home-page {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    /* Gradient od fioletu w dół */
-    background: radial-gradient(circle at center, #230f36 0%, var(--bg-body) 90%);
+    background: radial-gradient(circle at center, #2e1a45 0%, var(--bg-body) 60%, #000000 100%);
     overflow: hidden;
     position: relative;
 }
@@ -631,7 +579,6 @@ body.home-page {
     position: relative;
 }
 
-/* Logo Home */
 .neon-logo {
     font-size: clamp(4rem, 10vh, 8rem);
     font-weight: 900;
@@ -640,7 +587,6 @@ body.home-page {
     margin-bottom: 0;
     letter-spacing: 5px;
     line-height: 1;
-    /* Neon Pink Shadow */
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 0, 204, 0.5), 0 0 40px rgba(255, 0, 204, 0.5), 0 0 80px rgba(255, 0, 204, 0.8), 0 0 120px rgba(189, 0, 255, 0.8);
 }
 
@@ -654,15 +600,16 @@ body.home-page {
     text-shadow: 0 2px 5px rgba(0,0,0,0.8);
 }
 
-/* --- SWIPER SLIDER --- */
+/* --- SWIPER SLIDER (ZMODYFIKOWANE) --- */
 body.home-page .swiper {
     width: 100%;
     padding-top: 60px !important;
     padding-bottom: 60px !important;
     margin-top: -20px;
     overflow: visible !important;
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+    /* NOWA MASKA: Mocniejszy cień po bokach (0-30% i 70-100% czerń) */
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
 }
 
 body.home-page .swiper-slide {
@@ -682,7 +629,6 @@ body.home-page .swiper-slide {
     transition: transform 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease;
 }
 
-    /* Łączymy .swiper-slide i .swiper-slide img dla spójności */
     body.home-page .swiper-slide img {
         display: block;
         width: 100%;
@@ -691,7 +637,6 @@ body.home-page .swiper-slide {
         transition: transform 0.6s ease;
     }
 
-/* Aktywna karta - Używa --home-theme (Neon Pink) */
 body.home-page .swiper-slide-active {
     filter: brightness(1.0);
     border: 3px solid var(--home-theme) !important;
@@ -700,13 +645,12 @@ body.home-page .swiper-slide-active {
     transform: scale(1.05);
 }
 
-/* Info o grze */
 body.home-page .game-info {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    padding: 20px 15px 12px 15px; /* Guzik niżej */
+    padding: 20px 15px 12px 15px;
     background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 60%, transparent 100%);
     opacity: 0;
     visibility: hidden;
@@ -731,7 +675,6 @@ body.home-page .game-title {
     line-height: 1.2;
 }
 
-/* Nadpisanie guzika dla Home Page */
 body.home-page .btn-save-custom {
     border-color: var(--home-theme) !important;
     color: var(--home-theme) !important;
@@ -743,7 +686,6 @@ body.home-page .btn-save-custom {
         color: #fff !important;
     }
 
-/* Media Queries (Mobile) */
 @media (max-width: 768px) {
     body.home-page .swiper-slide {
         height: 40vh !important;
@@ -764,4 +706,117 @@ body.home-page .btn-save-custom {
         transform: translateY(0);
         margin-bottom: 20px;
     }
+}
+
+/* ==========================================================================
+   10. KOMPONENTY BIBLIOTEKI (Grid & Cards) - PRZYWRÓCONE DO STANDARDU
+   ========================================================================== */
+.panel-toolbar {
+    background: var(--bg-panel);
+    border: 1px solid var(--neon-pink);
+    border-radius: var(--radius-main);
+    padding: 15px 30px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4), 0 0 10px rgba(255, 0, 204, 0.1);
+    /* Przywrócona pełna szerokość */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.card-game {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
+    border-radius: var(--radius-main);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+    height: 100%;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.game-link-wrapper {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+    .game-link-wrapper:hover .card-game {
+        transform: translateY(-5px);
+        border-color: var(--neon-pink);
+        box-shadow: 0 0 20px rgba(255, 0, 204, 0.3);
+    }
+
+    .game-link-wrapper:hover .cover-img {
+        transform: none;
+        filter: brightness(1.2);
+    }
+
+    .game-link-wrapper:hover .grid-card-title {
+        color: var(--neon-pink);
+        text-shadow: 0 0 5px var(--neon-pink);
+    }
+
+.grid-card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ccc;
+    transition: color 0.3s;
+}
+
+.playtime-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(5, 2, 8, 0.85);
+    color: var(--neon-cyan);
+    border: 1px solid var(--neon-cyan);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--radius-main);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+
+.pagination .page-link {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
+    color: #888;
+    margin: 0 3px;
+    border-radius: var(--radius-main);
+    transition: all 0.3s;
+}
+
+    .pagination .page-link:hover {
+        background-color: rgba(255,255,255,0.05);
+        color: #fff;
+        border-color: #fff;
+    }
+
+.pagination .page-item.active .page-link {
+    background: rgba(0, 243, 255, 0.1);
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+}
+
+.pagination .page-item.disabled .page-link {
+    background: transparent;
+    border-color: transparent;
+    color: #444;
+}
+
+.vr-tech {
+    width: 1px;
+    height: 30px;
+    background: var(--border-tech);
 }
