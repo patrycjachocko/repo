@@ -23,7 +23,6 @@ namespace praca_dyplomowa.Data
         {
         }
 
-        // --- Istniejące tabele ---
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Guide> Guides { get; set; } = null!;
         public DbSet<Tip> Tips { get; set; } = null!;
@@ -31,8 +30,6 @@ namespace praca_dyplomowa.Data
         public DbSet<Reply> Replies { get; set; } = null!;
         public DbSet<Rate> Rates { get; set; } = null!;
         public DbSet<Reaction> Reactions { get; set; } = null!;
-
-        // --- NOWE TABELE DODANE DO BAZY ---
         public DbSet<GameInLibrary> GamesInLibraries { get; set; } = null!;
         public DbSet<UserAchievement> UserAchievements { get; set; } = null!;
         public DbSet<ToDoItem> ToDoItems { get; set; } = null!;
@@ -41,20 +38,12 @@ namespace praca_dyplomowa.Data
         public DbSet<TicketAttachment> TicketAttachments { get; set; } = null!;
         public DbSet<GameRate> GameRates { get; set; } = null!;
         public DbSet<GameMap> GameMaps { get; set; } = null!;
-
-        // NOWE: Tabela recenzji
         public DbSet<GameReview> GameReviews { get; set; } = null!;
 
-
-        /// <summary>
-        /// Ta metoda jest wywoływana przez Entity Framework podczas tworzenia modelu bazy danych.
-        /// Używamy jej do skonfigurowania początkowych danych (seeding).
-        /// </summary>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Konfiguracja relacji pozostaje bez zmian
             modelBuilder.Entity<GameInLibrary>()
                 .HasOne(g => g.User)
                 .WithMany()
@@ -65,7 +54,6 @@ namespace praca_dyplomowa.Data
                 .WithMany()
                 .HasForeignKey(ua => ua.UserId);
 
-            // <-- DODANE: Konfiguracja dla nowego pola w Guide -->
             modelBuilder.Entity<Guide>()
                 .HasIndex(g => g.IgdbGameId);
 
@@ -75,21 +63,21 @@ namespace praca_dyplomowa.Data
                 .HasForeignKey(r => r.ParentCommentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 2. Relacja Komentarz -> Reakcje (Usunięcie komentarza usuwa jego lajki)
+            //usunięcie komentarza usuwa jego lajki
             modelBuilder.Entity<Reaction>()
                 .HasOne(r => r.Comment)
                 .WithMany(c => c.Reactions)
                 .HasForeignKey(r => r.CommentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 3. Relacja Odpowiedź -> Reakcje (Usunięcie odpowiedzi usuwa jej lajki)
+            //usunięcie odpowiedzi usuwa jej lajki
             modelBuilder.Entity<Reaction>()
                 .HasOne(r => r.Reply)
                 .WithMany(r => r.Reactions)
                 .HasForeignKey(r => r.ReplyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 4. NOWE: Relacja Recenzja -> Reakcje (Usunięcie recenzji usuwa jej lajki)
+            //usunięcie recenzji usuwa jej lajki
             modelBuilder.Entity<Reaction>()
                 .HasOne(r => r.GameReview)
                 .WithMany(gr => gr.Reactions)

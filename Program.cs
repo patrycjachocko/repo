@@ -57,11 +57,6 @@ builder.Services.AddSingleton<IGDBClient>(provider =>
     var clientId = builder.Configuration["IGDB:ClientId"];
     var clientSecret = builder.Configuration["IGDB:ClientSecret"];
 
-    if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-    {
-        throw new Exception("Klucze ClientId i ClientSecret dla IGDB nie zosta³y ustawione w appsettings.json");
-    }
-
     return new IGDBClient(clientId, clientSecret);
 });
 

@@ -11,23 +11,15 @@ namespace praca_dyplomowa_zesp.Models.Interactions.Comments
     {
         [Key]
         public Guid Id { get; set; }
-
         [Required]
         public string Content { get; set; }
-
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-
-        // Relacja z Użytkownikiem (Autorem)
         public Guid UserId { get; set; }
         [ForeignKey("UserId")]
         public virtual User Author { get; set; }
-
-        // Relacja z Poradnikiem
         public int GuideId { get; set; }
         [ForeignKey("GuideId")]
         public virtual Guide Guide { get; set; }
-
-        // Listy podrzędne
         public virtual ICollection<Reply> Replies { get; set; } = new List<Reply>();
         public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
     }
