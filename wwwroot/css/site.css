@@ -1,99 +1,233 @@
-﻿/* =========================================
-   GLÓWNE ZMIENNE I KONFIGURACJA
-   ========================================= */
+﻿/* ==========================================================================
+   1. ZMIENNE I KONFIGURACJA (VARIABLES & CONFIG)
+   ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-    /* Paleta kolorów Neon */
+    /* --- PALETA NEONOWA --- */
     --neon-cyan: #00f3ff;
-    --neon-pink: #bd00ff; /*ogar tutaj ten kolorsdafasdfsdafsdafasdfasdf*/
     --neon-green: #00ff9d;
-    --neon-purple: #bd00ff;
     --neon-red: #ff3333;
-    /* Tła */
-    --bg-body: #050507;
-    --bg-panel: #0a0a0c;
-    --border-tech: #333333;
-    /* Czcionka */
+    --neon-pink: #ff00cc;
+    --neon-purple: #bd00ff;
+    --neon-yellow: #f2ff00;
+    --neon-grey: #e0e6ed;
+    /* --- TŁA --- */
+    --bg-body: #120a1a;
+    --bg-panel: #050208;
+    --border-tech: #2a1f3d;
+    /* --- TYPOGRAFIA --- */
     --font-main: 'Exo 2', sans-serif;
-    /* Zmienna dynamiczna dla rangi (globalna) */
+    /* --- ZMIENNE LOGICZNE --- */
     --role-color: var(--neon-cyan);
+    /* --- GLOBALNE ZAOKRĄGLENIE --- */
+    --radius-main: 15px;
 }
 
-/* =========================================
-   STYL BAZOWY (BODY I CZCIONKI)
-   ========================================= */
-
-/* Ważne: ustawiamy wysokość html, żeby body miało się do czego odnieść */
+/* ==========================================================================
+   2. STYL BAZOWY (RESET & BASE STYLES)
+   ========================================================================== */
 html {
     height: 100%;
 }
 
 body {
     background-color: var(--bg-body);
-    background-image: radial-gradient(circle at 50% 0%, #1a1020 0%, #050507 80%);
+    /* NOWE TŁO: Vignette (Jasny środek, czarne rogi) */
+    background-image: radial-gradient(circle at center, #2e1a45 0%, var(--bg-body) 50%, #000000 100%);
     background-attachment: fixed;
     color: #e0e0e0;
-    /* --- FIX STOPKI (Sticky Footer - Metoda Flexbox) --- */
-    min-height: 100vh; /* Minimalna wysokość to 100% okna */
-    display: flex; /* Włączamy Flexbox */
-    flex-direction: column; /* Układ pionowy */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     margin: 0;
     font-family: var(--font-main);
-    position: relative; /* Zapobiega dziwnym przesunięciom */
+    position: relative;
+    overflow-x: hidden;
 }
 
-/* To jest kontener z treścią strony. 
-   flex: 1 sprawia, że ten element rozciąga się, by zająć całe wolne miejsce,
-   spychając stopkę na sam dół. */
 .main-container {
-    flex: 1 0 auto; /* Ważne: 1=grow, 0=shrink, auto=basis */
+    flex: 1 0 auto;
     width: 100%;
 }
 
-/* Wymuszenie czcionki wszędzie */
 h1, h2, h3, h4, h5, h6, p, span, a, div, button, input {
     font-family: var(--font-main) !important;
 }
 
-/* Elementy pogrubione (Nagłówki, Przyciski) */
 h1, h2, h3, h4, h5, h6, .btn, .nav-link {
     font-weight: 700 !important;
     letter-spacing: 1px;
     text-transform: uppercase;
 }
 
-/* =========================================
-   STOPKA (FOOTER) - POPRAWIONA
-   ========================================= */
+/* ==========================================================================
+   3. PASEK NAWIGACJI (NAVBAR)
+   ========================================================================== */
+.navbar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    background-color: rgba(5, 2, 8, 0.85) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 2px solid var(--neon-pink);
+    box-shadow: 0 5px 20px -5px rgba(255, 0, 204, 0.4);
+    transition: all 0.3s ease;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.navbar-brand {
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    color: #fff !important;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 0 0 10px rgba(255, 0, 204, 0.5), 0 0 40px rgba(189, 0, 255, 0.8);
+    transition: transform 0.3s ease;
+}
+
+    .navbar-brand:hover {
+        transform: scale(1.05);
+    }
+
+.navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    margin: 0 5px;
+}
+
+    .navbar-nav .nav-link:hover {
+        color: #fff !important;
+        text-shadow: 0 0 10px var(--neon-pink);
+    }
+
+.nav-link[data-bs-target="#loginModal"] {
+    padding: 8px 20px !important;
+    border-radius: var(--radius-main);
+    border: 1px solid rgba(255, 0, 204, 0.3);
+    box-shadow: 0 4px 15px -5px rgba(255, 0, 204, 0.5);
+}
+
+    .nav-link[data-bs-target="#loginModal"]:hover {
+        background: rgba(255, 0, 204, 0.1);
+        border-color: var(--neon-pink);
+        box-shadow: 0 0 20px rgba(255, 0, 204, 0.8);
+        color: #fff !important;
+    }
+
+.navbar .btn-primary {
+    background: transparent !important;
+    border: 1px solid var(--neon-pink) !important;
+    color: var(--neon-pink) !important;
+    box-shadow: 0 0 10px rgba(255, 0, 204, 0.3);
+    font-weight: 700;
+    border-radius: var(--radius-main);
+}
+
+    .navbar .btn-primary:hover {
+        background: var(--neon-pink) !important;
+        color: #fff !important;
+        box-shadow: 0 0 25px rgba(255, 0, 204, 0.8);
+        transform: translateY(-2px);
+    }
+
+.dropdown-menu-dark {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    border-radius: var(--radius-main);
+}
+
+.dropdown-item {
+    color: #ccc;
+    padding: 10px 20px;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+    .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        padding-left: 25px;
+    }
+
+    .dropdown-item.item-neon-pink:hover {
+        border-left-color: var(--neon-pink);
+        text-shadow: 0 0 8px var(--neon-pink);
+    }
+
+    .dropdown-item.item-neon-green:hover {
+        border-left-color: var(--neon-green);
+        text-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .dropdown-item.item-neon-cyan:hover {
+        border-left-color: var(--neon-cyan);
+        text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .dropdown-item.item-neon-purple:hover {
+        border-left-color: var(--neon-purple);
+        text-shadow: 0 0 8px var(--neon-purple);
+    }
+
+    .dropdown-item.item-neon-red:hover {
+        border-left-color: var(--neon-red);
+        text-shadow: 0 0 8px var(--neon-red);
+    }
+
+    .dropdown-item.item-neon-yellow:hover {
+        border-left-color: var(--neon-yellow);
+        text-shadow: 0 0 8px var(--neon-yellow);
+    }
+
+.dropdown-divider {
+    border-top-color: var(--border-tech);
+}
+
+/* ==========================================================================
+   4. STOPKA & 5. FORMULARZE
+   ========================================================================== */
 footer.footer {
-    /* KLUCZOWA ZMIANA: Nadpisujemy position: absolute z szablonów */
     position: relative !important;
-    flex-shrink: 0; /* Zapobiega zgniataniu stopki */
-    /* Usuwamy linię */
+    flex-shrink: 0;
     border: none !important;
-    /* Wygląd */
     padding: 10px 0 !important;
     line-height: 1;
     font-size: 0.8rem;
     background: transparent;
-    opacity: 0.7;
+    opacity: 0.9;
     width: 100%;
 }
 
-/* =========================================
-   FORMULARZE (TECH STYLE)
-   ========================================= */
+    footer.footer a {
+        color: var(--neon-pink) !important;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+        footer.footer a:hover {
+            color: #fff !important;
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+
+    footer.footer .text-secondary {
+        color: #666 !important;
+    }
+
 .form-floating {
     position: relative;
 }
 
 .form-control-tech {
-    background: #050507;
-    border: 1px solid #444;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-tech);
     color: #fff;
     font-weight: 400 !important;
     height: 50px;
+    border-radius: var(--radius-main);
 }
 
     .form-control-tech:focus {
@@ -132,11 +266,11 @@ footer.footer {
     text-shadow: 0 0 5px rgba(189, 0, 255, 0.3);
 }
 
-/* =========================================
-   PRZYCISKI (BUTTONS)
-   ========================================= */
+/* ==========================================================================
+   6. PRZYCISKI
+   ========================================================================== */
 .btn {
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     transition: all 0.3s ease;
 }
 
@@ -152,7 +286,6 @@ footer.footer {
         transform: none !important;
     }
 
-/* Zapisz - domyślnie używa koloru rangi */
 .btn-save-custom {
     border: 1px solid var(--role-color);
     color: var(--role-color);
@@ -161,13 +294,12 @@ footer.footer {
 }
 
     .btn-save-custom:hover {
-        background: rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.05);
         color: #fff;
         box-shadow: inset 0 0 20px var(--role-color);
         text-shadow: 0 0 8px var(--role-color);
     }
 
-/* Neon Primary */
 .btn-neon-primary {
     border: 1px solid var(--neon-purple);
     color: var(--neon-purple);
@@ -181,7 +313,6 @@ footer.footer {
         text-shadow: 0 0 8px var(--neon-purple);
     }
 
-/* Danger */
 .btn-danger-custom {
     border: 1px solid var(--neon-red);
     color: var(--neon-red);
@@ -195,7 +326,6 @@ footer.footer {
         text-shadow: 0 0 8px var(--neon-red);
     }
 
-/* Steam Connect */
 .btn-steam-connect {
     background: rgba(0, 243, 255, 0.05);
     border: 1px solid var(--neon-cyan);
@@ -211,7 +341,6 @@ footer.footer {
         text-shadow: 0 0 8px var(--neon-cyan);
     }
 
-/* Steam Disconnect */
 .btn-steam-disconnect {
     border: 1px solid var(--neon-cyan);
     color: var(--neon-cyan);
@@ -226,7 +355,6 @@ footer.footer {
         text-shadow: 0 0 5px var(--neon-cyan);
     }
 
-/* Ghost Cancel */
 .btn-ghost-cancel {
     border: none;
     background: transparent;
@@ -240,7 +368,6 @@ footer.footer {
         box-shadow: none;
     }
 
-/* Ołówek */
 .btn-edit-avatar {
     position: absolute;
     bottom: 5px;
@@ -248,7 +375,7 @@ footer.footer {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(10, 10, 12, 0.95);
+    background: var(--bg-panel);
     border: 2px solid var(--role-color);
     color: var(--role-color);
     display: flex;
@@ -260,20 +387,20 @@ footer.footer {
 }
 
     .btn-edit-avatar:hover {
-        background: rgba(10, 10, 12, 0.95);
+        background: var(--bg-panel);
         color: #fff;
         box-shadow: inset 0 0 20px var(--role-color);
         text-shadow: 0 0 5px #fff;
         transform: none !important;
     }
 
-/* =========================================
-   KARTY I PANELE
-   ========================================= */
+/* ==========================================================================
+   7, 8, 9. KARTY, PROFILE, HOME
+   ========================================================================== */
 .profile-sidebar-card {
-    background: rgba(10, 10, 12, 0.95);
+    background: var(--bg-panel);
     border: 1px solid var(--border-tech);
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     position: relative;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0,0,0,0.6);
@@ -291,12 +418,12 @@ footer.footer {
     }
 
 .steam-card {
-    background: rgba(20, 30, 45, 0.7);
+    background: rgba(19, 10, 28, 0.8);
     border: 1px solid var(--neon-cyan);
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.15), inset 0 0 20px rgba(0, 243, 255, 0.05);
     position: relative;
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     color: #fff;
     margin-bottom: 1.5rem;
 }
@@ -314,44 +441,52 @@ footer.footer {
         transform: rotate(15deg);
     }
 
-.settings-card {
-    background: rgba(15, 10, 20, 0.8);
-    border: 1px solid var(--neon-purple);
-    box-shadow: 0 0 10px rgba(189, 0, 255, 0.1);
-    border-radius: 4px;
-    margin-bottom: 1.5rem;
-}
-
-.danger-zone {
-    border: 1px solid var(--neon-red);
-    background: rgba(20, 5, 5, 0.8);
-    box-shadow: 0 0 10px rgba(255, 51, 51, 0.1);
-}
-
-    .danger-zone:hover {
-        box-shadow: 0 0 20px rgba(255, 51, 51, 0.2);
-    }
-
-.steam-header, .settings-header {
-    padding: 15px 20px;
-    color: #fff;
-}
-
 .steam-header {
     border-bottom: 1px solid rgba(0, 243, 255, 0.3);
     background: rgba(0, 243, 255, 0.05);
     text-shadow: 0 0 10px var(--neon-cyan);
+    padding: 15px 20px;
+    color: #fff;
+}
+
+.settings-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--neon-purple);
+    box-shadow: 0 0 10px rgba(189, 0, 255, 0.1);
+    border-radius: var(--radius-main);
+    margin-bottom: 1.5rem;
 }
 
 .settings-header {
     background: rgba(189, 0, 255, 0.05);
     border-bottom: 1px solid rgba(189, 0, 255, 0.3);
     text-shadow: 0 0 5px var(--neon-purple);
+    padding: 15px 20px;
+    color: #fff;
 }
 
-/* =========================================
-   ALERTY I MODALE
-   ========================================= */
+.danger-zone {
+    border: 1px solid var(--neon-red);
+    background: rgba(30, 0, 0, 0.4);
+    box-shadow: 0 0 10px rgba(255, 51, 51, 0.1);
+    border-radius: var(--radius-main);
+}
+
+    .danger-zone:hover {
+        box-shadow: 0 0 20px rgba(255, 51, 51, 0.2);
+    }
+
+.modal-content {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
+    border-radius: var(--radius-main);
+    color: #fff;
+}
+
+.modal-header, .modal-footer {
+    border-color: var(--border-tech);
+}
+
 .alert-neon {
     border: none;
     color: #fff;
@@ -359,6 +494,7 @@ footer.footer {
     box-shadow: 0 5px 20px rgba(0,0,0,0.5);
     border-left: 5px solid transparent;
     font-weight: 600;
+    border-radius: var(--radius-main);
 }
 
 .alert-neon-success {
@@ -373,18 +509,6 @@ footer.footer {
     box-shadow: 0 0 15px rgba(255, 0, 85, 0.1);
 }
 
-.modal-content {
-    background-color: #0b0b0e;
-    color: #fff;
-}
-
-.modal-header, .modal-footer {
-    border-color: #333;
-}
-
-/* =========================================
-   ELEMENTY PROFILOWE
-   ========================================= */
 .avatar-container {
     position: relative;
     width: 160px;
@@ -410,33 +534,17 @@ footer.footer {
     font-size: 0.9rem;
     margin-bottom: 20px;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    border-radius: var(--radius-main);
 }
 
-/* =========================================
-   STRONA GŁÓWNA (HERO & SWIPER)
-   ========================================= */
-
-/* Blokada przewijania tylko na stronie głównej */
 body.home-page {
     height: 100vh;
-    overflow: hidden;
-    /* DEFINIUJEMY KOLOR PRZEWODNI DLA HOME (PINK) 
-       Ale NIE nadpisujemy --role-color, żeby zachować logikę aplikacji */
+    overflow-x: hidden;
     --home-theme: var(--neon-pink);
 }
 
-    /* Ukrycie stopki tylko na stronie głównej */
     body.home-page footer {
         display: none !important;
-    }
-
-    /* Specyficzna nawigacja dla Home */
-    body.home-page .navbar {
-        margin-bottom: 0 !important;
-        background-color: rgba(11, 11, 14, 0.95) !important;
-        border-bottom: 1px solid #333;
-        z-index: 100;
-        height: 60px;
     }
 
     body.home-page .main-container {
@@ -451,7 +559,6 @@ body.home-page {
         height: calc(100vh - 60px);
     }
 
-/* HERO SECTION */
 .hero-section {
     width: 100%;
     height: 100%;
@@ -459,7 +566,7 @@ body.home-page {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background: radial-gradient(circle at center, #1a0524 0%, var(--bg-body) 90%);
+    background: radial-gradient(circle at center, #2e1a45 0%, var(--bg-body) 60%, #000000 100%);
     overflow: hidden;
     position: relative;
 }
@@ -472,7 +579,6 @@ body.home-page {
     position: relative;
 }
 
-/* NEONOWE LOGO */
 .neon-logo {
     font-size: clamp(4rem, 10vh, 8rem);
     font-weight: 900;
@@ -481,7 +587,7 @@ body.home-page {
     margin-bottom: 0;
     letter-spacing: 5px;
     line-height: 1;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 102, 196, 0.5), 0 0 40px rgba(255, 102, 196, 0.5), 0 0 80px rgba(255, 102, 196, 0.8), 0 0 120px rgba(128, 0, 255, 0.8);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 0, 204, 0.5), 0 0 40px rgba(255, 0, 204, 0.5), 0 0 80px rgba(255, 0, 204, 0.8), 0 0 120px rgba(189, 0, 255, 0.8);
 }
 
 .hero-subtitle {
@@ -494,16 +600,16 @@ body.home-page {
     text-shadow: 0 2px 5px rgba(0,0,0,0.8);
 }
 
-/* --- SWIPER FIX --- */
-
+/* --- SWIPER SLIDER (ZMODYFIKOWANE) --- */
 body.home-page .swiper {
     width: 100%;
     padding-top: 60px !important;
     padding-bottom: 60px !important;
     margin-top: -20px;
     overflow: visible !important;
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+    /* NOWA MASKA: Mocniejszy cień po bokach (0-30% i 70-100% czerń) */
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
 }
 
 body.home-page .swiper-slide {
@@ -515,8 +621,8 @@ body.home-page .swiper-slide {
     margin: 0;
     border-radius: 20px;
     position: relative;
-    background-color: #1a1a20;
-    border: 2px solid rgba(160, 60, 255, 0.8);
+    background-color: var(--bg-panel);
+    border: 2px solid rgba(189, 0, 255, 0.4);
     box-shadow: 0 5px 20px rgba(0,0,0,0.8);
     filter: brightness(0.7);
     overflow: hidden;
@@ -531,24 +637,20 @@ body.home-page .swiper-slide {
         transition: transform 0.6s ease;
     }
 
-/* AKTYWNA KARTA */
 body.home-page .swiper-slide-active {
     filter: brightness(1.0);
-    /* Używamy koloru tematycznego HOME, a nie rangi */
     border: 3px solid var(--home-theme) !important;
-    box-shadow: -50px 0 70px -30px rgba(255, 0, 85, 0.4), 50px 0 70px -30px rgba(255, 0, 85, 0.4), 0 0 20px var(--home-theme);
+    box-shadow: -50px 0 70px -30px rgba(255, 0, 204, 0.4), 50px 0 70px -30px rgba(255, 0, 204, 0.4), 0 0 20px var(--home-theme);
     z-index: 100;
     transform: scale(1.05);
 }
 
-/* INFO O GRZE (Tytuł i guzik) */
 body.home-page .game-info {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    /* Odległości: Góra Prawa Dół Lewa */
-    padding: 20px 15px 25px 15px;
+    padding: 20px 15px 12px 15px;
     background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 60%, transparent 100%);
     opacity: 0;
     visibility: hidden;
@@ -568,13 +670,11 @@ body.home-page .game-title {
     font-size: clamp(1rem, 2.5vh, 1.4rem);
     font-weight: 800;
     color: white;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     text-shadow: 0 2px 5px rgba(0,0,0,1);
     line-height: 1.2;
 }
 
-/* --- SPECIFIC BUTTON OVERRIDE FOR HOME PAGE --- */
-/* Wymuszamy, aby guzik na stronie głównej używał koloru tematycznego HOME, a nie RANGI */
 body.home-page .btn-save-custom {
     border-color: var(--home-theme) !important;
     color: var(--home-theme) !important;
@@ -586,7 +686,6 @@ body.home-page .btn-save-custom {
         color: #fff !important;
     }
 
-/* MEDIA QUERIES */
 @media (max-width: 768px) {
     body.home-page .swiper-slide {
         height: 40vh !important;
@@ -607,4 +706,117 @@ body.home-page .btn-save-custom {
         transform: translateY(0);
         margin-bottom: 20px;
     }
+}
+
+/* ==========================================================================
+   10. KOMPONENTY BIBLIOTEKI (Grid & Cards) - PRZYWRÓCONE DO STANDARDU
+   ========================================================================== */
+.panel-toolbar {
+    background: var(--bg-panel);
+    border: 1px solid var(--neon-pink);
+    border-radius: var(--radius-main);
+    padding: 15px 30px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4), 0 0 10px rgba(255, 0, 204, 0.1);
+    /* Przywrócona pełna szerokość */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.card-game {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
+    border-radius: var(--radius-main);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+    height: 100%;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.game-link-wrapper {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+    .game-link-wrapper:hover .card-game {
+        transform: translateY(-5px);
+        border-color: var(--neon-pink);
+        box-shadow: 0 0 20px rgba(255, 0, 204, 0.3);
+    }
+
+    .game-link-wrapper:hover .cover-img {
+        transform: none;
+        filter: brightness(1.2);
+    }
+
+    .game-link-wrapper:hover .grid-card-title {
+        color: var(--neon-pink);
+        text-shadow: 0 0 5px var(--neon-pink);
+    }
+
+.grid-card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ccc;
+    transition: color 0.3s;
+}
+
+.playtime-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(5, 2, 8, 0.85);
+    color: var(--neon-cyan);
+    border: 1px solid var(--neon-cyan);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--radius-main);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+
+.pagination .page-link {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-tech);
+    color: #888;
+    margin: 0 3px;
+    border-radius: var(--radius-main);
+    transition: all 0.3s;
+}
+
+    .pagination .page-link:hover {
+        background-color: rgba(255,255,255,0.05);
+        color: #fff;
+        border-color: #fff;
+    }
+
+.pagination .page-item.active .page-link {
+    background: rgba(0, 243, 255, 0.1);
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+}
+
+.pagination .page-item.disabled .page-link {
+    background: transparent;
+    border-color: transparent;
+    color: #444;
+}
+
+.vr-tech {
+    width: 1px;
+    height: 30px;
+    background: var(--border-tech);
 }

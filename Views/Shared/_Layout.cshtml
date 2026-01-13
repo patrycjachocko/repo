@@ -48,8 +48,8 @@
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark mb-3">
             <div class="container-fluid">
 
-                @* LOGO *@
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">GameHub</a>
+                @* LOGO - STYLIZOWANE W CSS (navbar-brand) *@
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">GAMEHUB</a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
@@ -87,7 +87,6 @@
                             </li>
 
                             @* BIBLIOTEKA STEAM (Jeśli połączono) *@
-                            @* Sprawdzamy czy user ma SteamID *@
                             {
                                 var user = await UserManager.GetUserAsync(User);
                                 if (user != null && !string.IsNullOrEmpty(user.SteamId))
@@ -103,7 +102,7 @@
                         }
                     </ul>
 
-                    @* PANEL LOGOWANIA *@
+                    @* PANEL LOGOWANIA (Z NEONOWYMI GUZIKAMI) *@
                     <partial name="_LoginPartial" />
                 </div>
             </div>
@@ -135,7 +134,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container text-center">
-            &copy; 2025 - 2026 GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
+            &copy; 2025 - @DateTime.Now.Year GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
             <span class="mx-2 text-secondary">|</span>
             <a asp-controller="Tickets" asp-action="Index">
                 <i class="fas fa-headset me-1"></i> Support / Kontakt
