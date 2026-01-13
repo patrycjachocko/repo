@@ -52,10 +52,13 @@ namespace praca_dyplomowa_zesp.Controllers
                     break;
                 case "best":
                 default:
-                    reviewsList = reviewsList.OrderByDescending(r =>
-                        (r.Reactions?.Count(x => x.Type == ReactionType.Like) ?? 0) -
-                        (r.Reactions?.Count(x => x.Type == ReactionType.Dislike) ?? 0)
-                    ).ToList();
+                    reviewsList = reviewsList
+                        .OrderByDescending(r =>
+                            (r.Reactions?.Count(x => x.Type == ReactionType.Like) ?? 0) -
+                            (r.Reactions?.Count(x => x.Type == ReactionType.Dislike) ?? 0)
+                        )
+                        .ThenByDescending(r => r.CreatedAt)
+                        .ToList();
                     break;
             }
 

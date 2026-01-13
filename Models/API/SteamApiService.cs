@@ -21,7 +21,7 @@ namespace praca_dyplomowa_zesp.Models.API
             _apiKey = configuration["Steam:ApiKey"];
         }
 
-        public async Task<List<SteamGameDto>> GetUserGamesAsync(string steamId)
+        public virtual async Task<List<SteamGameDto>> GetUserGamesAsync(string steamId)
         {
             var url = $"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={_apiKey}&steamid={steamId}&include_appinfo=true&format=json";
 
@@ -42,7 +42,7 @@ namespace praca_dyplomowa_zesp.Models.API
             }
         }
 
-        public async Task<List<SteamAchievementDto>> GetGameAchievementsAsync(string steamId, string appId)
+        public virtual async Task<List<SteamAchievementDto>> GetGameAchievementsAsync(string steamId, string appId)
         {
             var url = $"http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid={appId}&key={_apiKey}&steamid={steamId}&l=english";
 
@@ -66,7 +66,7 @@ namespace praca_dyplomowa_zesp.Models.API
             }
         }
 
-        public async Task<List<SteamAchievementSchemaDto>> GetSchemaForGameAsync(string appId)
+        public virtual async Task<List<SteamAchievementSchemaDto>> GetSchemaForGameAsync(string appId)
         {
             var url = $"http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={_apiKey}&appid={appId}&l=english";
 
@@ -92,7 +92,7 @@ namespace praca_dyplomowa_zesp.Models.API
         }
 
         // --- NOWA METODA: Wyszukiwanie "na siłę" w sklepie Steam po nazwie ---
-        public async Task<string> SearchAppIdAsync(string query)
+        public virtual async Task<string> SearchAppIdAsync(string query)
         {
             if (string.IsNullOrEmpty(query)) return null;
 
@@ -123,7 +123,7 @@ namespace praca_dyplomowa_zesp.Models.API
             return null;
         }
 
-        public async Task<SteamPlayerSummaryDto?> GetPlayerSummaryAsync(string steamId)
+        public virtual async Task<SteamPlayerSummaryDto?> GetPlayerSummaryAsync(string steamId)
         {
             var url = $"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={_apiKey}&steamids={steamId}";
 
