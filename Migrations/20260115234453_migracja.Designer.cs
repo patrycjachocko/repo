@@ -11,7 +11,7 @@ using praca_dyplomowa.Data;
 namespace praca_dyplomowa_zesp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260110144738_migracja")]
+    [Migration("20260115234453_migracja")]
     partial class migracja
     {
         /// <inheritdoc />
@@ -361,7 +361,7 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
+                        .HasMaxLength(3000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")

@@ -1,209 +1,189 @@
 ﻿@model praca_dyplomowa_zesp.Models.ViewModels.GameRatingViewModel
 
-@* --- STYLE LOKALNE DLA PARTIALA (CYBERPUNK DATA PANELS) --- *@
-<style>
-    .cyber-panel {
-        background: rgba(20, 20, 25, 0.7); /* Ciemne półprzezroczyste tło */
-        backdrop-filter: blur(5px);
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease-in-out;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 10px;
-        position: relative;
-        overflow: hidden;
-    }
+@* --- NAGŁÓWEK SEKCJI (BEZ ZMIAN) --- *@
+<div class="mb-4">
+    <h3 class="text-neon-title text-start mb-0" style="font-size: 1.5rem; letter-spacing: 2px;">
+        <i class="bi bi-bar-chart-fill me-2"></i> Oceny
+    </h3>
+</div>
 
-        .cyber-panel:hover {
-            transform: translateY(-3px);
-            background: rgba(30, 30, 35, 0.8);
-        }
-
-    /* Warianty kolorystyczne neonów */
-    .panel-blue {
-        border-color: rgba(0, 243, 255, 0.5);
-        box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
-    }
-
-    .text-neon-blue {
-        color: #00f3ff;
-        text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
-    }
-
-    .panel-green {
-        border-color: rgba(0, 255, 157, 0.5);
-        box-shadow: inset 0 0 20px rgba(0, 255, 157, 0.1);
-    }
-
-    .text-neon-green {
-        color: #00ff9d;
-        text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
-    }
-
-    .panel-purple {
-        border-color: rgba(188, 19, 254, 0.5);
-        box-shadow: inset 0 0 20px rgba(188, 19, 254, 0.1);
-    }
-
-    .text-neon-purple {
-        color: #bc13fe;
-        text-shadow: 0 0 10px rgba(188, 19, 254, 0.5);
-    }
-
-    .panel-gold {
-        border-color: rgba(255, 193, 7, 0.6);
-        box-shadow: inset 0 0 25px rgba(255, 193, 7, 0.15);
-        background: rgba(255, 193, 7, 0.05); /* Lekki złoty tint */
-    }
-
-    .text-neon-gold {
-        color: #ffc107;
-        text-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
-    }
-
-    /* Nagłówki paneli */
-    .cyber-header-sm {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        opacity: 0.8;
-        margin-bottom: 5px;
-        font-weight: 600;
-    }
-
-    /* Duże liczby */
-    .cyber-score-lg {
-        font-family: 'Segoe UI', sans-serif; /* Można podmienić na bardziej "cyfrowy" font */
-        font-weight: 800;
-        font-size: 1.8rem;
-        line-height: 1;
-    }
-
-    /* --- Kontener interaktywny gwiazdek --- */
-    .star-input-module {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 10px;
-        padding: 8px 15px;
-        border: 1px solid rgba(255, 193, 7, 0.2);
-        transition: border-color 0.3s;
-    }
-
-        .star-input-module:hover {
-            border-color: rgba(255, 193, 7, 0.5);
-            box-shadow: 0 0 15px rgba(255, 193, 7, 0.2);
-        }
-
-    .game-star {
-        transition: transform 0.2s, filter 0.2s;
-    }
-    /* Efekt hover na samej gwiazdce */
-    #game-star-container:hover .game-star:hover {
-        transform: scale(1.15);
-        filter: drop-shadow(0 0 5px #ffc107);
-    }
-
-</style>
-
-@* --- RZĄD 1: Oceny Zewnętrzne (3 kafelki w jednej linii) --- *@
-<div class="row g-3 mb-3">
-    @* KRYTYCY (Niebieski Neon) *@
-    <div class="col-4">
-        <div class="cyber-panel panel-blue text-center">
-            <h6 class="cyber-header-sm text-neon-blue">Krytycy (IGDB)</h6>
-            <div class="cyber-score-lg text-neon-blue">
+<div class="row g-3">
+    @* 1. KRYTYCY (BEZ ZMIAN) *@
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="cyber-panel panel-neon-cyan">
+            <h6 class="cyber-header-sm text-neon-cyan-glow">Krytycy</h6>
+            <div class="cyber-score-lg text-neon-cyan-glow">
                 @(Model.IgdbCriticRating > 0 ? Model.IgdbCriticRating.ToString("0") : "-")
             </div>
         </div>
     </div>
 
-    @* GRACZE (Zielony Neon) *@
-    <div class="col-4">
-        <div class="cyber-panel panel-green text-center">
-            <h6 class="cyber-header-sm text-neon-green">Gracze (IGDB)</h6>
-            <div class="cyber-score-lg text-neon-green">
+    @* 2. GRACZE IGDB (BEZ ZMIAN) *@
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="cyber-panel panel-neon-green">
+            <h6 class="cyber-header-sm text-neon-green-glow">Gracze IGDB</h6>
+            <div class="cyber-score-lg text-neon-green-glow">
                 @(Model.IgdbUserRating > 0 ? Model.IgdbUserRating.ToString("0") : "-")
             </div>
         </div>
     </div>
 
-    @* TOTAL (Fioletowy Neon) *@
-    <div class="col-4">
-        <div class="cyber-panel panel-purple text-center">
-            <h6 class="cyber-header-sm text-neon-purple">Średnia Total</h6>
-            <div class="cyber-score-lg text-neon-purple">
+    @* 3. SPOŁECZNOŚĆ GAMEHUB *@
+    <div class="col-12 col-md-12 col-lg-6">
+        <div class="cyber-panel panel-neon-purple py-1 px-2 d-flex flex-column justify-content-center h-100">
+
+            @* GÓRA: Tytuł i przycisk X w jednej linii *@
+            <div class="position-relative w-100 mb-1">
+                <h6 class="cyber-header-sm text-neon-purple-glow mb-0 text-center" style="line-height: 1.2;">
+                    Społeczność GameHub
+                </h6>
+
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <button id="btn-delete-rating"
+                            type="button"
+                            onclick="openDeleteRatingModal()"
+                            @* USUNIĘTO translate-middle-y, DODANO btn-sm żeby uniknąć wysokości 50px z Twojego CSS *@
+                            class="btn btn-ghost-cancel btn-sm p-0 position-absolute @(Model.UserPersonalRating > 0 ? "" : "d-none")"
+                            style="top: 0; right: 5px; height: auto; line-height: 1; border: none !important;">
+                        <i class="bi bi-x-lg" style="font-size: 1rem;"></i>
+                    </button>
+                }
+            </div>
+
+            @* ŚRODEK: Gwiazdki i Liczba *@
+            <div class="d-flex justify-content-center align-items-center gap-2 w-100">
+
+                @* 1. LEWA STRONA: Średnia *@
+                <div class="d-flex align-items-baseline gap-2">
+                    <div class="cyber-score-lg" style="font-size: 2.5rem; color: #ffffff; text-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple); line-height: 1;" id="local-avg-display">
+                        @((Model.LocalAverageRating * 10) > 0 ? (Model.LocalAverageRating * 10).ToString("0") : "-")
+                    </div>
+                    <small class="text-white-50" style="font-size: 0.7rem;">/ 100</small>
+                </div>
+
+                @* 2. PRAWA STRONA: Ptaszek + Gwiazdki + Ocena *@
+                <div class="d-flex align-items-center">
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="partialGameId" value="@Model.IgdbGameId" />
+
+                        @* Ikonka sukcesu *@
+                        <span id="game-rate-msg" class="text-neon-green me-2 d-flex align-items-center"
+                              style="opacity:0; transition: opacity 0.5s; font-size: 1.2rem;">
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+
+                        @* Gwiazdki *@
+                        <div id="game-star-container" class="star-input-large" style="white-space: nowrap; line-height: 1;">
+                            @for (int i = 1; i <= 10; i++)
+                            {
+                                <i class="far fa-star game-star" data-value="@i" style="font-size: 1.4rem; cursor: pointer; padding: 0 1px;"></i>
+                            }
+                        </div>
+
+                        @* Twoja ocena *@
+                        <span id="current-hover-rating" class="text-white-50 fw-bold ms-2" style="font-size: 1rem; min-width: 25px;">
+                            @(Model.UserPersonalRating > 0 ? Model.UserPersonalRating.ToString("0.0") : "-")
+                        </span>
+                    }
+                    else
+                    {
+                        <div class="d-flex align-items-center gap-2 ms-2">
+                            <span class="text-muted small" style="font-size: 0.7rem;">Zaloguj się</span>
+                            <a asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-light rounded-pill px-3 py-0" style="font-size: 0.65rem; border-color: var(--neon-purple); color: var(--neon-purple);">
+                                LOGIN
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* Usunięto dolny div z przyciskiem tekstowym *@
+        </div>
+    </div>
+
+    @* 4. ŚREDNIA (BEZ ZMIAN) *@
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="cyber-panel panel-neon-yellow">
+            <h6 class="cyber-header-sm text-neon-yellow-glow">Średnia</h6>
+            <div class="cyber-score-lg text-neon-yellow-glow">
                 @(Model.HybridTotalRating > 0 ? Model.HybridTotalRating.ToString("0") : "-")
             </div>
         </div>
     </div>
 </div>
 
-@* --- RZĄD 2: Społeczność GameHub (Interaktywny panel) --- *@
-<div class="row">
-    <div class="col-12">
-        <div class="cyber-panel panel-gold p-3">
-            <div class="d-flex align-items-center justify-content-between">
-
-                @* LEWA STRONA: Etykieta GameHub i Wynik *@
-                <div class="d-flex align-items-center gap-4">
-                    <div class="d-flex flex-column">
-                        <h6 class="cyber-header-sm text-neon-gold mb-1" style="font-size: 0.85rem;">Społeczność GameHub</h6>
-                        <small class="text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
-                            Na podstawie <span id="local-count-display" class="text-white fw-bold">@Model.LocalRatingCount</span> głosów
-                        </small>
-                    </div>
-
-                    <div class="cyber-score-lg text-neon-gold" style="font-size: 2.2rem;" id="local-avg-display">
-                        @((Model.LocalAverageRating * 10) > 0 ? (Model.LocalAverageRating * 10).ToString("0") : "-")
-                    </div>
+@* --- MODAL I SKRYPT BEZ ZMIAN --- *@
+@if (User.Identity.IsAuthenticated)
+{
+    <div class="modal fade" id="deleteRatingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-red); box-shadow: 0 0 30px rgba(255, 51, 51, 0.2);">
+                <div class="modal-header border-secondary justify-content-center pt-3 pb-0 border-0">
+                    <h5 class="modal-title text-neon-danger text-center w-100" style="font-size: 1.1rem;">Usuń ocenę</h5>
                 </div>
-
-                @* PRAWA STRONA: Moduł Głosowania *@
-                <div class="star-input-module d-flex align-items-center">
-                    @if (User.Identity.IsAuthenticated)
-                    {
-                        <div class="d-flex flex-column align-items-end">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" id="partialGameId" value="@Model.IgdbGameId" />
-
-                            @* Kontener Gwiazdek *@
-                            <div id="game-star-container" style="cursor: pointer; font-size: 1.5rem; color: #333; white-space: nowrap; line-height: 1; letter-spacing: 3px;">
-                                @for (int i = 1; i <= 10; i++)
-                                {
-                                    <i class="far fa-star game-star" data-value="@i"></i>
-                                }
-                            </div>
-
-                            @* Tekst podpowiedzi *@
-                            <div class="d-flex align-items-center mt-2 w-100 justify-content-between">
-                                <span id="game-rate-msg" class="text-neon-green fw-bold me-2" style="opacity:0; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Zapisano!</span>
-                                <div id="current-hover-rating" class="text-neon-gold fw-bold small" style="font-size: 0.85rem; min-width: 50px; text-align: right;">
-                                    @(Model.UserPersonalRating > 0 ? Model.UserPersonalRating.ToString("0.0") + "/10" : "Oceń")
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-end">
-                            <small class="text-muted d-block mb-2 text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Zaloguj się, aby ocenić</small>
-                            <a asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-bold" style="font-size: 0.8rem; box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);">
-                                <i class="fas fa-sign-in-alt me-1"></i> Logowanie
-                            </a>
-                        </div>
-                    }
+                <div class="modal-body text-white text-center py-3">
+                    <i class="bi bi-exclamation-triangle text-neon-danger mb-2 d-block" style="font-size: 2rem;"></i>
+                    <p class="small text-muted mb-0">Usunięcie oceny spowoduje również <strong>usunięcie Twojej recenzji</strong> dla tej gry.</p>
+                    <p class="mt-2 mb-0 fw-bold">Kontynuować?</p>
                 </div>
-
+                <div class="modal-footer border-0 justify-content-center pb-3 pt-0">
+                    <button type="button" class="btn btn-sm btn-ghost-cancel" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="button" class="btn btn-sm btn-danger-custom px-4" onclick="confirmDeleteRating()">Usuń</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-@if (User.Identity.IsAuthenticated)
-{
     <script>
+        window.openDeleteRatingModal = function() {
+            var modal = new bootstrap.Modal(document.getElementById('deleteRatingModal'));
+            modal.show();
+        };
+
+        window.confirmDeleteRating = function() {
+            const gameId = document.getElementById('partialGameId').value;
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenInput ? tokenInput.value : '';
+
+            fetch('/Games/RemoveRating', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ igdbGameId: parseInt(gameId) })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    var modalEl = document.getElementById('deleteRatingModal');
+                    var modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+
+                    const stars = document.querySelectorAll('#game-star-container .game-star');
+                    stars.forEach(s => {
+                        s.className = 'game-star far fa-star';
+                        s.style.color = 'rgba(255, 255, 255, 0.15)';
+                        s.style.textShadow = 'none';
+                    });
+
+                    document.getElementById('current-hover-rating').innerText = "-";
+                    document.getElementById('btn-delete-rating').classList.add('d-none');
+
+                    const avgDisplay = document.getElementById('local-avg-display');
+                    if(avgDisplay) {
+                        let avgScale100 = data.newAverage * 10;
+                        avgDisplay.innerText = avgScale100 > 0 ? avgScale100.toFixed(0) : "-";
+                    }
+
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    alert("Wystąpił błąd podczas usuwania oceny.");
+                }
+            })
+            .catch(err => console.error(err));
+        };
+
         (function() {
             const container = document.getElementById('game-star-container');
             if (!container) return;
@@ -212,57 +192,53 @@
             const gameId = document.getElementById('partialGameId').value;
             const msg = document.getElementById('game-rate-msg');
             const avgDisplay = document.getElementById('local-avg-display');
-            const countDisplay = document.getElementById('local-count-display');
             const ratingTextDisplay = document.getElementById('current-hover-rating');
+            const deleteBtn = document.getElementById('btn-delete-rating');
             const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
             const token = tokenInput ? tokenInput.value : '';
 
+            // Parsowanie bezpieczne dla kropki/przecinka
             let currentRating = @Model.UserPersonalRating.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
             function renderStars(value) {
                 stars.forEach((star, index) => {
                     const starValue = index + 1;
                     star.className = 'game-star far fa-star';
-                    // Kolor pustej gwiazdki - ciemniejszy, bardziej metaliczny
-                    star.style.color = 'rgba(255, 255, 255, 0.2)';
+                    star.style.color = 'rgba(255, 255, 255, 0.15)';
+                    star.style.textShadow = 'none';
 
-                    // Pełna gwiazdka
                     if (value >= starValue) {
                         star.className = 'game-star fas fa-star';
-                        star.style.color = '#ffc107'; // Złoty
-                    }
-                    // Pół gwiazdki
-                    else if (value >= starValue - 0.5) {
+                        star.style.color = '#ffffff';
+                        star.style.textShadow = '0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple)';
+                    } else if (value >= starValue - 0.5) {
                         star.className = 'game-star fas fa-star-half-alt';
-                        star.style.color = '#ffc107';
+                        star.style.color = '#ffffff';
+                        star.style.textShadow = '0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple)';
                     }
                 });
             }
 
             renderStars(currentRating);
 
-            // Hover
             stars.forEach((star, index) => {
                 star.addEventListener('mousemove', (e) => {
                     const rect = star.getBoundingClientRect();
                     const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
                     let val = index + 1;
                     if (isLeftHalf) val -= 0.5;
-
                     renderStars(val);
-                    if(ratingTextDisplay) ratingTextDisplay.innerText = val.toFixed(1) + "/10";
+                    if(ratingTextDisplay) ratingTextDisplay.innerText = val.toFixed(1);
                 });
             });
 
-            // Mouse leave
             container.addEventListener('mouseleave', () => {
                 renderStars(currentRating);
                 if(ratingTextDisplay) {
-                    ratingTextDisplay.innerText = currentRating > 0 ? currentRating.toFixed(1) + "/10" : "Oceń";
+                    ratingTextDisplay.innerText = currentRating > 0 ? currentRating.toFixed(1) : "-";
                 }
             });
 
-            // Click
             stars.forEach((star, index) => {
                 star.addEventListener('click', (e) => {
                     const rect = star.getBoundingClientRect();
@@ -272,8 +248,7 @@
 
                     currentRating = val;
                     renderStars(currentRating);
-
-                    if(ratingTextDisplay) ratingTextDisplay.innerText = val.toFixed(1) + "/10";
+                    if(ratingTextDisplay) ratingTextDisplay.innerText = val.toFixed(1);
 
                     fetch('/Games/RateGame', {
                         method: 'POST',
@@ -284,12 +259,14 @@
                     .then(data => {
                         if (data.success) {
                             msg.style.opacity = 1;
-                            setTimeout(() => msg.style.opacity = 0, 2000);
+                            setTimeout(() => msg.style.opacity = 0, 2500);
 
-                            // Aktualizacja średniej (mnożymy x10, żeby wyświetlać w skali 100)
-                            let avgScale100 = data.newAverage * 10;
-                            avgDisplay.innerText = avgScale100.toFixed(0);
-                            countDisplay.innerText = data.newCount;
+                            if(deleteBtn) deleteBtn.classList.remove('d-none');
+
+                            if(avgDisplay) {
+                                let avgScale100 = data.newAverage * 10;
+                                avgDisplay.innerText = avgScale100.toFixed(0);
+                            }
                         }
                     });
                 });

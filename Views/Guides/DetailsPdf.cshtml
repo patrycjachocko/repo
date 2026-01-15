@@ -2,6 +2,10 @@
 
 @{
     Layout = null;
+
+    string bgImageUrl = Model.Guide.CoverImage != null
+        ? $"data:{Model.Guide.CoverImageContentType};base64,{Convert.ToBase64String(Model.Guide.CoverImage)}"
+        : "";
 }
 
 <!DOCTYPE html>
@@ -9,165 +13,63 @@
 <head>
     <meta charset="utf-8" />
     <title>@Model.Guide.Title</title>
-    <style>
-        /* --- RESET I BAZA --- */
-        body {
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            color: #111;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            background: #fff;
-        }
 
-        .container {
-            width: 100%;
-            padding: 20px 40px;
-            box-sizing: border-box;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 20px;
-        }
-
-        .title {
-            font-size: 32px;
-            font-weight: 800;
-            text-transform: uppercase;
-            margin: 0 0 10px 0;
-            letter-spacing: 1px;
-        }
-
-        .description {
-            font-size: 16px;
-            color: #444;
-            font-style: italic;
-            margin: 0;
-        }
-
-        .meta-table {
-            width: 100%;
-            margin-bottom: 30px;
-            border-collapse: collapse;
-        }
-
-            .meta-table td {
-                padding: 10px;
-                border-top: 1px solid #eee;
-                border-bottom: 1px solid #eee;
-                font-size: 14px;
-            }
-
-        .meta-label {
-            font-weight: bold;
-            text-transform: uppercase;
-            color: #666;
-            font-size: 12px;
-        }
-
-        .cover-container {
-            text-align: center;
-            margin-bottom: 30px;
-            page-break-inside: avoid;
-        }
-
-        .cover-img {
-            max-width: 100%;
-            max-height: 400px;
-            border: 1px solid #333;
-            border-radius: 4px;
-        }
-
-        .content {
-            font-size: 14px;
-            text-align: justify;
-        }
-
-            .content img {
-                max-width: 100%;
-                height: auto;
-                display: block;
-                margin: 20px auto;
-                border: 1px solid #ccc;
-                page-break-inside: avoid;
-            }
-
-        /* --- NAPRAWA PINEZEK (METODA BASE64 - PANCERNA) --- */
-
-        /* 1. Ukrywamy wszystkie próby wyświetlania czcionek i kwadratów */
-        .custom-pin-icon,
-        .custom-pin-icon i,
-        .fa-map-marker-alt,
-        .fa-map-marker-alt::before,
-        .fa-map-marker-alt::after {
-            font-family: sans-serif !important; /* Wyłącz czcionki ikon */
-            border: none !important;
-            background-color: transparent !important;
-            box-shadow: none !important;
-            content: "" !important;
-            transform: none !important; /* Wyłączamy rotację, która psuła efekt */
-            border-radius: 0 !important;
-        }
-
-            /* 2. Wstawiamy obrazek pinezki w Base64 */
-            .custom-pin-icon i,
-            .fa-map-marker-alt {
-                display: inline-block !important;
-                width: 24px !important;
-                height: 36px !important;
-                /* Czerwona pinezka w Base64 - działa offline */
-                background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAkCAYAAACTz/liAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5gMUEw0y0n3+3QAAAAlwSFlzAAAi1gAAItYBn3sIqgAAAydJREFUSMetlc9rE0EUx7+zs9kkatqkSU00iVp/gBA8eKqePHjw4LkIeinitScePHj15K8QvHjxICiCoCDWivVPtGZN02y6+8cbZt1sNlFBL34wu+/N7Huf9968mSE85aH/C+C4bdtlVfVzz/OKy8vL1Uwm09/Z2ak9C8B13XFCSJ2I6kS0QURjQojrjuN82tzc/PEoAM/z6kT0kIiuENGSEKIqpcxZlnWLiF6ura19fRSA7/vXReQOEV0ionNCiLKU8oIQ4p7neVfX19e/PAqgVqvdFJF7zLzMzGeIqEZEt4noZjabvbS6uvo9FMD3/atE9IiZ7xLRZSIqEtE1Zt4olUrX9vb2vj0I4LrumIh8ZObHzHyeiE6ZpnmRmZ8z84TruhceBiClzInIQ2a+S0TnROQKM98RkX3XdU+32+3vDwKQUhaIyCNmfsDMl4hIENE1Zv7AzM+llJceBGCa5jQR3Wfmh8x8gYhyRHSDmR8x81O2bV8PBbAsq0ZE95n5ATNfIqI8EV1n5nfMfI9t21dDAXq93jkiusfM95n5AhFlmPkyMz9g5qdardbFUAC2bZeZ+SEzP2DmC0RUZObLzPyAmW+5rnsxFIDneXUiushMInqKiEqM95iZE9F1KaUeCsDMZSL6yMzdQf+LiJ6a5v/XQ/cAs237DBH1mHk/CIIvyWSy3e12v4cCaLVaV4jobaFQOC2l7BDRPhG1ReR1s9n8EgqQTqfLRHSLma8Q0TkiKhLRXRG5vbm5+SUMwPO8KhE9ZOZrRHSWiMpEdF9Erm5ubn4OBZBSZonoMTNfI6IzRJRj5k/M/LCv74e+X2ma5oyI3Gfma8x8hohKzPyJmR84jvN5a2vrWyhALpdbJKLHzHyNiM4QUYmZPzHzQ8dxPrXb7a+hAMlk8gwR3Wfma8x8hohKzPyJmR9IKa/s7u5+CwVgjC0S0SNm7hDRKWa+SUT3ReTq1tbW11AAxthFInrIzNeI6CwRlZn5EzM/YIytP/Q9QCaTWSCix8x8jYjOEFGZmT8x8wPG2MpDAf4J/gF+yQ8K95v9OAAAAABJRU5ErkJggg==') !important;
-                background-size: contain !important;
-                background-repeat: no-repeat !important;
-                background-position: center bottom !important;
-                /* Pozycjonowanie, żeby czubek pinezki wskazywał punkt */
-                position: relative;
-                top: -18px; /* Przesuwamy w górę o połowę wysokości */
-                left: -2px; /* Drobna korekta w poziomie */
-            }
-    </style>
+    @* WAŻNE: Tu musi być poprawna ścieżka do Twojego pliku CSS. 
+       W PDF czasami trzeba podać pełny URL (http://...) lub ścieżkę fizyczną (C:\...) *@
+    <link rel="stylesheet" href="~/css/site.css" />
 </head>
-<body>
-    @* Reszta kodu bez zmian *@
+<body class="pdf-document">
+
     <div class="container">
-        <div class="header">
-            <h1 class="title">@Model.Guide.Title</h1>
-            <p class="description">@Model.Guide.Description</p>
+        <div class="header-section">
+            <h1 class="guide-title">@Model.Guide.Title</h1>
         </div>
+
+        @if (!string.IsNullOrEmpty(bgImageUrl))
+        {
+            <div class="cover-image-container">
+                <img src="@bgImageUrl" alt="Cover Image" />
+            </div>
+        }
 
         <table class="meta-table">
             <tr>
-                <td align="left">
-                    <span class="meta-label">Autor</span><br />
-                    @Model.Guide.User?.UserName
+                <td width="33%">
+                    <span class="meta-label">AUTOR</span>
+                    <div class="meta-value">@Model.Guide.User?.UserName</div>
                 </td>
-                <td align="center">
-                    <span class="meta-label">Data utworzenia</span><br />
-                    @Model.Guide.CreatedAt.ToString("dd.MM.yyyy")
+                <td width="33%">
+                    <span class="meta-label">DATA PUBLIKACJI</span>
+                    <div class="meta-value">@Model.Guide.CreatedAt.ToString("dd.MM.yyyy")</div>
                 </td>
-                <td align="right">
-                    <span class="meta-label">Ocena społeczności</span><br />
-                    @Model.AverageRating.ToString("0.0") / 5.0
+                <td width="33%">
+                    <span class="meta-label">OCENA</span>
+                    <div class="meta-value">
+                        @(Model.Guide.IsApproved ? $"{Model.AverageRating:0.0} / 5.0" : "---")
+                    </div>
                 </td>
             </tr>
         </table>
 
-        @if (Model.Guide.CoverImage != null)
+        @if (!string.IsNullOrEmpty(Model.Guide.Description))
         {
-            <div class="cover-container">
-                <img src="data:@Model.Guide.CoverImageContentType;base64,@Convert.ToBase64String(Model.Guide.CoverImage)" class="cover-img" />
-            </div>
+            <div class="description-box">@Model.Guide.Description</div>
         }
 
         <div class="content">
-            @Html.Raw(Model.Guide.Content)
+            @if (!string.IsNullOrEmpty(Model.Guide.Content))
+            {
+                @Html.Raw(Model.Guide.Content)
+            }
+            else
+            {
+                <div style="text-align: center; color: #999;">[Brak treści]</div>
+            }
         </div>
 
         <div class="footer">
-            Wygenerowano z systemu Praca Dyplomowa | @DateTime.Now.ToString("dd.MM.yyyy HH:mm")
+            Dokument wygenerowany z systemu GameHub &bull; @DateTime.Now.ToString("dd.MM.yyyy HH:mm") <br />
+            ID: @Model.Guide.Id
         </div>
     </div>
 </body>

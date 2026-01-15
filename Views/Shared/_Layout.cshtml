@@ -5,17 +5,14 @@
 
 @{
     // --- GLOBALNA LOGIKA KOLORÓW RANGI (NEON) ---
-    // Domyślny kolor (Użytkownik / Gość)
     string globalRoleColor = "var(--neon-cyan)";
 
     if (User.IsInRole("Admin"))
     {
-        // Admin -> Czerwony
         globalRoleColor = "var(--neon-red)";
     }
     else if (User.IsInRole("Moderator"))
     {
-        // Moderator -> Zielony
         globalRoleColor = "var(--neon-green)";
     }
 }
@@ -41,14 +38,12 @@
     <link rel="stylesheet" href="~/praca_dyplomowa_zesp.styles.css" asp-append-version="true" />
 </head>
 
-@* --- TU DZIEJE SIĘ MAGIA: WSTRZYKUJEMY KOLOR RANGI DO ZMIENNEJ CSS --- *@
 <body style="--role-color: @globalRoleColor;">
 
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark mb-3">
             <div class="container-fluid">
 
-                @* LOGO - STYLIZOWANE W CSS (navbar-brand) *@
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">GAMEHUB</a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -87,22 +82,20 @@
                             </li>
 
                             @* BIBLIOTEKA STEAM (Jeśli połączono) *@
+                            var user = await UserManager.GetUserAsync(User);
+                            if (user != null && !string.IsNullOrEmpty(user.SteamId))
                             {
-                                var user = await UserManager.GetUserAsync(User);
-                                if (user != null && !string.IsNullOrEmpty(user.SteamId))
-                                {
-                                    <li class="nav-item">
-                                        @* ZMIANA: Używamy var(--role-color) zamiast sztywnego cyjanu *@
-                                        <a class="nav-link" asp-controller="Profile" asp-action="SteamLibrary" style="color: var(--role-color) !important;">
-                                            <i class="fab fa-steam me-1"></i> Biblioteka Steam
-                                        </a>
-                                    </li>
-                                }
+                                <li class="nav-item">
+                                    @* ZMIANA: Użycie klasy nav-link-cyan zamiast stylu inline *@
+                                    <a class="nav-link nav-link-cyan" asp-controller="Profile" asp-action="SteamLibrary">
+                                        <i class="fab fa-steam me-1"></i> Biblioteka Steam
+                                    </a>
+                                </li>
                             }
                         }
                     </ul>
 
-                    @* PANEL LOGOWANIA (Z NEONOWYMI GUZIKAMI) *@
+                    @* PANEL LOGOWANIA *@
                     <partial name="_LoginPartial" />
                 </div>
             </div>
@@ -111,20 +104,38 @@
 
     <div class="container main-container">
         <main role="main" class="pb-3">
-            @* POWIADOMIENIA (ALERTY) *@
-            @if (TempData["Success"] != null)
+
+            @* GLOBALNE POWIADOMIENIA *@
+            @{
+                var successMessage = TempData["Success"]?.ToString() ?? TempData["StatusMessage"]?.ToString() ?? ViewData["StatusMessage"]?.ToString();
+                var errorMessage = TempData["Error"]?.ToString() ?? ViewData["ErrorMessage"]?.ToString();
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
             {
-                <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                    <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-neon alert-neon-success alert-dismissible fade show mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle me-3 icon-glow"></i>
+                        <div>
+                            <strong>SUKCES</strong><br />
+                            @successMessage
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
 
-            @if (TempData["Error"] != null)
+            @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i> @TempData["Error"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-neon alert-neon-danger alert-dismissible fade show mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-3 icon-glow"></i>
+                        <div>
+                            <strong>BŁĄD</strong><br />
+                            @errorMessage
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
 

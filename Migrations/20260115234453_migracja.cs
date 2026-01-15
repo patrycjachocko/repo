@@ -218,7 +218,7 @@ namespace praca_dyplomowa_zesp.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     IgdbGameId = table.Column<long>(type: "INTEGER", nullable: false),
-                    Content = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
+                    Content = table.Column<string>(type: "TEXT", maxLength: 3000, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },

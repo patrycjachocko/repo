@@ -18,17 +18,13 @@
     }
 
     bool isAdminOrMod = User.IsInRole("Admin") || User.IsInRole("Moderator");
-
-    // Pobieramy model ogólnych ocen
     var ratingsModel = ViewBag.Ratings as GameRatingViewModel;
     double myCurrentRating = ratingsModel?.UserPersonalRating ?? 0;
 
-    // SŁOWNIK OCEN
     var userRatings = _context.GameRates
         .Where(r => r.IgdbGameId == gameId)
         .ToDictionary(r => r.UserId, r => r.Value);
 
-    // SORTOWANIE
     IEnumerable<praca_dyplomowa_zesp.Models.Modules.Games.GameReview> reviewsToDisplay = Model;
 
     if (reviewsToDisplay != null)
@@ -48,350 +44,198 @@
     }
 }
 
-<style>
-    /* --- STYL RECENZJI (Cyberpunk) --- */
+@* Dodano klasę 'fade-in-up' do głównego kontenera *@
+<div class="container mt-3 pb-5 main-container fade-in-up">
 
-    .reviews-header {
-        margin-bottom: 30px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding-bottom: 20px;
-    }
-
-    .review-title {
-        font-weight: 900;
-        text-transform: uppercase;
-        color: #fff;
-        text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-    }
-
-    /* Karta Recenzji */
-    .review-card {
-        background: rgba(26, 26, 32, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 15px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(10px);
-        transition: transform 0.2s;
-    }
-
-        .review-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-    .review-header {
-        padding: 15px 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        background: rgba(0, 0, 0, 0.2);
-        border-top-left-radius: 15px;
-        border-top-right-radius: 15px;
-    }
-
-    .review-avatar {
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid var(--deep-purple);
-        box-shadow: 0 0 10px rgba(128, 0, 255, 0.3);
-    }
-
-    .review-body {
-        padding: 20px;
-        color: #ddd;
-        font-size: 0.95rem;
-        line-height: 1.6;
-    }
-
-    /* Łapki */
-    .vote-btn {
-        background: transparent;
-        border: none;
-        color: #6c757d;
-        transition: all 0.2s;
-    }
-
-        .vote-btn:hover {
-            transform: scale(1.2);
-        }
-
-    .vote-up.active {
-        color: #00ff9d;
-        text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
-    }
-
-    .vote-down.active {
-        color: #ff3366;
-        text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
-    }
-
-    .score-badge {
-        font-weight: 800;
-        min-width: 30px;
-        text-align: center;
-    }
-
-    .score-positive {
-        color: #00ff9d;
-    }
-
-    .score-negative {
-        color: #ff3366;
-    }
-
-    /* Dropdown */
-    .btn-sort {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #ccc;
-    }
-
-        .btn-sort:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-        }
-
-    .dropdown-menu-dark {
-        background-color: #1a1a20;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .dropdown-item:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    /* --- GWIAZDKI (Interaktywne) --- */
-    .star-rating-container {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-        cursor: pointer;
-    }
-
-        .star-rating-container i {
-            font-size: 2rem;
-            color: #444; /* Pusta gwiazdka */
-            transition: transform 0.1s;
-            width: 32px; /* Stała szerokość dla precyzji */
-            text-align: center;
-        }
-
-            /* Pełna */
-            .star-rating-container i.fa-star.active {
-                color: #ffc107;
-                text-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
-            }
-
-            /* Połówka */
-            .star-rating-container i.fa-star-half-alt.active {
-                color: #ffc107;
-                text-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
-            }
-
-    /* Inputy */
-    .form-control-dark {
-        background-color: #121215;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #fff;
-        border-radius: 8px;
-    }
-
-        .form-control-dark:focus {
-            background-color: #121215;
-            border-color: var(--mid-pink);
-            box-shadow: 0 0 10px rgba(255, 102, 196, 0.2);
-            color: #fff;
-        }
-
-</style>
-
-<div class="container mt-4 pb-5">
-
-    @* --- GÓRNY PASEK --- *@
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <a asp-controller="Games" asp-action="Details" asp-route-id="@gameId" class="btn btn-outline-light btn-sm rounded-pill px-3">
-            <i class="bi bi-arrow-left me-2"></i>Wróć do gry
-        </a>
-
-        @if (User.Identity.IsAuthenticated)
-        {
-            <button type="button" class="btn btn-primary rounded-pill px-4 shadow-lg" data-bs-toggle="modal" data-bs-target="#addReviewModal"
-                    style="background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink)); border: none;">
-                <i class="bi bi-pencil-square me-2"></i> Napisz recenzję
-            </button>
-        }
+    @* --- NAGŁÓWEK --- *@
+    <div class="text-center mb-4">
+        <h1 class="text-neon-title mb-1" style="font-size: 3.5rem;">
+            @gameName
+        </h1>
+        <h2 class="text-white fw-bold text-uppercase m-0" style="font-size: 1.2rem; letter-spacing: 4px; text-shadow: 0 0 15px rgba(255, 255, 255, 0.5); opacity: 0.9;">
+            RECENZJE
+        </h2>
     </div>
 
-    <div class="reviews-header">
-        <h2 class="review-title mb-0">Recenzje: <span style="color: var(--neon-blue);">@gameName</span></h2>
-    </div>
-
-    @* --- PODSUMOWANIE OCEN --- *@
-    <div class="mb-5 p-4 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+    @* --- PANEL OCEN --- *@
+    <div class="mb-5">
         @if (ratingsModel != null)
         {
             <partial name="_GameRatingPartial" model="ratingsModel" />
         }
     </div>
 
-    @* --- SORTOWANIE --- *@
-    <div class="d-flex justify-content-end mb-4">
-        <div class="dropdown">
-            <button class="btn btn-sort dropdown-toggle rounded-pill px-3" type="button" id="sortMenu" data-bs-toggle="dropdown">
-                <i class="bi bi-sort-down me-2"></i>Sortuj:
-                @if (currentSort == "newest")
-                {
-                    <strong>Najnowsze</strong>
-                }
-                else if (currentSort == "popular")
-                {
+    @* --- PASEK NARZĘDZI --- *@
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom" style="border-color: rgba(255,255,255,0.1) !important; min-height: 60px;">
+        <div class="text-start" style="width: 200px;">
+            <span class="text-muted text-uppercase small fw-bold letter-spacing-1">
+                Liczba opinii: <span class="text-white">@reviewsToDisplay?.Count()</span>
+            </span>
+        </div>
 
-                    <strong>Najpopularniejsze</strong>
-                }
-                else if (currentSort == "highest_rating")
-                {
+        <div>
+            @if (User.Identity.IsAuthenticated)
+            {
+                <button type="button" class="btn btn-neon-primary px-4 rounded-pill" data-bs-toggle="modal" data-bs-target="#addReviewModal">
+                    <i class="bi bi-pencil-square me-2"></i> Napisz recenzję
+                </button>
+            }
+        </div>
 
-                    <strong>Najwyższe oceny</strong>
-                }
-                else if (currentSort == "lowest_rating")
-                {
+        <div class="text-end" style="width: 200px;">
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-sm btn-ghost-cancel dropdown-toggle px-3" type="button" id="sortMenu" data-bs-toggle="dropdown">
+                    <i class="bi bi-sort-down me-2"></i>
+                    @if (currentSort == "newest")
+                    {
+                        <span>Najnowsze</span>
+                    }
+                    else if (currentSort == "popular")
+                    {
 
-                    <strong>Najniższe oceny</strong>
-                }
-                else
-                {
+                        <span>Najpopularniejsze</span>
+                    }
+                    else if (currentSort == "highest_rating")
+                    {
 
-                    <strong>Najlepsze</strong>
-                }
-            </button>
-            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-                <li><a class="dropdown-item @(currentSort == "best" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="best">Najlepsze (Domyślne)</a></li>
-                <li><a class="dropdown-item @(currentSort == "newest" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="newest">Najnowsze</a></li>
-                <li><a class="dropdown-item @(currentSort == "popular" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="popular">Najpopularniejsze</a></li>
-                <li><hr class="dropdown-divider bg-secondary"></li>
-                <li><a class="dropdown-item @(currentSort == "highest_rating" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="highest_rating">Najwyższe oceny</a></li>
-                <li><a class="dropdown-item @(currentSort == "lowest_rating" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="lowest_rating">Najniższe oceny</a></li>
-            </ul>
+                        <span>Najwyższe oceny</span>
+                    }
+                    else if (currentSort == "lowest_rating")
+                    {
+
+                        <span>Najniższe oceny</span>
+                    }
+                    else
+                    {
+
+                        <span>Najlepsze</span>
+                    }
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                    <li><a class="dropdown-item @(currentSort == "best" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="best">Najlepsze</a></li>
+                    <li><a class="dropdown-item @(currentSort == "newest" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="newest">Najnowsze</a></li>
+                    <li><a class="dropdown-item @(currentSort == "popular" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="popular">Najpopularniejsze</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item @(currentSort == "highest_rating" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="highest_rating">Najwyższe oceny</a></li>
+                    <li><a class="dropdown-item @(currentSort == "lowest_rating" ? "active" : "")" asp-action="Index" asp-route-gameId="@gameId" asp-route-gameName="@gameName" asp-route-sortOrder="lowest_rating">Najniższe oceny</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 
     @* --- LISTA RECENZJI --- *@
     @if (reviewsToDisplay != null && reviewsToDisplay.Any())
     {
-        foreach (var review in reviewsToDisplay)
-        {
-            var likes = review.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
-            var dislikes = review.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
-            var score = likes - dislikes;
+        <div class="row g-4">
+            @foreach (var review in reviewsToDisplay)
+            {
+                var likes = review.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
+                var dislikes = review.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
+                var score = likes - dislikes;
+                bool userLiked = currentUserId != Guid.Empty && (review.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like) ?? false);
+                bool userDisliked = currentUserId != Guid.Empty && (review.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike) ?? false);
+                string scoreClass = score > 0 ? "text-neon-green fw-bold" : (score < 0 ? "text-neon-danger fw-bold" : "text-muted");
+                string sign = score > 0 ? "+" : "";
+                string roleBorderColor = "var(--neon-cyan)";
+                string roleNameClass = "text-white";
+                var userRole = review.User?.Role?.ToLower();
+                if (userRole == "admin") { roleBorderColor = "var(--neon-red)"; roleNameClass = "text-danger fw-bold"; }
+                else if (userRole == "moderator") { roleBorderColor = "var(--neon-green)"; roleNameClass = "text-success fw-bold"; }
+                double authorRating = userRatings.ContainsKey(review.UserId) ? userRatings[review.UserId] : 0;
+                bool isAuthor = review.UserId == currentUserId;
+                bool canEdit = isAuthor;
+                bool canDelete = isAuthor || isAdminOrMod;
 
-            bool userLiked = currentUserId != Guid.Empty && (review.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like) ?? false);
-            bool userDisliked = currentUserId != Guid.Empty && (review.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike) ?? false);
+                <div class="col-12">
+                    <div class="card-review p-4">
 
-            string scoreClass = "text-muted";
-            string sign = "";
-            if (score > 0) { scoreClass = "score-positive"; sign = "+"; }
-            else if (score < 0) { scoreClass = "score-negative"; }
-
-            string nickClass = "text-white";
-            var userRole = review.User?.Role?.ToLower();
-            if (userRole == "admin") { nickClass = "text-danger fw-bold"; }
-            else if (userRole == "moderator") { nickClass = "text-success fw-bold"; }
-
-            double authorRating = userRatings.ContainsKey(review.UserId) ? userRatings[review.UserId] : 0;
-            bool isAuthor = review.UserId == currentUserId;
-            bool canEdit = isAuthor;
-            bool canDelete = isAuthor || isAdminOrMod;
-
-            <div class="review-card">
-                <div class="review-header d-flex justify-content-between align-items-center">
-
-                    @* LEWA: AUTOR *@
-                    <div class="d-flex align-items-center">
-                        <img src="@(review.User?.ProfilePicture != null ? Url.Action("GetAvatar", "Profile", new { id = review.UserId }) : "/uploads/avatars/default_avatar.png")"
-                             alt="Avatar" class="review-avatar me-3" />
-
-                        <div class="d-flex flex-column">
+                        @* NAGŁÓWEK REVIEWS *@
+                        <div class="review-header mb-2 pb-2 border-bottom" style="border-color: rgba(255,255,255,0.05) !important;">
                             <div class="d-flex align-items-center">
-                                <span class="@nickClass fs-5 me-2">@review.User?.UserName</span>
-                                @if (authorRating > 0)
-                                {
-                                    <span class="badge bg-dark border border-warning text-warning" title="Ocena autora">
-                                        <i class="fas fa-star me-1"></i>@authorRating.ToString("0.#", CultureInfo.InvariantCulture)
-                                    </span>
-                                }
+                                <img src="@(review.User?.ProfilePicture != null ? Url.Action("GetAvatar", "Profile", new { id = review.UserId }) : "/uploads/avatars/default_avatar.png")"
+                                     class="review-avatar me-3"
+                                     style="border-color: @roleBorderColor; box-shadow: 0 0 15px @roleBorderColor;"
+                                     alt="Avatar">
+
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="@roleNameClass fs-5" style="text-shadow: 0 0 10px rgba(0,0,0,0.5);">@review.User?.UserName</span>
+
+                                        @if (authorRating > 0)
+                                        {
+                                            @* ZMIANA: Użycie nowej klasy z site.css *@
+                                            <div class="review-rating-badge-neon ms-2" title="Ocena użytkownika">
+                                                <i class="bi bi-star-fill"></i>
+                                                <span>@authorRating.ToString("0.#", CultureInfo.InvariantCulture)</span>
+                                            </div>
+                                        }
+                                    </div>
+                                    <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                </div>
                             </div>
-                            <small class="text-muted" style="font-size: 0.75rem;">
-                                @review.CreatedAt.ToString("dd.MM.yyyy HH:mm")
-                            </small>
+
+                            @* MENU *@
+                            @if (canEdit || canDelete)
+                            {
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical fs-5"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                        @if (canEdit)
+                                        {
+                                            <li>
+                                                <a class="dropdown-item" href="#" onclick="openEditModal(@review.Id, 'review-content-@review.Id', '@(authorRating > 0 ? authorRating.ToString(CultureInfo.InvariantCulture) : "0")')">
+                                                    <i class="bi bi-pencil me-2"></i> Edytuj
+                                                </a>
+                                            </li>
+                                        }
+                                        @if (canDelete)
+                                        {
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="#" onclick="openDeleteModal(@review.Id)">
+                                                    <i class="bi bi-trash me-2"></i> Usuń
+                                                </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
                         </div>
-                    </div>
 
-                    @* PRAWA: MENU + ŁAPKI *@
-                    <div class="d-flex align-items-center gap-3">
-                        @if (canEdit || canDelete)
-                        {
-                            <div class="dropdown">
-                                <button class="btn btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown">
-                                    <i class="bi bi-three-dots-vertical fs-5"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                                    @if (canEdit)
-                                    {
-                                        <li>
-                                            @* Używamy ToString(InvariantCulture) aby przesłać "6.5" a nie "6,5" *@
-                                            <a class="dropdown-item" href="#" onclick="openEditModal(@review.Id, 'review-content-@review.Id', '@(authorRating > 0 ? authorRating.ToString(CultureInfo.InvariantCulture) : "0")')">
-                                                <i class="bi bi-pencil me-2"></i> Edytuj
-                                            </a>
-                                        </li>
-                                    }
-                                    @if (canDelete)
-                                    {
-                                        <li>
-                                            <a class="dropdown-item text-danger" href="#" onclick="openDeleteModal(@review.Id)">
-                                                <i class="bi bi-trash me-2"></i> Usuń
-                                            </a>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                        }
+                        <div class="review-content full-text mb-3 mt-1" id="review-content-@review.Id">@review.Content?.Trim()</div>
 
-                        @* GŁOSOWANIE *@
-                        <div class="d-flex align-items-center bg-dark bg-opacity-50 rounded-pill px-2 py-1 border border-secondary border-opacity-25">
-                            <form asp-controller="Reviews" asp-action="ToggleReaction" method="post" class="d-inline">
+                        <div class="d-flex align-items-center gap-3">
+                            <form asp-controller="Reviews" asp-action="ToggleReaction" method="post">
                                 <input type="hidden" name="reviewId" value="@review.Id" />
                                 <input type="hidden" name="isUpvote" value="true" />
                                 <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                <button type="submit" class="vote-btn vote-up @(userLiked ? "active" : "") p-1" title="Pomocne">
+                                <button type="submit" class="btn-vote vote-up @(userLiked ? "active" : "")" title="Pomocne">
                                     <i class="@(userLiked ? "bi bi-hand-thumbs-up-fill" : "bi bi-hand-thumbs-up")"></i>
                                 </button>
                             </form>
 
-                            <span class="@scoreClass score-badge mx-1">@sign@score</span>
+                            <span class="@scoreClass score-badge-pill">@sign@score</span>
 
-                            <form asp-controller="Reviews" asp-action="ToggleReaction" method="post" class="d-inline">
+                            <form asp-controller="Reviews" asp-action="ToggleReaction" method="post">
                                 <input type="hidden" name="reviewId" value="@review.Id" />
                                 <input type="hidden" name="isUpvote" value="false" />
                                 <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                <button type="submit" class="vote-btn vote-down @(userDisliked ? "active" : "") p-1" title="Słabe">
+                                <button type="submit" class="btn-vote vote-down @(userDisliked ? "active" : "")" title="Niepomocne">
                                     <i class="@(userDisliked ? "bi bi-hand-thumbs-down-fill" : "bi bi-hand-thumbs-down")"></i>
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
-
-                <div class="review-body">
-                    <p class="mb-0" style="white-space: pre-wrap;" id="review-content-@review.Id">@review.Content</p>
-                </div>
-            </div>
-        }
+            }
+        </div>
     }
     else
     {
-        <div class="text-center py-5">
-            <i class="bi bi-chat-square-dots fa-3x mb-3 text-secondary opacity-50"></i>
-            <h3 class="text-white">Brak recenzji</h3>
+        <div class="glass-panel text-center py-5">
+            <i class="bi bi-chat-square-quote display-3 mb-3 d-block" style="color: var(--neon-cyan); opacity: 0.3;"></i>
+            <h5 class="text-white">Brak recenzji</h5>
             <p class="text-muted">Bądź pierwszą osobą, która podzieli się opinią o tej grze!</p>
         </div>
     }
@@ -399,114 +243,139 @@
 
 @if (User.Identity.IsAuthenticated)
 {
-    @* --- MODAL: DODAJ RECENZJĘ --- *@
+    @* MODAL DODAWANIA RECENZJI *@
     <div class="modal fade" id="addReviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content" style="background-color: #1a1a20; border: 1px solid rgba(255,255,255,0.1);">
-                <form asp-action="Create" method="post" id="createReviewForm">
-                    <div class="modal-header border-secondary">
-                        <h5 class="modal-title text-white">Twoja recenzja: <span style="color: var(--neon-blue);">@gameName</span></h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            @* Fioletowy border modala *@
+            <div class="modal-content modal-neon" style="border-color: var(--neon-purple);">
+                <form asp-action="Create" method="post" id="createReviewForm" class="h-100 d-flex flex-column">
+
+                    <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
+                        <h5 class="modal-title text-white text-uppercase fw-bold text-center w-100 m-0">
+                            Twoja recenzja:<br />
+                            @* Tytuł gry neonowy *@
+                            <span class="text-neon-title d-block mt-2" style="font-size: 1.8rem; letter-spacing: 2px;">@gameName</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body text-white">
+
+                    <div class="modal-body text-white d-flex flex-column justify-content-start py-4" style="overflow: hidden;">
                         <input type="hidden" name="gameId" value="@gameId" />
                         <input type="hidden" name="gameName" value="@gameName" />
 
-                        <div class="mb-4 text-center">
-                            <label class="form-label fw-bold d-block text-uppercase small text-muted mb-2">Twoja ocena</label>
-
-                            @* GWIAZDKI CONTAINER (Nowa struktura) *@
-                            <div class="star-rating-container" id="createRatingStars">
-                                @for (int i = 1; i <= 10; i++)
-                                {
-                                    <i class="far fa-star" data-value="@i"></i>
-                                }
+                        <div class="mb-3 d-flex flex-column align-items-center justify-content-center gap-2 flex-shrink-0">
+                            <span class="text-uppercase small text-muted fw-bold" style="letter-spacing: 1px;">Twoja ocena</span>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="star-input-large" id="createRatingStars">
+                                    @for (int i = 1; i <= 10; i++)
+                                    {
+                                        <i class="far fa-star game-star" data-value="@i"></i>
+                                    }
+                                </div>
+                                @* Ocena liczbowa w neonowym stylu *@
+                                <div class="fw-bold fs-4" id="createRatingText" style="min-width: 40px; color: #fff; text-shadow: 0 0 10px var(--neon-purple);">
+                                    @(myCurrentRating > 0 ? myCurrentRating.ToString("0.0", CultureInfo.InvariantCulture) : "-")
+                                </div>
                             </div>
-
-                            <div class="mt-2 text-warning fw-bold fs-4" id="createRatingText">
-                                @* Używamy InvariantCulture aby upewnić się, że w HTML wyląduje kropka lub brak przecinka, ale wyświetlanie zmienimy w JS *@
-                                @(myCurrentRating > 0 ? myCurrentRating.ToString("0.0", CultureInfo.InvariantCulture) : "-")
-                            </div>
-
-                            @* Hidden Input z InvariantCulture (kropka) *@
                             <input type="hidden" id="createRatingValue" value="@(myCurrentRating.ToString(CultureInfo.InvariantCulture))" />
-                            <div id="ratingError" class="text-danger small mt-2 d-none">Musisz ocenić grę (min. 0.5 gwiazdki).</div>
                         </div>
+                        <div id="ratingError" class="text-center text-neon-danger small mb-2 d-none flex-shrink-0">Musisz ocenić grę (min. 0.5 gwiazdki).</div>
 
-                        <div class="mb-3">
-                            <label class="form-label text-muted small">Treść recenzji</label>
-                            <textarea name="content" class="form-control form-control-dark" rows="6" placeholder="Napisz, co Ci się podobało..." required maxlength="2000"></textarea>
-                            <div class="form-text text-white-50 text-end">Maks. 2000 znaków.</div>
+                        <div class="flex-grow-1" style="min-height: 200px;">
+                            <div class="form-floating h-100">
+                                <textarea name="content" id="addReviewContent" class="form-control form-control-tech no-resize h-100" style="overflow-y: auto;" placeholder="Napisz recenzję" required maxlength="3000"></textarea>
+                                <label for="addReviewContent" class="text-muted">Napisz, co Ci się podobało...</label>
+                            </div>
                         </div>
+                        <div class="form-text text-white-50 text-end mt-1 flex-shrink-0">Maks. 3000 znaków.</div>
                     </div>
-                    <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Anuluj</button>
-                        <button type="button" class="btn btn-primary" onclick="submitCreateReview()">Opublikuj</button>
+
+                    <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
+                        <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                        <button type="button" class="btn btn-neon-primary px-4" onclick="submitCreateReview()">Opublikuj</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    @* --- MODAL: EDYTUJ RECENZJĘ --- *@
+    @* MODAL EDYCJI RECENZJI *@
     <div class="modal fade" id="editReviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content" style="background-color: #1a1a20; border: 1px solid rgba(255,255,255,0.1);">
-                <form asp-action="Edit" method="post" id="editReviewForm">
-                    <div class="modal-header border-secondary">
-                        <h5 class="modal-title text-white">Edytuj recenzję</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            @* Fioletowy border modala *@
+            <div class="modal-content modal-neon" style="border-color: var(--neon-purple);">
+                <form asp-action="Edit" method="post" id="editReviewForm" class="h-100 d-flex flex-column">
+
+                    <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
+                        <h5 class="modal-title text-white text-uppercase fw-bold text-center w-100 m-0">
+                            Edytuj recenzję:<br />
+                            @* Tytuł gry neonowy *@
+                            <span class="text-neon-title d-block mt-2" style="font-size: 1.8rem; letter-spacing: 2px;">@gameName</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body text-white">
+
+                    <div class="modal-body text-white d-flex flex-column justify-content-start py-4" style="overflow: hidden;">
                         <input type="hidden" name="id" id="editReviewId" />
                         <input type="hidden" name="gameName" value="@gameName" />
 
-                        <div class="mb-4 text-center">
-                            <label class="form-label fw-bold d-block text-uppercase small text-muted mb-2">Twoja ocena</label>
-
-                            <div class="star-rating-container" id="editRatingStars">
-                                @for (int i = 1; i <= 10; i++)
-                                {
-                                    <i class="far fa-star" data-value="@i"></i>
-                                }
+                        <div class="mb-3 d-flex flex-column align-items-center justify-content-center gap-2 flex-shrink-0">
+                            <span class="text-uppercase small text-muted fw-bold" style="letter-spacing: 1px;">Twoja ocena</span>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="star-input-large" id="editRatingStars">
+                                    @for (int i = 1; i <= 10; i++)
+                                    {
+                                        <i class="far fa-star game-star" data-value="@i"></i>
+                                    }
+                                </div>
+                                <div class="fw-bold fs-4" id="editRatingText" style="min-width: 40px; color: #fff; text-shadow: 0 0 10px var(--neon-purple);">
+                                    @(myCurrentRating > 0 ? myCurrentRating.ToString("0.0", CultureInfo.InvariantCulture) : "-")
+                                </div>
                             </div>
-
-                            <div class="mt-2 text-warning fw-bold fs-4" id="editRatingText"></div>
-                            <input type="hidden" id="editRatingValue" />
+                            <input type="hidden" name="rating" id="editRatingValue" value="" />
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label text-muted small">Treść recenzji</label>
-                            <textarea name="content" id="editReviewContent" class="form-control form-control-dark" rows="6" required maxlength="2000"></textarea>
+                        <div class="flex-grow-1" style="min-height: 200px;">
+                            <div class="form-floating h-100">
+                                <textarea name="content" id="editReviewContentInput" class="form-control form-control-tech no-resize h-100" style="overflow-y: auto;" placeholder="Treść recenzji" required maxlength="3000"></textarea>
+                                <label for="editReviewContentInput" class="text-muted">Treść recenzji</label>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Anuluj</button>
-                        <button type="button" class="btn btn-primary" onclick="submitEditReview()">Zapisz zmiany</button>
+
+                    <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
+                        <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                        <button type="button" class="btn btn-neon-primary px-4" onclick="submitEditReview()">Zapisz zmiany</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    @* --- MODAL: USUŃ RECENZJĘ --- *@
+    @* MODAL USUWANIA *@
     <div class="modal fade" id="deleteReviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="background-color: #1a1a20; border: 1px solid #dc3545;">
+            <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-red); box-shadow: 0 0 30px rgba(255, 51, 51, 0.2);">
                 <form asp-action="Delete" method="post">
-                    <div class="modal-header border-secondary">
-                        <h5 class="modal-title text-danger fw-bold">Usuń recenzję</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+
+                    <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
+                        <h5 class="modal-title text-neon-danger text-uppercase fw-bold text-center w-100 m-0">
+                            Usuń recenzję
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body text-white text-center py-4">
-                        <p class="fs-5">Czy na pewno chcesz usunąć tę recenzję?</p>
-                        <small class="text-muted">Tej operacji nie można cofnąć.</small>
+
+                    <div class="modal-body text-white d-flex flex-column justify-content-center align-items-center text-center py-4">
+                        <i class="bi bi-trash-fill display-4 text-neon-danger mb-3 d-block"></i>
+                        <p class="fs-5 mb-1">Czy na pewno chcesz usunąć tę recenzję?</p>
+                        <p class="text-muted small mb-0">Tej operacji nie można cofnąć.</p>
                         <input type="hidden" name="id" id="deleteReviewId" />
                         <input type="hidden" name="gameName" value="@gameName" />
                     </div>
-                    <div class="modal-footer border-secondary justify-content-center">
-                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Anuluj</button>
-                        <button type="submit" class="btn btn-danger">Usuń</button>
+
+                    <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
+                        <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                        <button type="submit" class="btn btn-danger-custom px-4">Usuń</button>
                     </div>
                 </form>
             </div>
@@ -518,151 +387,109 @@
             var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
             return tokenInput ? tokenInput.value : '';
         }
-
-        // --- CORE: LOGIKA GWIAZDEK (Połówki) ---
         function initStars(containerId, inputId, textId, initialValue) {
             const container = document.getElementById(containerId);
             const input = document.getElementById(inputId);
             const text = document.getElementById(textId);
             const stars = container.querySelectorAll('i');
-
-            // Funkcja wizualizująca gwiazdki na podstawie liczby (np. 6.5)
             function updateStarVisuals(val) {
-                // Konwersja na float, bezpieczna
                 var numVal = parseFloat(val);
                 if (isNaN(numVal)) numVal = 0;
-
                 stars.forEach(s => {
                     var starIndex = parseInt(s.getAttribute('data-value'));
-
-                    // Reset do pustej
-                    s.className = 'far fa-star';
-                    s.classList.remove('active');
-
+                    s.className = 'far fa-star game-star';
+                    s.style.color = 'rgba(255, 255, 255, 0.1)';
+                    s.style.textShadow = 'none';
                     if (numVal >= starIndex) {
-                        // Pełna gwiazdka
-                        s.className = 'fas fa-star active';
-                    }
-                    else if (numVal >= starIndex - 0.5) {
-                        // Połówka
-                        s.className = 'fas fa-star-half-alt active';
+                        s.className = 'fas fa-star game-star';
+                        s.style.color = '#ffffff';
+                        s.style.textShadow = '0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple)';
+                    } else if (numVal >= starIndex - 0.5) {
+                        s.className = 'fas fa-star-half-alt game-star';
+                        s.style.color = '#ffffff';
+                        s.style.textShadow = '0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple)';
                     }
                 });
-
                 if (text) {
                     text.innerText = numVal > 0 ? numVal.toString().replace('.', ',') : "Brak";
+                    if(numVal > 0) {
+                        text.style.color = '#ffffff';
+                        text.style.textShadow = '0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple)';
+                    } else {
+                        text.style.color = 'rgba(255,255,255,0.5)';
+                        text.style.textShadow = 'none';
+                    }
                 }
             }
-
-            // Inicjalizacja przy starcie
             updateStarVisuals(initialValue);
-
-            // --- Obsługa Myszki ---
             stars.forEach(s => {
-                // Ruch myszką po gwiazdce (lewa/prawa połowa)
                 s.addEventListener('mousemove', function(e) {
                     var rect = this.getBoundingClientRect();
                     var width = rect.width;
                     var x = e.clientX - rect.left;
                     var starIndex = parseInt(this.getAttribute('data-value'));
-
-                    // Jeśli myszka w lewej połowie -> .5, w prawej -> .0
                     var previewVal = (x < width / 2) ? (starIndex - 0.5) : starIndex;
-
                     updateStarVisuals(previewVal);
                 });
-
-                // Kliknięcie (zapisanie wartości)
                 s.addEventListener('click', function(e) {
                     var rect = this.getBoundingClientRect();
                     var width = rect.width;
                     var x = e.clientX - rect.left;
                     var starIndex = parseInt(this.getAttribute('data-value'));
-
                     var finalVal = (x < width / 2) ? (starIndex - 0.5) : starIndex;
-
-                    // Zapisujemy do inputa jako np. "6.5"
                     input.value = finalVal;
-
-                    // Ukryj błąd
                     var err = document.getElementById('ratingError');
                     if(err) err.classList.add('d-none');
                 });
             });
-
-            // Wyjście myszką z kontenera -> przywróć zapisaną wartość
             container.addEventListener('mouseleave', function() {
                 var savedVal = parseFloat(input.value);
                 if (isNaN(savedVal)) savedVal = 0;
                 updateStarVisuals(savedVal);
             });
         }
-
-        // Uruchomienie dla formularza "Dodaj"
         document.addEventListener("DOMContentLoaded", function() {
-            // Pobieramy wartość z ukrytego inputa, który ma format z kropką (CultureInfo.InvariantCulture)
             var startVal = document.getElementById('createRatingValue').value;
             initStars('createRatingStars', 'createRatingValue', 'createRatingText', startVal);
         });
-
-        // --- Otwieranie Modala Edycji ---
         function openEditModal(id, contentId, currentRating) {
-            var content = document.getElementById(contentId).innerText;
+            var content = document.getElementById(contentId).innerText.trim();
             document.getElementById('editReviewId').value = id;
-            document.getElementById('editReviewContent').value = content;
-
-            // currentRating przychodzi jako string np. "6.5" (dzięki .ToString(InvariantCulture))
+            document.getElementById('editReviewContentInput').value = content;
             document.getElementById('editRatingValue').value = currentRating;
-
             initStars('editRatingStars', 'editRatingValue', 'editRatingText', currentRating);
-
             var modal = new bootstrap.Modal(document.getElementById('editReviewModal'));
             modal.show();
         }
-
         function openDeleteModal(id) {
             document.getElementById('deleteReviewId').value = id;
             var modal = new bootstrap.Modal(document.getElementById('deleteReviewModal'));
             modal.show();
         }
-
-        // --- SUBMIT RECENZJI ---
         function submitCreateReview() {
             var ratingInput = document.getElementById('createRatingValue');
             var rating = parseFloat(ratingInput.value);
             var gameId = @gameId;
-
             if (isNaN(rating) || rating < 0.5) {
                 document.getElementById('ratingError').classList.remove('d-none');
                 return;
             }
-
-            // AJAX: Zapisz ocenę
             fetch('/Games/RateGame', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': getToken()
-                },
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getToken() },
                 body: JSON.stringify({ gameId: gameId, ratingValue: rating })
             }).then(() => {
-                // Potem wyślij formularz (odświeży stronę)
                 document.getElementById('createReviewForm').submit();
             });
         }
-
         function submitEditReview() {
             var ratingInput = document.getElementById('editRatingValue');
             var rating = parseFloat(ratingInput.value);
             var gameId = @gameId;
-
             if (!isNaN(rating) && rating >= 0.5) {
                 fetch('/Games/RateGame', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': getToken()
-                    },
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getToken() },
                     body: JSON.stringify({ gameId: gameId, ratingValue: rating })
                 }).then(() => {
                     document.getElementById('editReviewForm').submit();

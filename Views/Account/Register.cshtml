@@ -4,150 +4,52 @@
     ViewData["Title"] = "Rejestracja";
 }
 
-<style>
-    /* --- STYL HEAVY NEON PAGE (REGISTER) --- */
-    :root {
-        --neon-green: #00ff9d;
-        --neon-purple: #d900ff;
-        --bg-panel: #0a0a0f;
-    }
-
-    .register-wrapper {
-        min-height: 85vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 0;
-    }
-
-    .neon-card {
-        background-color: var(--bg-panel);
-        border: 2px solid var(--neon-green);
-        box-shadow: 0 0 30px rgba(0, 255, 157, 0.2), inset 0 0 30px rgba(0, 255, 157, 0.05);
-        border-radius: 0;
-    }
-
-    .neon-title-page {
-        font-family: sans-serif;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        text-align: center;
-        margin-bottom: 2rem;
-        color: #fff;
-        text-shadow: 0 0 15px var(--neon-green), 0 0 30px var(--neon-green);
-    }
-
-    /* INPUTY */
-    .form-floating > .form-control {
-        background-color: #000 !important;
-        border: none;
-        border-bottom: 2px solid #333;
-        color: #fff !important;
-        border-radius: 0;
-        font-family: monospace;
-    }
-
-    .form-floating > label {
-        color: #666 !important;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 2px;
-    }
-
-    .form-floating > .form-control:focus {
-        border-color: var(--neon-green);
-        box-shadow: 0 10px 20px -10px rgba(0, 255, 157, 0.3);
-    }
-
-        .form-floating > .form-control:focus ~ label {
-            color: var(--neon-green) !important;
-            text-shadow: 0 0 5px var(--neon-green);
-        }
-
-    /* GUZIKI */
-    .btn-neon-solid {
-        border: 2px solid;
-        color: #fff;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        padding: 15px;
-        transition: 0.2s ease-in-out;
-        background: transparent;
-    }
-
-    .btn-solid-green {
-        border-color: var(--neon-green);
-        color: var(--neon-green);
-        box-shadow: 0 0 10px rgba(0, 255, 157, 0.3);
-    }
-
-        .btn-solid-green:hover {
-            background-color: var(--neon-green);
-            color: #000;
-            box-shadow: 0 0 30px var(--neon-green);
-        }
-
-    .link-glow {
-        text-decoration: none;
-        transition: 0.3s;
-        border-bottom: 1px solid transparent;
-        cursor: pointer;
-        color: #fff;
-    }
-
-        .link-glow:hover {
-            border-color: currentColor;
-            text-shadow: 0 0 10px currentColor;
-        }
-</style>
-
-<div class="container register-wrapper">
+<div class="container auth-wrapper">
     <div class="row justify-content-center w-100">
         <div class="col-md-7 col-lg-6 col-xl-5">
 
-            <div class="card neon-card">
+            <div class="card auth-card">
                 <div class="card-body p-4 p-sm-5">
 
-                    <h2 class="neon-title-page">Rejestracja</h2>
+                    <h2 class="text-neon-title">Rejestracja</h2>
 
                     <form asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger bg-transparent border-danger text-danger py-2 small mb-3"></div>
 
                         <div class="form-floating mb-3">
-                            <input asp-for="Login" class="form-control" placeholder="Login" required />
+                            <input asp-for="Login" class="form-control form-control-tech" placeholder="Login" required />
                             <label asp-for="Login">Login (ID)</label>
                             <span asp-validation-for="Login" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         <div class="form-floating mb-3">
-                            <input asp-for="UserName" class="form-control" placeholder="Nick" required />
+                            <input asp-for="UserName" class="form-control form-control-tech" placeholder="Nick" required />
                             <label asp-for="UserName">Nazwa gracza</label>
                             <span asp-validation-for="UserName" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         <div class="form-floating mb-3">
-                            <input asp-for="Password" class="form-control" type="password" placeholder="Hasło" required />
+                            <input asp-for="Password" class="form-control form-control-tech" type="password" placeholder="Hasło" required />
                             <label asp-for="Password">Hasło</label>
                             <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         <div class="form-floating mb-4">
-                            <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="Powtórz hasło" required />
+                            <input asp-for="ConfirmPassword" class="form-control form-control-tech" type="password" placeholder="Powtórz hasło" required />
                             <label asp-for="ConfirmPassword">Powtórz hasło</label>
                             <span asp-validation-for="ConfirmPassword" class="text-danger small mt-1 d-block"></span>
                         </div>
 
                         <div class="d-grid mb-4">
-                            <button type="submit" class="btn btn-neon-solid btn-solid-green">
+                            @* ZMIANA NA ZIELONY *@
+                            <button type="submit" class="btn btn-neon-green">
                                 Stwórz konto
                             </button>
                         </div>
 
                         <div class="text-center mt-3">
                             <p class="text-muted small mb-1">Masz już ID?</p>
-                            <a asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="link-glow fw-bold" style="color: #fff;">
+                            <a asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="btn btn-low-tier fw-bold" style="color: #fff;">
                                 ZALOGUJ SIĘ TUTAJ
                             </a>
                         </div>

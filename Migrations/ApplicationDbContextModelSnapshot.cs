@@ -358,7 +358,7 @@ namespace praca_dyplomowa_zesp.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
+                        .HasMaxLength(3000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")

@@ -4,213 +4,64 @@
     ViewData["Title"] = "Nowe Zgłoszenie";
 }
 
-<style>
-    /* --- STYL FORMULARZA (Cyberpunk Terminal) --- */
-
-    /* Główny kontener */
-    .ticket-panel {
-        background: rgba(22, 22, 28, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-        padding: 40px;
-        position: relative;
-        overflow: hidden;
-    }
-
-        /* Dekoracyjna linia na górze */
-        .ticket-panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--deep-purple), var(--mid-pink));
-            box-shadow: 0 0 15px var(--mid-pink);
-        }
-
-    /* Nagłówek */
-    .panel-title {
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-bottom: 30px;
-        background: linear-gradient(90deg, #fff, #ff66c4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 20px rgba(255, 102, 196, 0.3);
-    }
-
-    /* Inputy */
-    .form-label {
-        color: #aaa;
-        font-size: 0.9rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .form-control-cyber {
-        background-color: #0b0b0e !important;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #fff !important;
-        border-radius: 10px;
-        padding: 12px 15px;
-        transition: all 0.3s ease;
-    }
-
-        .form-control-cyber:focus {
-            border-color: var(--mid-pink);
-            box-shadow: 0 0 15px rgba(255, 102, 196, 0.2);
-        }
-
-        .form-control-cyber::placeholder {
-            color: #555;
-        }
-
-    /* Podgląd załączników */
-    .preview-container {
-        position: relative;
-        display: inline-block;
-        margin-right: 15px;
-        margin-bottom: 15px;
-        border-radius: 10px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        transition: transform 0.2s;
-    }
-
-        .preview-container:hover {
-            transform: scale(1.05);
-            border-color: var(--mid-pink);
-        }
-
-    .preview-thumb {
-        width: 120px;
-        height: 120px;
-        object-fit: cover;
-    }
-
-    .btn-remove-file {
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        background: rgba(0,0,0,0.7);
-        border-radius: 50%;
-        padding: 5px;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        border: none;
-        transition: background 0.2s;
-    }
-
-        .btn-remove-file:hover {
-            background: #ff3366;
-        }
-
-    /* Przyciski */
-    .btn-send {
-        background: linear-gradient(45deg, var(--deep-purple), var(--mid-pink));
-        border: none;
-        color: white;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        padding: 12px;
-        border-radius: 10px;
-        transition: all 0.3s;
-        box-shadow: 0 5px 15px rgba(188, 19, 254, 0.3);
-    }
-
-        .btn-send:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 25px rgba(255, 102, 196, 0.6);
-            color: white;
-        }
-
-    .btn-back {
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: #aaa;
-        border-radius: 10px;
-        padding: 12px;
-        transition: all 0.3s;
-    }
-
-        .btn-back:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border-color: #fff;
-        }
-
-    /* Strefa upuszczania plików (wizualna) */
-    .drop-zone-info {
-        border: 2px dashed rgba(255,255,255,0.1);
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        color: #666;
-        font-size: 0.85rem;
-        margin-bottom: 10px;
-        background: rgba(0,0,0,0.2);
-    }
-</style>
-
-<div class="container mt-5">
+<div class="container mt-5 main-container fade-in-up">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="ticket-panel">
 
-                <h2 class="panel-title text-center">
-                    <i class="fas fa-headset me-3 text-white-50"></i>Centrum Wsparcia
+            @* --- GŁÓWNY PANEL --- *@
+            <div class="glass-panel p-5 position-relative" style="border-top: 4px solid var(--neon-purple);">
+
+                @* Nagłówek *@
+                <h2 class="text-neon-title text-center mb-4" style="letter-spacing: 2px;">
+                    <i class="fas fa-headset me-3 text-neon-cyan"></i>CENTRUM WSPARCIA
                 </h2>
 
+                <p class="text-center text-muted mb-5">
+                    Wypełnij formularz poniżej. Nasz zespół netrunnerów zajmie się Twoim zgłoszeniem tak szybko, jak to możliwe.
+                </p>
+
                 <form asp-action="Create" enctype="multipart/form-data">
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-neon alert-neon-danger mb-4"></div>
 
                     @* TEMAT *@
-                    <div class="mb-4">
-                        <label asp-for="Title" class="form-label">Temat zgłoszenia</label>
-                        <input asp-for="Title" class="form-control form-control-cyber" placeholder="Np. Problem z logowaniem / Błąd w grze" />
+                    <div class="form-floating mb-4">
+                        <input asp-for="Title" class="form-control form-control-tech fs-5 fw-bold text-white" placeholder="Temat" />
+                        <label asp-for="Title" class="text-neon-purple">TEMAT ZGŁOSZENIA</label>
                         <span asp-validation-for="Title" class="text-danger small mt-1 d-block"></span>
                     </div>
 
                     @* OPIS *@
-                    <div class="mb-4">
-                        <label asp-for="Content" class="form-label">Opis problemu</label>
-                        <div class="small text-muted mb-2 opacity-75">
-                            <i class="bi bi-info-circle me-1"></i> Możesz wklejać zrzuty ekranu bezpośrednio (Ctrl+V) w pole tekstowe.
-                        </div>
-                        <textarea asp-for="Content" id="contentInput" class="form-control form-control-cyber" rows="6" placeholder="Opisz szczegółowo, co się stało..."></textarea>
+                    <div class="form-floating mb-4">
+                        <textarea asp-for="Content" id="contentInput" class="form-control form-control-tech" placeholder="Opis" style="height: 200px; resize: none;"></textarea>
+                        <label asp-for="Content" class="text-muted">OPIS PROBLEMU (CTRL+V ABY WKLEIĆ OBRAZ)</label>
                         <span asp-validation-for="Content" class="text-danger small mt-1 d-block"></span>
                     </div>
 
                     @* ZAŁĄCZNIKI *@
-                    <div class="mb-4">
-                        <label class="form-label">Załączniki (Opcjonalnie)</label>
+                    <div class="mb-5">
+                        <label class="text-white-50 small text-uppercase fw-bold mb-2">Załączniki (Opcjonalnie)</label>
 
-                        <div class="drop-zone-info">
-                            Obsługiwane formaty: JPG, PNG. Maksymalnie 5 plików.
+                        @* Strefa Drop Zone *@
+                        <div class="file-upload-zone p-4 text-center" onclick="document.getElementById('attachmentInput').click()" style="cursor: pointer;">
+                            <i class="fas fa-cloud-upload-alt text-neon-cyan fs-2 mb-2"></i>
+                            <div class="text-muted small">Kliknij lub przeciągnij pliki tutaj</div>
+                            <div class="text-white-50 small mt-1">Tylko pliki obrazkowe (JPG, PNG)</div>
                         </div>
 
-                        <div id="previews" class="d-flex flex-wrap mb-3"></div>
+                        @* Kontener na podgląd *@
+                        <div id="previews" class="d-flex flex-wrap gap-3 mt-3 justify-content-center"></div>
 
-                        <input type="file" name="attachments" id="attachmentInput" class="form-control form-control-cyber" multiple accept="image/*" />
+                        <input type="file" name="attachments" id="attachmentInput" class="d-none" multiple accept="image/*" />
                     </div>
 
-                    @* PRZYCISKI *@
-                    <div class="d-grid gap-3 d-md-flex mt-5">
-                        <button type="submit" class="btn btn-send flex-grow-1">
-                            <i class="fas fa-paper-plane me-2"></i> Wyślij zgłoszenie
-                        </button>
-                        <a asp-action="Index" class="btn btn-back px-4">
-                            Anuluj
+                    @* PRZYCISKI (Wyśrodkowane, bez kreski) *@
+                    <div class="d-grid gap-3 d-md-flex justify-content-md-center pt-3">
+                        <a asp-action="Index" class="btn btn-ghost-cancel border border-secondary px-5 py-2">
+                            ANULUJ
                         </a>
+                        <button type="submit" class="btn btn-neon-primary px-5 py-2 fw-bold">
+                            <i class="fas fa-paper-plane me-2"></i> WYŚLIJ ZGŁOSZENIE
+                        </button>
                     </div>
                 </form>
 
@@ -229,12 +80,29 @@
         const attachmentInput = document.getElementById('attachmentInput');
         const previewsDiv = document.getElementById('previews');
 
+        // Funkcja sprawdzająca czy plik to obrazek
+        function isImage(file) {
+            return file.type.startsWith('image/');
+        }
+
         // Obsługa wyboru plików z dysku
         attachmentInput.addEventListener('change', function(){
+            let invalidFiles = false;
+
             for(let i = 0; i < this.files.length; i++){
-                // Dodajemy tylko jeśli jeszcze nie ma (opcjonalnie)
-                dt.items.add(this.files[i]);
+                const file = this.files[i];
+
+                if (isImage(file)) {
+                    dt.items.add(file);
+                } else {
+                    invalidFiles = true;
+                }
             }
+
+            if (invalidFiles) {
+                alert("Niektóre pliki zostały pominięte. Dozwolone są tylko obrazy.");
+            }
+
             updateFiles();
         });
 
@@ -243,10 +111,15 @@
             var items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (var index in items) {
                 var item = items[index];
-                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                if (item.kind === 'file') {
                     var blob = item.getAsFile();
-                    dt.items.add(blob);
-                    updateFiles();
+
+                    if (isImage(blob)) {
+                        dt.items.add(blob);
+                        updateFiles();
+                    } else {
+                        alert("Wklejony plik nie jest obrazem.");
+                    }
                 }
             }
         });
@@ -264,13 +137,12 @@
 
                 reader.onload = function(e){
                     const div = document.createElement('div');
-                    div.className = 'preview-container';
+                    div.className = 'attachment-preview-wrapper';
 
-                    // Template miniatury
                     div.innerHTML = `
-                        <img src="${e.target.result}" class="preview-thumb" />
-                        <button type="button" class="btn-remove-file text-white" onclick="removeFile(${i})" title="Usuń">
-                            <i class="fas fa-times" style="font-size: 0.8rem;"></i>
+                        <img src="${e.target.result}" class="attachment-preview-img" style="width: 80px; height: 80px;" />
+                        <button type="button" class="btn-remove-attachment" onclick="removeFile(${i})" title="Usuń">
+                            <i class="fas fa-times-circle fs-5 text-white"></i>
                         </button>
                     `;
                     previewsDiv.appendChild(div);
@@ -279,7 +151,6 @@
             }
         }
 
-        // Musimy przypisać funkcję do window, żeby była widoczna w onclick="" wewnątrz HTML generowanego przez JS
         window.removeFile = function(index){
             dt.items.remove(index);
             updateFiles();

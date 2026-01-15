@@ -1,17 +1,18 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using praca_dyplomowa.Data;
+using praca_dyplomowa_zesp.Models.API;
+using praca_dyplomowa_zesp.Models.Interactions.Reactions;
+using praca_dyplomowa_zesp.Models.Modules.Games;
+using praca_dyplomowa_zesp.Models.Users;
+using praca_dyplomowa_zesp.Models.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using praca_dyplomowa_zesp.Models.API;
-using Microsoft.AspNetCore.Identity;
-using praca_dyplomowa_zesp.Models.Users;
-using Microsoft.AspNetCore.Authorization;
-using praca_dyplomowa_zesp.Models.Interactions.Reactions;
-using praca_dyplomowa_zesp.Models.Modules.Games;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -45,6 +46,7 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> Index(
             string? searchString,
             int page = 1,
+            int pageSize = 60, // <--- 1. NOWE: Parametr rozmiaru strony
             string mode = "browse",
             bool isFiltered = false,
             bool showUser = false,
@@ -52,6 +54,13 @@ namespace praca_dyplomowa_zesp.Controllers
             bool showLocal = false
         )
         {
+            // 2. NOWE: Walidacja (Security Check)
+            // Jeśli ktoś wpisze dziwną liczbę ręcznie w URL, ustawiamy na 60
+            if (pageSize != 36 && pageSize != 48 && pageSize != 60)
+            {
+                pageSize = 60;
+            }
+
             // LOGIKA DOMYŚLNYCH WARTOŚCI (Pierwsze wejście = wszystko włączone)
             if (!isFiltered)
             {
@@ -61,7 +70,9 @@ namespace praca_dyplomowa_zesp.Controllers
             }
 
             if (page < 1) page = 1;
-            int offset = (page - 1) * PageSize;
+
+            // 3. NOWE: Obliczanie offsetu na podstawie wybranego pageSize
+            int offset = (page - 1) * pageSize;
 
             string safeSearch = searchString?.Replace("\"", "").Trim();
             string query;
@@ -75,13 +86,17 @@ namespace praca_dyplomowa_zesp.Controllers
             if (showCritic && !showUser) sortField = "aggregated_rating";
             else if (showUser && !showCritic) sortField = "rating";
 
+            // Limit w API ustawiamy na trochę więcej (np. 100), żeby mieć bufor na filtrowanie in-memory
+            // (bo odrzucamy DLC, bundle itp., więc musimy pobrać więcej niż wyświetlamy)
+            int apiLimit = pageSize + 40;
+
             if (!string.IsNullOrEmpty(safeSearch))
             {
-                query = $"{fields}; search \"{safeSearch}\"; {baseFilter} & cover.url != null; limit 100; offset {offset};";
+                query = $"{fields}; search \"{safeSearch}\"; {baseFilter} & cover.url != null; limit {apiLimit}; offset {offset};";
             }
             else
             {
-                query = $"{fields}; sort {sortField} desc; {baseFilter} & {sortField} != null & cover.url != null; limit 100; offset {offset};";
+                query = $"{fields}; sort {sortField} desc; {baseFilter} & {sortField} != null & cover.url != null; limit {apiLimit}; offset {offset};";
             }
 
             var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
@@ -101,7 +116,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
                     !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
                 )
-                .Take(PageSize)
+                .Take(pageSize) // <--- 4. NOWE: Bierzemy tyle, ile wybrał użytkownik (36/48/60)
                 .ToList();
 
             // 3. Pobranie ocen lokalnych
@@ -157,7 +172,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     Cover = apiGame.Cover != null ? new ApiCover { Url = apiGame.Cover.Url.Replace("t_thumb", "t_cover_big") } : null
                 };
             })
-            // --- NOWOŚĆ: SORTOWANIE W PAMIĘCI ---
+            // --- Sortowanie w pamięci ---
             .OrderByDescending(g => g.Total_rating ?? -1)
             .ToList();
             // -------------------------------------
@@ -174,6 +189,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 ShowIgdbUser = showUser,
                 ShowIgdbCritic = showCritic,
                 ShowLocal = showLocal
+                // Jeśli w ViewModelu masz pole PageSize, możesz je tu przypisać:
+                // PageSize = pageSize 
             };
 
             return View(viewModel);
@@ -380,6 +397,44 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             public long GameId { get; set; }
             public double RatingValue { get; set; }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveRating([FromBody] RemoveRateRequest request)
+        {
+            var userIdStr = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userIdStr)) return Json(new { success = false });
+            var userId = Guid.Parse(userIdStr);
+
+            // 1. Znajdź i usuń ocenę
+            var rating = await _context.GameRates
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.IgdbGameId == request.IgdbGameId);
+
+            if (rating != null)
+            {
+                _context.GameRates.Remove(rating);
+            }
+
+            // 2. Znajdź i usuń recenzje tego użytkownika dla tej gry
+            // UWAGA: Upewnij się, że GameReview.IgdbGameId to właściwe pole. 
+            // Jeśli w modelu recenzji używasz 'GameId' jako ID z IGDB, zostaw jak jest.
+            var reviews = await _context.GameReviews
+                .Where(r => r.UserId == userId && r.IgdbGameId == request.IgdbGameId)
+                .ToListAsync();
+
+            if (reviews.Any())
+            {
+                _context.GameReviews.RemoveRange(reviews);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // 3. Przelicz nową średnią
+            var allRatings = await _context.GameRates.Where(r => r.IgdbGameId == request.IgdbGameId).ToListAsync();
+            double newAverage = allRatings.Any() ? allRatings.Average(r => r.Value) : 0;
+
+            return Json(new { success = true, newAverage = newAverage });
         }
     }
 }

@@ -2,187 +2,46 @@
     ViewData["Title"] = "O Projekcie";
 }
 
-<style>
-    /* Lokalne style dla wizytówki, korzystające ze zmiennych z Layoutu */
-    
-    .about-wrapper {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 80vh; /* Centrowanie w pionie */
-        width: 100%;
-        position: relative;
-    }
+<div class="container d-flex align-items-center justify-content-center fade-in-up" style="min-height: 80vh;">
 
-    /* Tło ozdobne za kartą */
-    .about-bg-glow {
-        position: absolute;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(circle, rgba(128, 0, 255, 0.15) 0%, transparent 70%);
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 0;
-        pointer-events: none;
-    }
+    @* text-center tutaj załatwia centrowanie całej dolnej części *@
+    <div class="glass-panel w-100 shadow-lg text-center" style="max-width: 900px; border-width: 2px;">
 
-    .glass-card {
-        position: relative;
-        z-index: 1;
-        background: rgba(26, 26, 32, 0.7); /* Półprzezroczyste ciemne tło */
-        backdrop-filter: blur(20px);        /* Rozmycie tła pod spodem */
-        -webkit-backdrop-filter: blur(20px);
-        
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 30px;
-        padding: 4rem 3rem;
-        max-width: 900px;
-        width: 100%;
-        text-align: center;
-        
-        /* Neonowa poświata ramki */
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 102, 196, 0.05);
-        overflow: hidden;
-    }
+        @* Nagłówek *@
+        <div class="info-label mb-3" style="font-size: 1rem;">
+            <i class="bi bi-mortarboard-fill me-2"></i>Praca Inżynierska
+        </div>
 
-    /* Górna neonowa krawędź */
-    .glass-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, var(--neon-blue), var(--mid-pink), var(--deep-purple));
-        box-shadow: 0 0 20px var(--mid-pink);
-    }
-
-    /* TYPOGRAFIA */
-    
-    .thesis-label {
-        font-size: 1.1rem;
-        text-transform: uppercase;
-        letter-spacing: 5px;
-        color: #888;
-        margin-bottom: 1.5rem;
-        font-weight: 600;
-        opacity: 0.8;
-    }
-
-    .thesis-topic {
-        font-size: clamp(1.8rem, 4vw, 2.8rem);
-        font-weight: 900;
-        line-height: 1.2;
-        margin-bottom: 3rem;
-        
-        /* Gradient tekstu */
-        background: linear-gradient(135deg, #fff 0%, var(--light-pink) 50%, var(--mid-pink) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        
-        text-shadow: 0 0 30px rgba(255, 102, 196, 0.3);
-    }
-
-    .authors-container {
-        display: flex;
-        justify-content: center;
-        gap: 40px;
-        margin-bottom: 3rem;
-        flex-wrap: wrap;
-    }
-
-    .author-box {
-        position: relative;
-        padding: 15px 30px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        background: rgba(255, 255, 255, 0.03);
-        transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .author-box:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 20px rgba(0, 243, 255, 0.2);
-        border-color: var(--neon-blue);
-    }
-
-    .author-label {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: var(--neon-blue);
-        margin-bottom: 5px;
-        display: block;
-    }
-
-    .author-name {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #fff;
-        display: block;
-    }
-
-    .supervisor-section {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding-top: 2rem;
-        margin-top: 2rem;
-    }
-
-    .supervisor-label {
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        color: var(--deep-purple);
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-
-    .supervisor-name {
-        font-size: 1.4rem;
-        color: #ddd;
-        font-weight: 500;
-    }
-
-    /* Animacja wejścia */
-    .fade-in-up {
-        animation: fadeInUp 1s ease-out forwards;
-        opacity: 0;
-        transform: translateY(30px);
-    }
-
-    @("@keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }")
-
-</style>
-
-<div class="about-wrapper">
-    <div class="about-bg-glow"></div>
-
-    <div class="glass-card fade-in-up">
-        <div class="thesis-label">Praca Inżynierska</div>
-        
-        <h1 class="thesis-topic">
+        @* Tytuł *@
+        <h1 class="text-neon-title mb-5" style="font-size: clamp(1.5rem, 4vw, 2.5rem); line-height: 1.3;">
             Aplikacja webowa do zarządzania stanem gier i wspierania rozgrywki
         </h1>
 
-        <div class="authors-container">
-            <div class="author-box">
-                <span class="author-label">Autor</span>
-                <span class="author-name">Oliwier Ancutko</span>
+        @* Autorzy - usunięto jakiekolwiek klasy hover, są teraz statyczni *@
+        <div class="row g-4 justify-content-center mb-5">
+            <div class="col-12 col-md-5">
+                <div class="cyber-panel panel-neon-purple py-3 px-4">
+                    <span class="info-label mb-1" style="color: var(--neon-purple); text-shadow: 0 0 5px var(--neon-purple);">Autor</span>
+                    <span class="h4 fw-bold text-white mb-0">Oliwier Ancutko</span>
+                </div>
             </div>
-            
-            <div class="author-box">
-                <span class="author-label">Autor</span>
-                <span class="author-name">Patrycja Choćko</span>
+
+            <div class="col-12 col-md-5">
+                <div class="cyber-panel panel-neon-purple py-3 px-4">
+                    <span class="info-label mb-1" style="color: var(--neon-purple); text-shadow: 0 0 5px var(--neon-purple);">Autor</span>
+                    <span class="h4 fw-bold text-white mb-0">Patrycja Choćko</span>
+                </div>
             </div>
         </div>
 
-        <div class="supervisor-section">
-            <div class="supervisor-label">Promotor</div>
-            <div class="supervisor-name">dr inż. Paweł Tadejko</div>
+        @* Promotor - teraz wyśrodkowany dzięki text-center w glass-panel *@
+        <div class="pt-4 border-top border-secondary border-opacity-25">
+            <div class="info-label mb-2" style="color: var(--neon-cyan); text-shadow: 0 0 5px var(--neon-cyan);">Promotor</div>
+            <div class="h4 text-white-50">dr inż. Paweł Tadejko</div>
         </div>
-        
-        <div class="mt-4 text-muted small" style="opacity: 0.5;">
+
+        @* Stopka *@
+        <div class="mt-5 text-muted small text-uppercase fw-bold" style="letter-spacing: 2px; opacity: 0.4;">
             Politechnika Białostocka &copy; 2025-2026
         </div>
     </div>

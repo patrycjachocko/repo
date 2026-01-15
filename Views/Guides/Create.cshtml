@@ -6,344 +6,178 @@
 
 <script src="https://unpkg.com/tinymce@6.8.2/tinymce.min.js"></script>
 
-<style>
-    /* --- STYLE CYBERPUNK (ZDEFINIOWANE LOKALNIE DLA SPÓJNOŚCI) --- */
-    :root {
-        --neon-blue: #00f3ff;
-        --neon-pink: #ff0099;
-        --neon-green: #00ff9d;
-        --panel-bg: rgba(19, 19, 24, 0.95);
-        --input-bg: #0b0b0e;
-    }
+<div class="container mt-4 main-container fade-in-up">
 
-    /* Główny kontener formularza */
-    .cyber-form-card {
-        background: var(--panel-bg);
-        border: 1px solid rgba(0, 243, 255, 0.2);
-        box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 243, 255, 0.05);
-        border-radius: 12px;
-        backdrop-filter: blur(10px);
-    }
+    @* --- NAGŁÓWEK --- *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-neon-title mb-0" style="letter-spacing: 2px;">NOWY PORADNIK</h2>
+            <p class="text-muted small mb-0">Podziel się wiedzą z innymi graczami</p>
+        </div>
+        <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-ghost-cancel border border-secondary px-4">
+            <i class="fas fa-arrow-left me-2"></i> ANULUJ
+        </a>
+    </div>
 
-    .cyber-header {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        background: linear-gradient(90deg, rgba(0, 243, 255, 0.1) 0%, transparent 100%);
-    }
-
-    .cyber-title {
-        font-family: 'Orbitron', sans-serif; /* Opcjonalnie, jeśli masz font */
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: #fff;
-        text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
-        margin: 0;
-    }
-
-    /* Inputy */
-    .form-label-cyber {
-        color: var(--neon-blue);
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 1px;
-        margin-bottom: 8px;
-        font-weight: 600;
-    }
-
-    .form-control-cyber {
-        background-color: var(--input-bg);
-        border: 1px solid #333;
-        color: #fff;
-        border-radius: 4px;
-        transition: all 0.3s ease;
-    }
-
-        .form-control-cyber:focus {
-            background-color: #000;
-            border-color: var(--neon-blue);
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
-            color: #fff;
-        }
-
-        .form-control-cyber::placeholder {
-            color: #555;
-        }
-
-    /* File Input Wrapper */
-    .file-input-wrapper {
-        position: relative;
-        overflow: hidden;
-    }
-
-    /* Podgląd zdjęcia */
-    .preview-box {
-        border: 1px solid var(--neon-pink);
-        padding: 5px;
-        background: rgba(255, 0, 153, 0.1);
-        border-radius: 8px;
-        box-shadow: 0 0 15px rgba(255, 0, 153, 0.2);
-    }
-
-    /* Przyciski */
-    .btn-cyber-primary {
-        background: linear-gradient(135deg, #b000b0, #7000ff);
-        border: none;
-        color: #fff;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: all 0.3s;
-        box-shadow: 0 4px 15px rgba(112, 0, 255, 0.4);
-    }
-
-        .btn-cyber-primary:hover {
-            background: linear-gradient(135deg, #d400d4, #8a2be2);
-            box-shadow: 0 0 25px rgba(255, 0, 153, 0.6);
-            color: #fff;
-            transform: translateY(-2px);
-        }
-
-    .btn-cyber-secondary {
-        background: transparent;
-        border: 1px solid #555;
-        color: #aaa;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-    }
-
-        .btn-cyber-secondary:hover {
-            border-color: #fff;
-            color: #fff;
-            background: rgba(255,255,255,0.05);
-        }
-
-    .btn-cyber-info {
-        background: rgba(0, 243, 255, 0.1);
-        border: 1px solid var(--neon-blue);
-        color: var(--neon-blue);
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        transition: all 0.3s;
-    }
-
-        .btn-cyber-info:hover {
-            background: var(--neon-blue);
-            color: #000;
-            box-shadow: 0 0 20px rgba(0, 243, 255, 0.6);
-        }
-
-    /* --- STYL MODALA MAPY --- */
-    .modal-content-cyber {
-        background-color: #131318;
-        border: 1px solid var(--neon-green);
-        box-shadow: 0 0 30px rgba(0, 255, 157, 0.15);
-        color: #fff;
-    }
-
-    .modal-header-cyber {
-        border-bottom: 1px solid rgba(0, 255, 157, 0.3);
-        background: linear-gradient(90deg, rgba(0, 255, 157, 0.1), transparent);
-    }
-
-    .modal-title-cyber {
-        color: var(--neon-green);
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    /* Karta Mapy w Modalu */
-    .map-card-cyber {
-        background: #0b0b0e;
-        border: 1px solid #333;
-        transition: all 0.2s;
-        position: relative;
-        overflow: hidden;
-    }
-
-        .map-card-cyber:hover {
-            border-color: var(--neon-green);
-            transform: translateY(-3px);
-            box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);
-            cursor: pointer;
-        }
-
-        .map-card-cyber img {
-            filter: grayscale(40%);
-            transition: all 0.3s;
-        }
-
-        .map-card-cyber:hover img {
-            filter: grayscale(0%);
-        }
-
-    .map-card-footer {
-        background: rgba(0, 255, 157, 0.1);
-        color: var(--neon-green);
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        border-top: 1px solid rgba(0, 255, 157, 0.2);
-    }
-
-    /* TinyMCE Dark Border */
-    .tox-tinymce {
-        border: 1px solid #333 !important;
-        border-radius: 4px !important;
-    }
-</style>
-
-<div class="container mt-5 mb-5">
     <div class="row justify-content-center">
-        <div class="col-lg-10">
+        <div class="col-lg-12">
 
-            <div class="cyber-form-card">
-                <div class="cyber-header d-flex align-items-center gap-3">
-                    <i class="fas fa-pen-fancy fa-2x" style="color: var(--neon-blue);"></i>
-                    <h2 class="cyber-title">Nowy Poradnik</h2>
-                </div>
+            @* --- GŁÓWNY PANEL FORMULARZA --- *@
+            <div class="glass-panel p-4" style="border-top: 3px solid var(--neon-purple);">
 
-                <div class="card-body p-4">
-                    <form asp-action="Create" enctype="multipart/form-data" id="createForm">
-                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-                        <input type="hidden" asp-for="IgdbGameId" />
+                <form asp-action="Create" enctype="multipart/form-data" id="createForm">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-neon alert-neon-danger mb-4"></div>
+                    <input type="hidden" asp-for="IgdbGameId" />
 
-                        @* Tytuł *@
-                        <div class="form-group mb-4">
-                            <label asp-for="Title" class="form-label-cyber">Tytuł poradnika</label>
-                            <input asp-for="Title" class="form-control form-control-lg form-control-cyber" placeholder="Wpisz chwytliwy tytuł..." />
-                            <span asp-validation-for="Title" class="text-danger small"></span>
-                        </div>
+                    <div class="row g-4">
+                        @* KOLUMNA LEWA: Dane podstawowe *@
+                        <div class="col-lg-8">
 
-                        @* Opis *@
-                        <div class="form-group mb-4">
-                            <label asp-for="Description" class="form-label-cyber">Krótki wstęp</label>
-                            <textarea asp-for="Description" class="form-control form-control-cyber" rows="3" placeholder="O czym będzie ten poradnik?"></textarea>
-                            <span asp-validation-for="Description" class="text-danger small"></span>
-                        </div>
-
-                        @* Okładka *@
-                        <div class="form-group mb-4">
-                            <label class="form-label-cyber">Zdjęcie okładkowe (wymagane)</label>
-                            <div class="file-input-wrapper">
-                                <input type="file" id="coverImageInput" name="coverImageFile" class="form-control form-control-cyber" accept="image/*" required onchange="previewFile()" />
+                            @* Tytuł *@
+                            <div class="form-floating mb-4">
+                                <input asp-for="Title" class="form-control form-control-tech fs-5 fw-bold text-white" placeholder="Tytuł" style="height: 60px;" />
+                                <label asp-for="Title" class="text-neon-purple">TYTUŁ PORADNIKA</label>
+                                <span asp-validation-for="Title" class="text-danger small mt-1 d-block"></span>
                             </div>
-                            <span asp-validation-for="CoverImage" class="text-danger small"></span>
 
-                            <div id="imagePreviewContainer" class="mt-3 position-relative d-none preview-box" style="width: fit-content;">
-                                <img id="imagePreview" src="#" alt="Podgląd" style="max-height: 200px; border-radius: 4px;" />
-                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 shadow" onclick="clearImage()" title="Usuń zdjęcie">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                            @* Edytor Treści *@
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-end mb-2">
+                                    <label asp-for="Content" class="text-white-50 small text-uppercase fw-bold">Treść poradnika</label>
+                                    <button type="button" class="btn btn-sm btn-outline-light" style="border-color: var(--neon-cyan); color: var(--neon-cyan);" data-bs-toggle="modal" data-bs-target="#mapsModal" onclick="resetModal()">
+                                        <i class="fas fa-map-marked-alt me-2"></i> WSTAW MAPĘ
+                                    </button>
+                                </div>
+                                <textarea asp-for="Content" id="guide-editor"></textarea>
+                                <span asp-validation-for="Content" class="text-danger small"></span>
                             </div>
                         </div>
 
-                        @* Edytor *@
-                        <div class="form-group mb-4">
-                            <div class="d-flex justify-content-between align-items-end mb-2">
-                                <label asp-for="Content" class="form-label-cyber mb-0">Treść poradnika</label>
-                                @* --- PRZYCISK MAPY --- *@
-                                <button type="button" class="btn btn-cyber-info btn-sm py-1 px-3" data-bs-toggle="modal" data-bs-target="#mapsModal" onclick="resetModal()">
-                                    <i class="fas fa-map me-2"></i> Wstaw mapę
-                                </button>
+                        @* KOLUMNA PRAWA: Meta i Okładka *@
+                        <div class="col-lg-4">
+
+                            @* Krótki opis *@
+                            <div class="form-floating mb-4">
+                                <textarea asp-for="Description" class="form-control form-control-tech" placeholder="Wstęp" style="height: 120px; resize: none;"></textarea>
+                                <label asp-for="Description" class="text-muted">KRÓTKI WSTĘP (TEASER)</label>
+                                <span asp-validation-for="Description" class="text-danger small"></span>
                             </div>
 
-                            <textarea asp-for="Content" id="guide-editor"></textarea>
-                            <span asp-validation-for="Content" class="text-danger small"></span>
-                        </div>
+                            @* Okładka *@
+                            <div class="mb-4">
+                                <label class="text-white-50 small text-uppercase fw-bold mb-2">Zdjęcie okładkowe (Wymagane)</label>
 
-                        @* --- PRZYCISKI AKCJI --- *@
-                        <div class="d-flex justify-content-between pt-4 align-items-center border-top border-secondary border-opacity-25 mt-4">
-                            <a asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-link text-muted text-decoration-none text-uppercase small" style="letter-spacing: 1px;">
-                                <i class="fas fa-arrow-left me-1"></i> Anuluj
-                            </a>
+                                <div class="file-upload-zone p-3 text-center">
+                                    <input type="file" id="coverImageInput" name="coverImageFile" class="form-control d-none" accept="image/*" required onchange="previewFile()" />
 
-                            <div class="d-flex gap-3">
-                                <button type="submit" name="action" value="draft" class="btn btn-cyber-secondary px-4 py-2">
-                                    <i class="fas fa-save me-2"></i> Zapisz szkic
-                                </button>
-                                <button type="submit" name="action" value="publish" class="btn btn-cyber-primary px-5 py-2">
-                                    <i class="fas fa-paper-plane me-2"></i> Opublikuj
-                                </button>
+                                    <label for="coverImageInput" class="btn btn-sm btn-ghost-cancel border border-secondary mb-3 pointer-event px-3">
+                                        <i class="fas fa-upload me-2"></i> Wybierz plik
+                                    </label>
+
+                                    @* Podgląd *@
+                                    <div id="imagePreviewContainer" class="position-relative d-none mx-auto" style="width: 100%; max-height: 200px; overflow:hidden; border-radius: 6px;">
+                                        <img id="imagePreview" src="#" class="w-100 h-100" style="object-fit: cover;" />
+                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="clearImage()">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div id="uploadPlaceholder" class="text-muted small fst-italic">Brak wybranego pliku</div>
+                                </div>
+                                <span asp-validation-for="CoverImage" class="text-danger small"></span>
                             </div>
+
+                            @* Panel Akcji *@
+                            <div class="glass-panel p-3 bg-black bg-opacity-25 mt-4" style="border: 1px solid var(--neon-purple);">
+                                <h6 class="text-neon-purple text-uppercase small fw-bold mb-3">Publikacja</h6>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="action" value="publish" class="btn btn-neon-green fw-bold py-2">
+                                        <i class="fas fa-rocket me-2"></i> OPUBLIKUJ
+                                    </button>
+                                    <button type="submit" name="action" value="draft" class="btn btn-ghost-cancel border border-secondary text-white-50 py-2">
+                                        <i class="fas fa-save me-2"></i> ZAPISZ SZKIC
+                                    </button>
+                                </div>
+                            </div>
+
                         </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-@* --- MODAL MAPY (CYBERPUNK STYLE) --- *@
+@* --- MODAL MAPY --- *@
 <div class="modal fade" id="mapsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content modal-content-cyber">
-            <div class="modal-header modal-header-cyber">
-                <h5 class="modal-title modal-title-cyber"><i class="fas fa-globe-americas me-2"></i>Menedżer Map</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content modal-neon" style="border-color: var(--neon-cyan);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-neon-cyan fw-bold text-uppercase"><i class="fas fa-globe me-2"></i> MAPY</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
 
-                @* WIDOK 1: WYBÓR *@
+                @* KROK 1: Wybór *@
                 <div id="step-select-map" class="p-4">
-
-                    @* Sekcja Dodawania *@
-                    <div class="mb-4 p-4 border border-secondary rounded" style="background: rgba(255,255,255,0.02);">
-                        <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="fas fa-plus-circle text-success me-2"></i> Dodaj nową mapę</h6>
-                        <form id="uploadMapForm" enctype="multipart/form-data">
-                            <div class="row g-3">
-                                <div class="col-md-5">
-                                    <input type="text" class="form-control form-control-cyber" id="newMapName" placeholder="Nazwa mapy (np. Centrum)" required>
-                                </div>
-                                <div class="col-md-5">
-                                    <input type="file" class="form-control form-control-cyber" id="newMapFile" accept="image/*" required>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-success w-100 fw-bold" style="background: var(--neon-green); color: #000; border:none;">DODAJ</button>
+                    <div class="row g-4">
+                        @* Lewa: Lista *@
+                        <div class="col-lg-8">
+                            <div class="mb-3">
+                                @* Wyszukiwarka z Floating Label (Poprawiona: jedna ramka z site.css) *@
+                                <div class="admin-search-merged">
+                                    <div class="admin-search-merged-inner">
+                                        <div class="form-floating h-100 flex-grow-1">
+                                            <input type="text" class="form-control text-white" id="mapSearch" placeholder="Szukaj mapy..." onkeyup="filterMaps()">
+                                            <label for="mapSearch" class="text-muted">Szukaj mapy...</label>
+                                        </div>
+                                        <button class="btn-search-integrated">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </form>
-                    </div>
 
-                    @* Wyszukiwarka *@
-                    <div class="input-group mb-4">
-                        <span class="input-group-text bg-transparent border-secondary text-muted"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control form-control-cyber" id="mapSearch" placeholder="Szukaj mapy w bazie..." onkeyup="filterMaps()">
-                    </div>
+                            <div class="row row-cols-1 row-cols-md-3 g-3" id="mapsListContainer" style="max-height: 500px; overflow-y: auto;">
+                            </div>
+                        </div>
 
-                    @* Lista Map *@
-                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4" id="mapsListContainer"></div>
+                        @* Prawa: Upload *@
+                        <div class="col-lg-4">
+                            <div class="glass-panel p-3 border-secondary">
+                                <h6 class="text-white text-uppercase small fw-bold mb-3"><i class="fas fa-cloud-upload-alt me-2 text-neon-green"></i> Dodaj nową mapę</h6>
+                                <form id="uploadMapForm" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        @* ZMIANA: Nazwa mapy *@
+                                        <div class="form-floating mb-2">
+                                            <input type="text" class="form-control form-control-tech" id="newMapName" placeholder="Nazwa mapy" required>
+                                            <label for="newMapName" class="text-muted">Nazwa mapy</label>
+                                        </div>
+                                        <input type="file" class="form-control form-control-tech" id="newMapFile" accept="image/*" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-neon-green w-100 btn-sm">DODAJ DO BAZY</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                @* WIDOK 2: EDYCJA *@
-                <div id="step-draw-map" class="d-none" style="height: 80vh; display: flex; flex-direction: column;">
-                    <div class="p-3 d-flex justify-content-between align-items-center" style="background: #1a1a20; border-bottom: 1px solid #333;">
-                        <div class="d-flex align-items-center gap-4">
-                            <span class="fw-bold text-white text-uppercase" style="letter-spacing: 1px;">
-                                <i class="fas fa-pencil-alt text-warning me-2"></i> <span id="drawingMapName"></span>
-                            </span>
-
-                            @* --- WYBIERAK KOLORÓW --- *@
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="text-muted small text-uppercase">Kolor znacznika:</span>
-                                <input type="color" class="form-control form-control-color bg-dark border-secondary p-0"
-                                       id="drawingColor" value="#00f3ff" title="Wybierz kolor"
-                                       style="width: 40px; height: 30px; cursor: pointer; border-radius: 4px;">
+                @* KROK 2: Edycja *@
+                <div id="step-draw-map" class="d-none d-flex flex-column" style="height: 80vh;">
+                    <div class="p-2 bg-dark border-bottom border-secondary d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3 px-3">
+                            <span class="text-neon-cyan fw-bold text-uppercase" id="drawingMapName">MAPA</span>
+                            <div class="d-flex align-items-center gap-2 border-start border-secondary ps-3">
+                                <label class="small text-white-50">Kolor:</label>
+                                <input type="color" class="form-control form-control-color bg-transparent border-0 p-0" id="drawingColor" value="#00f3ff">
                             </div>
                         </div>
-
-                        <div>
-                            <button class="btn btn-sm btn-outline-secondary me-2" onclick="backToSelect()">
-                                <i class="fas fa-arrow-left me-1"></i> Wróć
-                            </button>
-                        </div>
+                        <button class="btn btn-sm btn-outline-light" onclick="backToSelect()">WRÓĆ</button>
                     </div>
 
-                    <div id="editorMap" style="flex-grow: 1; width: 100%; background: #000;"></div>
+                    <div id="editorMap" class="flex-grow-1 bg-black"></div>
 
-                    <div class="p-3 border-top border-secondary text-end" style="background: #1a1a20;">
-                        <button class="btn btn-cyber-primary px-4" onclick="finishAndInsert()">
+                    <div class="p-3 bg-dark border-top border-secondary text-end">
+                        <button class="btn btn-neon-primary px-4" onclick="finishAndInsert()">
                             <i class="fas fa-check me-2"></i> ZATWIERDŹ I WSTAW
                         </button>
                     </div>
@@ -358,27 +192,33 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-
     <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
 
     <script>
+        // --- UPLOAD OKŁADKI ---
         function previewFile() {
             const previewContainer = document.getElementById('imagePreviewContainer');
             const previewImage = document.getElementById('imagePreview');
+            const placeholder = document.getElementById('uploadPlaceholder');
             const fileInput = document.getElementById('coverImageInput');
             const file = fileInput.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) { previewImage.src = e.target.result; previewContainer.classList.remove('d-none'); }
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewContainer.classList.remove('d-none');
+                    placeholder.classList.add('d-none');
+                }
                 reader.readAsDataURL(file);
             }
         }
         function clearImage() {
             document.getElementById('coverImageInput').value = "";
             document.getElementById('imagePreviewContainer').classList.add('d-none');
+            document.getElementById('uploadPlaceholder').classList.remove('d-none');
         }
 
-        // Pomocnik do naprawiania ścieżek URL
+        // --- URL FIX ---
         function fixUrl(url) {
             if (!url) return '';
             if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -386,6 +226,7 @@
             return url;
         }
 
+        // --- TINYMCE INIT ---
         document.addEventListener("DOMContentLoaded", function() {
             tinymce.init({
                 selector: '#guide-editor',
@@ -429,7 +270,7 @@
             });
         });
 
-        // --- MAPY ---
+        // --- ZMIENNE GLOBALNE MAPY ---
         var gameId = @Model.IgdbGameId;
         var editorMap = null;
         var drawnItems = null;
@@ -437,6 +278,7 @@
         var screenshoter = null;
         var editingNode = null;
 
+        // --- LOGIKA MODALA ---
         function resetModal() {
             editingNode = null;
             $('#step-select-map').removeClass('d-none');
@@ -444,54 +286,26 @@
             loadMaps();
         }
 
-        function editExistingMap(imgNode) {
-            editingNode = imgNode;
-            var originSrc = imgNode.getAttribute('data-origin-src');
-            var mapName = imgNode.getAttribute('data-map-name');
-            var geoJsonStr = imgNode.getAttribute('data-geojson');
-
-            if (!originSrc) {
-                alert("Błąd: Nie można odczytać źródła mapy.");
-                return;
-            }
-
-            currentMapData = { url: fixUrl(originSrc), name: mapName };
-
-            var modal = new bootstrap.Modal(document.getElementById('mapsModal'));
-            modal.show();
-
-            $('#step-select-map').addClass('d-none');
-            $('#step-draw-map').removeClass('d-none');
-            $('#drawingMapName').text(mapName);
-
-            setTimeout(function() {
-                initEditorMap(geoJsonStr);
-            }, 300);
-        }
-
+        // --- LISTA MAP ---
         function loadMaps() {
             var search = $('#mapSearch').val();
             $.get('/Maps/GetMapsForGame', { gameId: gameId, searchString: search }, function (data) {
                 var container = $('#mapsListContainer');
                 container.empty();
                 if (data.length === 0) {
-                    container.html('<div class="col-12 text-center text-muted py-5">Brak map w bazie. Dodaj pierwszą!</div>');
+                    container.html('<div class="col-12 text-center text-muted py-4">Brak map w bazie. Dodaj pierwszą!</div>');
                     return;
                 }
                 data.forEach(function (map) {
                     var safeUrl = fixUrl(map.imageUrl);
                     var html = `
                         <div class="col">
-                            <div class="card h-100 map-card-cyber shadow-sm"
-                                 onclick="startEditingMap('${safeUrl}', '${map.name}')">
-                                <div style="height: 140px; overflow: hidden; position: relative;">
-                                    <img src="${safeUrl}" class="card-img-top w-100 h-100" style="object-fit: cover;">
+                            <div class="card bg-dark border-secondary h-100 map-card-hover" style="cursor:pointer; overflow:hidden;" onclick="startEditingMap('${safeUrl}', '${map.name}')">
+                                <div style="height: 120px;">
+                                    <img src="${safeUrl}" class="w-100 h-100" style="object-fit: cover; opacity: 0.8;">
                                 </div>
-                                <div class="card-body p-2 text-center bg-dark">
-                                    <span class="fw-bold small text-white">${map.name}</span>
-                                </div>
-                                <div class="map-card-footer p-1 text-center">
-                                    <small><i class="fas fa-mouse-pointer"></i> WYBIERZ</small>
+                                <div class="card-footer p-2 bg-black border-top border-secondary text-center">
+                                    <small class="text-white text-uppercase fw-bold">${map.name}</small>
                                 </div>
                             </div>
                         </div>
@@ -502,6 +316,7 @@
         }
         function filterMaps() { loadMaps(); }
 
+        // --- UPLOAD MAPY ---
         $('#uploadMapForm').on('submit', function (e) {
             e.preventDefault();
             var formData = new FormData();
@@ -515,6 +330,7 @@
             });
         });
 
+        // --- START EDYCJI ---
         function startEditingMap(url, name) {
             currentMapData = { url: url, name: name };
             $('#step-select-map').addClass('d-none');
@@ -523,11 +339,32 @@
             setTimeout(function() { initEditorMap(null); }, 300);
         }
 
+        // --- EDYCJA ISTNIEJĄCEJ W TREŚCI ---
+        function editExistingMap(imgNode) {
+            editingNode = imgNode;
+            var originSrc = imgNode.getAttribute('data-origin-src');
+            var mapName = imgNode.getAttribute('data-map-name');
+            var geoJsonStr = imgNode.getAttribute('data-geojson');
+
+            if (!originSrc) { alert("Błąd: Nie można odczytać źródła mapy."); return; }
+
+            currentMapData = { url: fixUrl(originSrc), name: mapName };
+            var modal = new bootstrap.Modal(document.getElementById('mapsModal'));
+            modal.show();
+
+            $('#step-select-map').addClass('d-none');
+            $('#step-draw-map').removeClass('d-none');
+            $('#drawingMapName').text(mapName);
+
+            setTimeout(function() { initEditorMap(geoJsonStr); }, 300);
+        }
+
         function backToSelect() {
             $('#step-draw-map').addClass('d-none');
             $('#step-select-map').removeClass('d-none');
         }
 
+        // --- LEAFLET INIT ---
         function getPinIcon(color) {
             return L.divIcon({
                 className: 'custom-pin-icon',
@@ -539,35 +376,24 @@
         }
 
         function initEditorMap(initialGeoJson) {
-            if (editorMap) {
-                editorMap.remove();
-                editorMap = null;
-            }
+            if (editorMap) { editorMap.remove(); editorMap = null; }
             editorMap = L.map('editorMap', {
-                crs: L.CRS.Simple,
-                minZoom: -2, maxZoom: 4, zoomSnap: 0.25,
-                preferCanvas: true
+                crs: L.CRS.Simple, minZoom: -2, maxZoom: 4, zoomSnap: 0.25, preferCanvas: true
             });
 
-            screenshoter = L.simpleMapScreenshoter({
-                hidden: true,
-                mimeType: 'image/png'
-            }).addTo(editorMap);
+            screenshoter = L.simpleMapScreenshoter({ hidden: true, mimeType: 'image/png' }).addTo(editorMap);
 
             var img = new Image();
             img.src = currentMapData.url;
             img.onload = function() {
-                var w = this.width;
-                var h = this.height;
+                var w = this.width; var h = this.height;
                 var southWest = editorMap.unproject([0, h], editorMap.getMaxZoom() - 1);
                 var northEast = editorMap.unproject([w, 0], editorMap.getMaxZoom() - 1);
                 var bounds = new L.LatLngBounds(southWest, northEast);
 
                 L.imageOverlay(currentMapData.url, bounds).addTo(editorMap);
                 editorMap.fitBounds(bounds);
-
-                var fitZoom = editorMap.getBoundsZoom(bounds);
-                editorMap.setMinZoom(fitZoom);
+                editorMap.setMinZoom(editorMap.getBoundsZoom(bounds));
                 editorMap.setMaxBounds(bounds);
 
                 drawnItems = new L.FeatureGroup();
@@ -588,13 +414,10 @@
                                 return { color: color, fillColor: color, fillOpacity: 0.5, weight: 4 };
                             },
                             onEachFeature: function (feature, layer) {
-                                layer.feature = feature;
-                                drawnItems.addLayer(layer);
+                                layer.feature = feature; drawnItems.addLayer(layer);
                             }
                         });
-                    } catch (e) {
-                        console.error("Błąd ładowania GeoJSON: ", e);
-                    }
+                    } catch (e) { console.error("Błąd GeoJSON: ", e); }
                 }
 
                 var drawControl = new L.Control.Draw({
@@ -602,9 +425,7 @@
                         polyline: { shapeOptions: { weight: 4 } },
                         polygon: { shapeOptions: { weight: 2 } },
                         rectangle: { shapeOptions: { weight: 2 } },
-                        circle: false,
-                        circlemarker: false,
-                        marker: true
+                        circle: false, circlemarker: false, marker: true
                     },
                     edit: { featureGroup: drawnItems }
                 });
@@ -620,14 +441,11 @@
                         layer.setIcon(getPinIcon(color));
                         note = prompt("Podaj opis dla tego punktu (opcjonalnie):", "");
                         if(note) layer.bindPopup(note);
-                    }
-                    else if (layer.setStyle) {
+                    } else if (layer.setStyle) {
                         layer.setStyle({ color: color, fillColor: color, fillOpacity: 0.5 });
                     }
 
-                    if (!layer.feature) {
-                        layer.feature = layer.toGeoJSON();
-                    }
+                    if (!layer.feature) { layer.feature = layer.toGeoJSON(); }
                     layer.feature.properties = layer.feature.properties || {};
                     layer.feature.properties.color = color;
                     layer.feature.properties.note = note;
@@ -637,6 +455,7 @@
             };
         }
 
+        // --- ZAPIS I WSTAWIANIE ---
         function finishAndInsert() {
             var geoJsonData = drawnItems.toGeoJSON();
             var jsonString = JSON.stringify(geoJsonData);
@@ -647,20 +466,8 @@
                 reader.readAsDataURL(blob);
                 reader.onloadend = function() {
                     var base64data = reader.result;
-
-                    var imgHtml = `<img src="${base64data}"
-                                     data-origin-src="${currentMapData.url}"
-                                     data-geojson="${safeJson}"
-                                     data-map-name="${currentMapData.name}"
-                                     class="img-fluid rounded border border-secondary interactive-map-source"
-                                     style="max-width: 100%; height: auto; display: block; margin: 0 auto; box-shadow: 0 0 10px rgba(0,243,255,0.3);" />`;
-
-                    var wrapperHtml = `
-                        <div class="interactive-map-wrapper my-3 text-center">
-                            ${imgHtml}
-                        </div>
-                        <p>&nbsp;</p>
-                    `;
+                    var imgHtml = `<img src="${base64data}" data-origin-src="${currentMapData.url}" data-geojson="${safeJson}" data-map-name="${currentMapData.name}" class="img-fluid rounded border border-secondary interactive-map-source" style="max-width: 100%; height: auto; display: block; margin: 0 auto; box-shadow: 0 0 10px rgba(0,243,255,0.3);" />`;
+                    var wrapperHtml = `<div class="interactive-map-wrapper my-3 text-center">${imgHtml}</div><p>&nbsp;</p>`;
 
                     if (editingNode) {
                         tinymce.activeEditor.selection.select(editingNode);
@@ -673,12 +480,11 @@
                     var modal = bootstrap.Modal.getInstance(modalEl);
                     modal.hide();
                 }
-            }).catch(e => {
-               alert('Błąd generowania podglądu: ' + e);
-            });
+            }).catch(e => { alert('Błąd generowania podglądu: ' + e); });
         }
     </script>
 
+    @* Style dla mapy *@
     <style>
         .custom-pin-icon {
             background: transparent !important;
@@ -690,10 +496,14 @@
             margin-top: -42px !important;
         }
 
-        .leaflet-marker-icon.leaflet-edit-marker-selected {
-            border: 2px dashed rgba(0, 0, 0, 0.5);
-            border-radius: 4px;
-            box-sizing: content-box;
+        .map-card-hover:hover {
+            border-color: var(--neon-cyan) !important;
+            transform: translateY(-2px);
+            transition: 0.2s;
         }
+
+            .map-card-hover:hover img {
+                opacity: 1 !important;
+            }
     </style>
 }

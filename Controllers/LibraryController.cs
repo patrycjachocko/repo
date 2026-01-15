@@ -425,16 +425,92 @@ namespace praca_dyplomowa_zesp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ClearLibrary()
+        public async Task<IActionResult> ClearLibrary(string? searchString, string statusFilter = "all")
         {
             var currentUserId = GetCurrentUserId();
-            var userGames = await _context.GamesInLibraries.Where(g => g.UserId == currentUserId).ToListAsync();
-            if (!userGames.Any()) { TempData["ErrorMessage"] = "Biblioteka pusta."; return RedirectToAction(nameof(Index)); }
-            var userAchievements = await _context.UserAchievements.Where(ua => ua.UserId == currentUserId).ToListAsync();
+
+            // 1. Pobieramy gry użytkownika (na razie zapytanie, jeszcze nie wykonane w bazie)
+            var query = _context.GamesInLibraries
+                .Where(g => g.UserId == currentUserId)
+                .AsQueryable();
+
+            // 2. Filtrowanie po statusie (W bazie danych)
+            if (statusFilter == "completed") query = query.Where(g => g.CurrentUserStoryProgressPercent == 100);
+            else if (statusFilter == "playing") query = query.Where(g => g.CurrentUserStoryProgressPercent > 0 && g.CurrentUserStoryProgressPercent < 100);
+            else if (statusFilter == "toplay") query = query.Where(g => g.CurrentUserStoryProgressPercent == 0);
+
+            // Lista gier do usunięcia
+            List<GameInLibrary> gamesToDelete = new List<GameInLibrary>();
+
+            // 3. Filtrowanie po nazwie (Wymaga API, bo baza nie ma nazw)
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                // Musimy pobrać wstępnie przefiltrowaną listę z bazy, żeby sprawdzić nazwy w API
+                var potentialGames = await query.ToListAsync();
+                var allIgdbIds = potentialGames.Select(g => g.IgdbGameId).Distinct().ToList();
+                var allApiGames = new List<ApiGame>();
+
+                // Pobieramy nazwy z API w paczkach po 50 (tak jak w Index)
+                for (int i = 0; i < allIgdbIds.Count; i += 50)
+                {
+                    var batchIds = allIgdbIds.Skip(i).Take(50).ToList();
+                    if (!batchIds.Any()) continue;
+
+                    var queryApi = $"fields name; where id = ({string.Join(",", batchIds)}); limit 50;";
+                    try
+                    {
+                        var json = await _igdbClient.ApiRequestAsync("games", queryApi);
+                        if (!string.IsNullOrEmpty(json))
+                        {
+                            var chunk = JsonConvert.DeserializeObject<List<ApiGame>>(json);
+                            if (chunk != null) allApiGames.AddRange(chunk);
+                        }
+                    }
+                    catch { /* Ignoruj błędy API przy usuwaniu */ }
+                }
+
+                // Filtrujemy listę gier do usunięcia, sprawdzając czy nazwa z API zawiera szukaną frazę
+                // Używamy IGDB ID do powiązania
+                gamesToDelete = potentialGames.Where(dbGame =>
+                {
+                    var apiInfo = allApiGames.FirstOrDefault(a => a.Id == dbGame.IgdbGameId);
+                    var gameName = apiInfo?.Name ?? "";
+                    return gameName.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+                }).ToList();
+            }
+            else
+            {
+                // Jeśli nie ma wyszukiwania tekstowego, usuwamy wszystko co pasuje do statusu
+                gamesToDelete = await query.ToListAsync();
+            }
+
+            if (!gamesToDelete.Any())
+            {
+                TempData["ErrorMessage"] = "Nie znaleziono gier do usunięcia wg podanych kryteriów.";
+                return RedirectToAction(nameof(Index), new { searchString, statusFilter });
+            }
+
+            // 4. Usuwanie powiązanych osiągnięć
+            var gamesIds = gamesToDelete.Select(g => g.IgdbGameId).ToList();
+            var userAchievements = await _context.UserAchievements
+                .Where(ua => ua.UserId == currentUserId && gamesIds.Contains(ua.IgdbGameId))
+                .ToListAsync();
+
+            // 5. Usuwanie powiązanych zadań ToDo
+            var dbIds = gamesToDelete.Select(g => g.Id).ToList();
+            var todoItems = await _context.ToDoItems
+                .Where(t => dbIds.Contains(t.GameInLibraryId))
+                .ToListAsync();
+
+            _context.ToDoItems.RemoveRange(todoItems);
             _context.UserAchievements.RemoveRange(userAchievements);
-            _context.GamesInLibraries.RemoveRange(userGames);
+            _context.GamesInLibraries.RemoveRange(gamesToDelete);
+
             await _context.SaveChangesAsync();
-            TempData["StatusMessage"] = "Wyczyszczono bibliotekę.";
+
+            TempData["StatusMessage"] = $"Usunięto {gamesToDelete.Count} gier z biblioteki.";
+
+            // Resetujemy filtry po usunięciu, żeby wrócić do czystego widoku
             return RedirectToAction(nameof(Index));
         }
 

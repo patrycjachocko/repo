@@ -15,7 +15,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Games
         public long IgdbGameId { get; set; } // ID gry z IGDB
 
         [Required(ErrorMessage = "Treść recenzji jest wymagana")]
-        [StringLength(2000, ErrorMessage = "Recenzja może mieć maksymalnie 2000 znaków")]
+        [StringLength(3000, ErrorMessage = "Recenzja może mieć maksymalnie 2000 znaków")]
         public string Content { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;

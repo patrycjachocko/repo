@@ -10,785 +10,321 @@
 
     var user = await UserManager.GetUserAsync(User);
     var currentUserId = user?.Id ?? Guid.Empty;
+
+    string currentSort = ViewData["CurrentSort"] as string;
+    string currentSortText = currentSort switch
+    {
+        "rating_desc" => "Najlepiej oceniane",
+        "mine" => "Moje poradniki",
+        _ => "Najnowsze"
+    };
 }
 
-<style>
-    /* --- GŁÓWNY STYL (Cyberpunk) --- */
-    :root {
-        --neon-blue: #00f3ff;
-        --neon-pink: #ff0099;
-        --neon-green: #00ff9d;
-        --neon-red: #ff3333;
-        --dark-bg: #0b0b0e;
-        --panel-bg: #131318;
-    }
-
-    /* Nagłówek Gry */
-    .game-header {
-        position: relative;
-        padding: 60px 20px;
-        background: radial-gradient(ellipse at center, rgba(128, 0, 255, 0.15) 0%, rgba(11, 11, 14, 0) 60%);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        margin-bottom: 50px;
-        text-align: center;
-    }
-
-    .game-title {
-        font-size: 3.5rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 4px;
-        background: linear-gradient(90deg, #fff, var(--neon-pink), var(--neon-blue));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 40px rgba(255, 102, 196, 0.4);
-        margin-bottom: 15px;
-    }
-
-    /* Karta Poradnika (Baza) */
-    .guide-card {
-        background: #131318;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        height: 100%;
-        position: relative;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-
-        .guide-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
-            border-color: var(--neon-pink);
-        }
-
-    /* --- PRZYWRÓCONE KOLORY KART (SPECYFICZNE STATUSY) --- */
-    .guide-card-draft {
-        opacity: 0.9;
-        border: 2px dashed #adb5bd !important;
-        background-color: #212529 !important;
-    }
-
-        .guide-card-draft:hover {
-            opacity: 1;
-            border-color: #fff !important;
-        }
-
-    .guide-card-rejected {
-        opacity: 0.9;
-        border: 2px dashed #6f42c1 !important;
-        background-color: #2a2035 !important;
-    }
-
-        .guide-card-rejected:hover {
-            opacity: 1;
-            border-color: #bc13fe !important;
-        }
-
-    .guide-card-pending {
-        opacity: 0.9;
-        border: 2px dashed #ffc107 !important;
-        background-color: #2b2505 !important;
-    }
-
-        .guide-card-pending:hover {
-            opacity: 1;
-            border-color: #ffca2c !important;
-        }
-
-    .guide-card-deleted {
-        opacity: 0.8;
-        border: 2px dashed #dc3545 !important;
-        background-color: #2c0b0e !important;
-    }
-
-        .guide-card-deleted:hover {
-            opacity: 1;
-            border-color: #ff3366 !important;
-        }
-
-
-    /* --- BADGE STATUSÓW --- */
-    .status-badge {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        color: #fff;
-        font-weight: bold;
-        padding: 5px 12px;
-        border-radius: 20px;
-        z-index: 10;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        font-size: 0.85rem;
-    }
-
-    .badge-pending {
-        background-color: #ffc107;
-        color: #000;
-    }
-
-    .badge-deleted {
-        background-color: #dc3545;
-    }
-
-    .badge-draft {
-        background-color: #adb5bd;
-        color: #212529;
-    }
-
-    .badge-rejected {
-        background-color: #6f42c1;
-    }
-
-    /* Obrazek */
-    .guide-img-container {
-        height: 180px;
-        position: relative;
-        overflow: hidden;
-        background: #000;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .guide-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.6s ease;
-        opacity: 0.9;
-    }
-
-    .guide-card:hover .guide-img {
-        transform: scale(1.1);
-        opacity: 1;
-    }
-
-    .rating-badge {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: rgba(0,0,0,0.8);
-        border: 1px solid #ffc107;
-        color: #ffc107;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 0.8rem;
-        backdrop-filter: blur(4px);
-    }
-
-    /* Treść karty */
-    .guide-body {
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        height: calc(100% - 180px);
-    }
-
-    .guide-title {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #fff;
-        margin-bottom: 8px;
-        line-height: 1.3;
-    }
-
-    .guide-meta {
-        font-size: 0.75rem;
-        color: #888;
-        margin-bottom: 15px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .guide-desc {
-        font-size: 0.9rem;
-        color: #aaa;
-        flex-grow: 1;
-        margin-bottom: 20px;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    /* PRZYCISKI W KARTACH */
-    .btn-card-action {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ddd;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        padding: 8px 15px;
-        transition: all 0.2s;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        cursor: pointer;
-    }
-
-        .btn-card-action:hover {
-            background: #fff;
-            color: #000;
-            border-color: #fff;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-        }
-
-    .btn-card-edit {
-        background: rgba(255, 193, 7, 0.15);
-        color: #ffc107;
-        border-color: rgba(255, 193, 7, 0.4);
-    }
-
-        .btn-card-edit:hover {
-            background: #ffc107;
-            color: #000;
-        }
-
-    .btn-card-delete {
-        background: rgba(220, 53, 69, 0.15);
-        color: #dc3545;
-        border-color: rgba(220, 53, 69, 0.4);
-    }
-
-        .btn-card-delete:hover {
-            background: #dc3545;
-            color: #fff;
-        }
-
-    /* --- POPRAWIONE BUTTONY ADMINA --- */
-    .btn-admin-icon {
-        width: 38px !important; /* Wymuszona szerokość */
-        height: 38px !important; /* Wymuszona wysokość */
-        padding: 0 !important; /* Reset paddingu, żeby tekst go nie rozpychał */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-width: 38px;
-    }
-
-    /* Alert Box */
-    .card-alert-box {
-        background: rgba(40, 40, 45, 0.95);
-        border: 1px solid;
-        border-radius: 8px;
-        padding: 8px;
-        margin-bottom: 15px;
-        font-size: 0.8rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        font-weight: 600;
-    }
-
-    .alert-rejected {
-        border-color: #ff3366;
-        color: #ff3366;
-    }
-
-    /* --- PANEL TIPÓW --- */
-    .tips-container {
-        background: #131318;
-        border: 1px solid rgba(255,255,255,0.05);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-
-    .tip-card {
-        background: #1a1a20;
-        border-left: 3px solid var(--neon-blue);
-        border-radius: 6px;
-        padding: 12px 15px;
-        margin-bottom: 12px;
-        transition: all 0.2s;
-    }
-
-        .tip-card:hover {
-            background: #222228;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
-        }
-
-    .tip-content {
-        font-size: 0.9rem;
-        color: #e0e0e0;
-        margin-bottom: 8px;
-        line-height: 1.4;
-    }
-
-    .btn-add-tip-cyber {
-        background: transparent;
-        border: 2px solid var(--neon-green);
-        color: var(--neon-green);
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s;
-        box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
-    }
-
-        .btn-add-tip-cyber:hover {
-            background: var(--neon-green);
-            color: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 157, 0.6);
-            transform: rotate(90deg);
-        }
-
-    /* --- STYLE FILTRÓW --- */
-    .filter-panel {
-        background: rgba(13, 13, 16, 0.8);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 243, 255, 0.15);
-        box-shadow: 0 0 20px rgba(0, 243, 255, 0.05);
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 40px;
-    }
-
-    .input-group-cyber {
-        background: #000;
-        border: 1px solid #333;
-        border-radius: 6px;
-        overflow: hidden;
-        transition: all 0.3s;
-    }
-
-        .input-group-cyber:focus-within {
-            border-color: var(--neon-blue);
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
-        }
-
-    .input-group-text-cyber {
-        background: transparent;
-        border: none;
-        color: var(--neon-blue);
-    }
-
-    .form-control-cyber {
-        background: transparent;
-        border: none;
-        color: #fff;
-        padding: 12px;
-    }
-
-        .form-control-cyber:focus {
-            background: transparent;
-            box-shadow: none;
-            color: #fff;
-        }
-
-        .form-control-cyber::placeholder {
-            color: #666;
-        }
-
-    .select-cyber-wrapper {
-        position: relative;
-    }
-
-        .select-cyber-wrapper i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--neon-blue);
-            z-index: 2;
-            pointer-events: none;
-        }
-
-    .form-select-cyber {
-        background-color: #000;
-        border: 1px solid #333;
-        color: #ddd;
-        padding-left: 40px;
-        padding-top: 12px;
-        padding-bottom: 12px;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-
-        .form-select-cyber:focus {
-            background-color: #050505;
-            border-color: var(--neon-blue);
-            color: #fff;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
-        }
-
-    .btn-search-cyber {
-        background: linear-gradient(135deg, #b000b0, #7000ff);
-        border: none;
-        color: #fff;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        padding: 12px;
-        transition: all 0.3s;
-        box-shadow: 0 4px 15px rgba(112, 0, 255, 0.4);
-    }
-
-        .btn-search-cyber:hover {
-            background: linear-gradient(135deg, #d400d4, #8a2be2);
-            box-shadow: 0 0 25px rgba(255, 0, 153, 0.6);
-            transform: scale(1.02);
-            color: #fff;
-        }
-
-    /* --- STYLE MODALI --- */
-    .modal-content-cyber {
-        background-color: var(--panel-bg);
-        border: 1px solid var(--neon-blue);
-        box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
-        color: #fff;
-    }
-
-        .modal-content-cyber .modal-header, .modal-content-cyber .modal-footer {
-            border-color: rgba(0, 243, 255, 0.3);
-        }
-
-        .modal-content-cyber .modal-title {
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--neon-blue);
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
-        }
-
-    /* MODAL DELETE - CZERWONY */
-    .modal-content-cyber-danger {
-        background-color: var(--panel-bg);
-        border: 1px solid var(--neon-red);
-        box-shadow: 0 0 25px rgba(255, 51, 51, 0.2);
-        color: #fff;
-    }
-
-        .modal-content-cyber-danger .modal-header, .modal-content-cyber-danger .modal-footer {
-            border-color: rgba(255, 51, 51, 0.3);
-        }
-
-        .modal-content-cyber-danger .modal-title {
-            color: var(--neon-red);
-            text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
-        }
-
-    /* NOWA IKONA W MODALU - PULSUJĄCA */
-    .modal-icon-danger {
-        color: var(--neon-red);
-        font-size: 4.5rem;
-        text-shadow: 0 0 25px rgba(255, 51, 51, 0.9);
-        margin-bottom: 20px;
-        animation: pulse-red 2s infinite;
-    }
-
-    @@keyframes pulse-red {
-        0% {
-            text-shadow: 0 0 20px rgba(255, 51, 51, 0.7);
-            transform: scale(1);
-        }
-
-        50% {
-            text-shadow: 0 0 40px rgba(255, 51, 51, 1);
-            transform: scale(1.1);
-        }
-
-        100% {
-            text-shadow: 0 0 20px rgba(255, 51, 51, 0.7);
-            transform: scale(1);
-        }
-    }
-
-    .table-cyber {
-        color: #ccc;
-    }
-
-        .table-cyber th {
-            color: var(--neon-blue);
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            border-bottom: 1px solid var(--neon-blue);
-            letter-spacing: 1px;
-        }
-
-        .table-cyber td {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            vertical-align: middle;
-        }
-
-        .table-cyber tbody tr:hover {
-            background-color: rgba(0, 243, 255, 0.05);
-        }
-</style>
-
-<div class="container mt-4">
+<div class="container mt-1 main-container fade-in-up">
 
     @* --- NAGŁÓWEK --- *@
-    <div class="game-header">
-        <h1 class="game-title">@Model.GameName</h1>
-        <p class="text-muted text-uppercase" style="letter-spacing: 2px;">Baza wiedzy i poradników</p>
+    <div class="game-header-guides text-center mb-5">
+        <h1 class="text-neon-title" style="font-size: 3rem; margin-bottom: 0.5rem;">@Model.GameName</h1>
+        <p class="browse-subtitle" style="font-size: 1.2rem;">Baza wiedzy i poradników</p>
 
         <div class="d-flex justify-content-center gap-3 mt-4">
             @if (canManageMaps)
             {
-                <button type="button" class="btn btn-outline-info" style="border-color: var(--neon-blue); color: var(--neon-blue); box-shadow: 0 0 10px rgba(0,243,255,0.2);" onclick="openMapManager()">
-                    <i class="fas fa-map-marked-alt me-2"></i> Zarządzaj Mapami
+                <button type="button" class="btn btn-neon-cyan btn-with-text" onclick="openMapManager()">
+                    <i class="fas fa-map-marked-alt fs-5"></i> <span>ZARZĄDZAJ MAPAMI</span>
                 </button>
             }
 
             @if (User.Identity.IsAuthenticated)
             {
-                <a asp-action="Create" asp-route-gameId="@Model.IgdbGameId" class="btn btn-success fw-bold px-4" style="background: linear-gradient(45deg, #006633, #00ff9d); border: none; color: #000; box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);">
-                    <i class="fas fa-plus me-2"></i> Napisz Poradnik
+                <a asp-action="Create" asp-route-gameId="@Model.IgdbGameId" class="btn btn-neon-green btn-with-text">
+                    <i class="fas fa-plus fs-5"></i> <span>NAPISZ PORADNIK</span>
                 </a>
+
                 @if (Model.IsInLibrary)
                 {
-                    <button class="btn btn-dark border-success text-success disabled"><i class="fas fa-check me-2"></i> W bibliotece</button>
+                    <button class="btn btn-neon-primary disabled btn-with-text">
+                        <i class="fas fa-check fs-5"></i> <span>W BIBLIOTECE</span>
+                    </button>
                 }
                 else
                 {
                     <form asp-controller="Library" asp-action="Create" method="post" class="d-inline">
                         <input type="hidden" name="IgdbGameId" value="@Model.IgdbGameId" />
                         <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                        <button type="submit" class="btn btn-outline-primary"><i class="fas fa-folder-plus me-2"></i> Dodaj do biblioteki</button>
+                        <button type="submit" class="btn btn-neon-primary btn-with-text">
+                            <i class="fas fa-folder-plus fs-5"></i> <span>DODAJ DO BIBLIOTEKI</span>
+                        </button>
                     </form>
                 }
             }
             else
             {
-                <a asp-controller="Account" asp-action="Login" class="btn btn-outline-secondary">
-                    <i class="fas fa-sign-in-alt me-2"></i> Zaloguj się, aby tworzyć
+                <a asp-controller="Account" asp-action="Login" class="btn btn-ghost-cancel border border-secondary btn-with-text">
+                    <i class="fas fa-sign-in-alt fs-5"></i> <span>ZALOGUJ SIĘ</span>
                 </a>
             }
         </div>
     </div>
 
     @* --- FILTRY --- *@
-    <div class="filter-panel">
-        <form asp-action="Index" method="get" class="row g-3 align-items-stretch">
+    <div class="glass-panel mb-4 filter-container">
+        <form id="filterForm" asp-action="Index" method="get" class="row g-3 align-items-center">
             <input type="hidden" name="gameId" value="@Model.IgdbGameId" />
-            <div class="col-md-6">
-                <div class="input-group input-group-cyber h-100">
-                    <span class="input-group-text input-group-text-cyber ps-3"><i class="fas fa-search"></i></span>
-                    <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control form-control-cyber" placeholder="Czego szukasz, Samuraju?" />
+            <input type="hidden" name="sortOrder" id="hiddenSortOrder" value="@currentSort" />
+
+            <div class="col-md-8">
+                <div class="admin-search-merged mb-0 w-100">
+                    <div class="admin-search-merged-inner">
+                        <div class="form-floating flex-grow-1 h-100">
+                            <input type="text" name="searchString" value="@ViewData["CurrentFilter"]"
+                                   class="form-control h-100 border-0 bg-transparent text-white"
+                                   id="searchGuide" placeholder="Szukaj" style="box-shadow: none;">
+                            <label for="searchGuide">Czego szukasz, Samuraju?</label>
+                        </div>
+                        <button type="submit" class="btn-search-integrated h-100">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
+
             <div class="col-md-4">
-                <div class="select-cyber-wrapper h-100">
-                    <i class="fas fa-sort-amount-down"></i>
-                    <select name="sortOrder" class="form-select form-select-cyber h-100" onchange="this.form.submit()">
-                        <!option value="newest" @(ViewData["CurrentSort"] as string == "newest" ? "selected" : "")>Najnowsze</!option>
-                        <!option value="rating_desc" @(ViewData["CurrentSort"] as string == "rating_desc" ? "selected" : "")>Najlepiej oceniane</!option>
+                <div class="dropdown w-100">
+                    <div class="dropdown-toggle no-arrow" data-bs-toggle="dropdown" style="cursor:pointer; text-decoration: none;">
+                        <div class="admin-search-merged mb-0 w-100">
+                            <div class="admin-search-merged-inner">
+                                <div class="form-floating flex-grow-1 h-100">
+                                    <div class="form-control border-0 bg-transparent text-white h-100 text-truncate ps-3"
+                                         style="padding-top: 1.625rem; padding-bottom: 0.625rem; line-height: 1.5; box-shadow: none;">
+                                        @currentSortText
+                                    </div>
+                                    <label class="text-neon-purple" style="opacity:1; transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);">Sortowanie</label>
+                                </div>
+                                <div class="btn-search-integrated border-0 bg-transparent h-100 d-flex align-items-center justify-content-center pointer-events-none" style="width: 50px;">
+                                    <i class="bi bi-chevron-down text-neon-purple"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul class="dropdown-menu dropdown-menu-dark w-100 custom-drop">
+                        <li>
+                            <a class="dropdown-item text-neon-purple" href="#" onclick="submitSort('newest')">
+                                <i class="fas fa-clock me-2"></i> Najnowsze
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-warning" href="#" onclick="submitSort('rating_desc')">
+                                <i class="fas fa-star me-2"></i> Najlepiej oceniane
+                            </a>
+                        </li>
                         @if (User.Identity.IsAuthenticated)
                         {
-                            <!option value="mine" @(ViewData["CurrentSort"] as string == "mine" ? "selected" : "")>Moje poradniki</!option>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-neon-green" href="#" onclick="submitSort('mine')">
+                                    <i class="fas fa-user me-2"></i> Moje poradniki
+                                </a>
+                            </li>
                         }
-                    </select>
+                    </ul>
                 </div>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-search-cyber w-100 h-100">Szukaj</button>
             </div>
         </form>
     </div>
 
-    <div class="row">
-        @* --- LEWA KOLUMNA: PORADNIKI --- *@
-        <div class="col-lg-9">
-            @if (Model.Guides.Any())
-            {
-                <div class="row row-cols-1 row-cols-md-2 g-4">
-                    @foreach (var guide in Model.Guides)
-                    {
-                        var avgRating = guide.Rates != null && guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0;
-                        bool isDeleted = guide.IsDeleted;
-                        bool isDraft = guide.IsDraft;
-                        bool isRejected = guide.IsRejected;
-                        bool isPending = !guide.IsApproved && !isDraft && !isDeleted && !isRejected;
-                        bool canManage = User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName;
+    @* --- GŁÓWNY UKŁAD: PORADNIKI I TIPY --- *@
+    <div class="row guides-row-equal">
 
-                        string cardClass = "";
-                        string badgeLabel = "";
-                        string badgeClass = "";
-                        if (isDeleted) { cardClass = "guide-card-deleted"; badgeLabel = "Kosz"; badgeClass = "badge-deleted"; }
-                        else if (isDraft) { cardClass = "guide-card-draft"; badgeLabel = "Szkic"; badgeClass = "badge-draft"; }
-                        else if (isRejected) { cardClass = "guide-card-rejected"; badgeLabel = "Odrzucony"; badgeClass = "badge-rejected"; }
-                        else if (isPending) { cardClass = "guide-card-pending"; badgeLabel = "Weryfikacja"; badgeClass = "badge-pending"; }
+        @* --- LEWA KOLUMNA: PORADNIKI OPAKOWANE W PANEL --- *@
+        <div class="col-lg-9 d-flex flex-column">
+            <div class="guides-main-panel">
+                @if (Model.Guides.Any())
+                {
+                    <div class="row row-cols-1 row-cols-md-2 g-4">
+                        @foreach (var guide in Model.Guides)
+                        {
+                            var avgRating = guide.Rates != null && guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0;
+                            bool isDeleted = guide.IsDeleted;
+                            bool isDraft = guide.IsDraft;
+                            bool isRejected = guide.IsRejected;
+                            bool isPending = !guide.IsApproved && !isDraft && !isDeleted && !isRejected;
+                            bool canManage = User.IsInRole("Admin") || User.IsInRole("Moderator") || User.Identity.Name == guide.User?.UserName;
 
-                        <div class="col">
-                            <div class="guide-card @cardClass">
-                                @if (!string.IsNullOrEmpty(badgeLabel))
-                                {
-                                    <span class="status-badge @badgeClass">
-                                        @if (isDeleted)
-                                        {
-                                            <i class="fas fa-trash-alt me-1"></i>
-                                        }
-                                        else if (isDraft)
-                                        {
+                            string cardClass = "card-guide";
+                            string badgeLabel = "";
+                            string badgeClass = "";
 
-                                            <i class="fas fa-pencil-ruler me-1"></i>
-                                        }
-                                        else if (isRejected)
-                                        {
+                            if (isDeleted) { cardClass += " guide-card-deleted"; badgeLabel = "Kosz"; badgeClass = "badge-deleted"; }
+                            else if (isDraft) { cardClass += " guide-card-draft"; badgeLabel = "Szkic"; badgeClass = "badge-draft"; }
+                            else if (isRejected) { cardClass += " guide-card-rejected"; badgeLabel = "Do Poprawy"; badgeClass = "badge-rejected"; }
+                            else if (isPending) { cardClass += " guide-card-pending"; badgeLabel = "Weryfikacja"; badgeClass = "badge-pending"; }
 
-                                            <i class="fas fa-times-circle me-1"></i>
-                                        }
-                                        else if (isPending)
-                                        {
+                            // Logic: X (Permanent delete) for Draft/Rejected/Pending/Deleted. Trash can for Published.
+                            bool isDirectDelete = isDeleted || isDraft || isRejected || isPending;
 
-                                            <i class="fas fa-lock me-1"></i>
-                                        }
-                                        @badgeLabel
-                                    </span>
-                                }
-
-                                <div class="guide-img-container">
-                                    @if (guide.CoverImage != null)
+                            <div class="col">
+                                <div class="@cardClass">
+                                    @if (!string.IsNullOrEmpty(badgeLabel))
                                     {
-                                        <img src="data:@guide.CoverImageContentType;base64,@Convert.ToBase64String(guide.CoverImage)"
-                                             class="guide-img" style="@(isDraft || isRejected || isDeleted ? "filter: grayscale(100%);" : "")" alt="@guide.Title">
-                                    }
-                                    else
-                                    {
-                                        <div class="d-flex align-items-center justify-content-center h-100 bg-dark text-secondary">
-                                            <i class="fas fa-gamepad fa-3x opacity-25"></i>
-                                        </div>
-                                    }
-                                    <div class="rating-badge"><i class="fas fa-star me-1"></i>@avgRating.ToString("0.0")</div>
-                                </div>
+                                        <span class="guide-status-badge @badgeClass">
+                                            @if (isDeleted)
+                                            {
+                                                <i class="fas fa-trash-alt me-1"></i>
+                                            }
+                                            else if (isDraft)
+                                            {
 
-                                <div class="guide-body">
-                                    <h5 class="guide-title">@guide.Title</h5>
-                                    <div class="guide-meta">
-                                        @{
-                                            var guideRole = guide.User?.Role?.ToLower();
-                                            string authorClass = "text-white";
-                                            if (guideRole == "admin") authorClass = "text-danger fw-bold";
-                                            else if (guideRole == "moderator") authorClass = "text-success fw-bold";
-                                        }
-                                        <span>Autor: <span class="@authorClass">@guide.User?.UserName</span></span>
-                                        <span class="ms-2 opacity-50">| @guide.CreatedAt.ToString("dd.MM.yyyy")</span>
-                                    </div>
+                                                <i class="fas fa-pencil-ruler me-1"></i>
+                                            }
+                                            else if (isRejected)
+                                            {
 
-                                    <p class="guide-desc">@guide.Description</p>
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                            }
+                                            else if (isPending)
+                                            {
 
-                                    @if (isRejected && canManage)
-                                    {
-                                        <div class="card-alert-box alert-rejected"><i class="fas fa-exclamation-triangle"></i> Wymaga poprawy</div>
+                                                <i class="fas fa-lock me-1"></i>
+                                            }
+                                            @badgeLabel
+                                        </span>
                                     }
 
-                                    <div class="mt-auto d-flex gap-2">
-                                        <a asp-action="Details" asp-route-id="@guide.Id" class="btn-card-action flex-grow-1 stretched-link" style="z-index: 2;">
-                                            Czytaj <i class="fas fa-arrow-right ms-1"></i>
-                                        </a>
-
-                                        @if (canManage)
+                                    <div class="guide-img-container">
+                                        @if (guide.CoverImage != null)
                                         {
-                                            <div style="z-index: 3; position: relative;" class="d-flex gap-2">
-                                                @* EDYCJA - Dodano klasę btn-admin-icon *@
-                                                <a asp-action="Edit" asp-route-id="@guide.Id" class="btn-card-action btn-card-edit btn-admin-icon" title="Edytuj">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-
-                                                @if (isDeleted)
-                                                {
-                                                    @* TRWAŁE USUWANIE - Używamy Modala i klasy btn-admin-icon *@
-                                                    <button type="button" class="btn-card-action btn-card-delete btn-admin-icon"
-                                                            onclick="openDeletePermanentlyModal('@guide.Id', '@guide.Title')" title="Usuń trwale">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
-                                                }
-                                                else
-                                                {
-                                                    @* KOSZ - Używamy Modala i klasy btn-admin-icon *@
-                                                    <button type="button" class="btn-card-action btn-card-delete btn-admin-icon"
-                                                            onclick="openDeleteGuideModal('@guide.Id', '@guide.Title')" title="Kosz">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                }
+                                            <img src="data:@guide.CoverImageContentType;base64,@Convert.ToBase64String(guide.CoverImage)"
+                                                 class="guide-img" alt="@guide.Title">
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex align-items-center justify-content-center h-100 bg-dark text-secondary">
+                                                <i class="fas fa-gamepad fa-3x opacity-25"></i>
                                             </div>
                                         }
+                                        <div class="rating-badge rating-mid">
+                                            <i class="fas fa-star me-1"></i>@avgRating.ToString("0.0")
+                                        </div>
+                                    </div>
+
+                                    <div class="guide-body">
+                                        <h5 class="guide-title text-truncate">@guide.Title</h5>
+
+                                        <div class="guide-meta">
+                                            @{
+                                                var guideRole = guide.User?.Role?.ToLower();
+                                                string authorColor = "var(--neon-cyan)";
+                                                if (guideRole == "admin") authorColor = "var(--neon-red)";
+                                                else if (guideRole == "moderator") authorColor = "var(--neon-green)";
+                                            }
+                                            <span>Autor: <span style="color: @authorColor; font-weight: bold; text-shadow: 0 0 5px @authorColor;">@guide.User?.UserName</span></span>
+                                            <span class="ms-2 opacity-50">| @guide.CreatedAt.ToString("dd.MM.yyyy")</span>
+                                        </div>
+
+                                        <p class="guide-desc">@guide.Description</p>
+
+                                        <div class="mt-auto d-flex gap-2">
+                                            <a asp-action="Details" asp-route-id="@guide.Id" class="btn btn-sm btn-ghost-cancel border flex-grow-1 stretched-link position-relative" style="z-index: 2;">
+                                                CZYTAJ <i class="fas fa-arrow-right ms-1"></i>
+                                            </a>
+
+                                            @if (canManage)
+                                            {
+                                                <div style="z-index: 3; position: relative;" class="d-flex gap-2">
+
+                                                    @* Guzik Edycji *@
+                                                    <a asp-action="Edit" asp-route-id="@guide.Id" class="btn-action btn-glow-yellow" title="Edytuj">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+
+                                                    @* Guzik Usuwania *@
+                                                    <button type="button" class="btn-action btn-action-red border border-danger"
+                                                            onclick="@(isDirectDelete ? $"openDeletePermanentlyModal('{guide.Id}', '{guide.Title}')" : $"openDeleteGuideModal('{guide.Id}', '{guide.Title}')")"
+                                                            title="@(isDirectDelete ? "Usuń trwale" : "Przenieś do kosza")">
+                                                        <i class="fas @(isDirectDelete ? "fa-times" : "fa-trash")"></i>
+                                                    </button>
+
+                                                </div>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="text-center py-5 opacity-50">
-                    <i class="fas fa-file-alt fa-4x mb-3"></i>
-                    <h3>Brak poradników</h3>
-                    <p>Bądź pierwszy i podziel się wiedzą!</p>
-                </div>
-            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5 h-100 d-flex flex-column justify-content-center">
+                        <i class="fas fa-file-alt display-3 mb-3 d-block" style="color: var(--neon-purple); opacity: 0.3;"></i>
+                        <h3 class="text-white">Brak poradników</h3>
+                        <p class="text-muted">Bądź pierwszy i podziel się wiedzą z innymi graczami!</p>
+                    </div>
+                }
+            </div>
         </div>
 
         @* --- PRAWA KOLUMNA: TIPY --- *@
-        <div class="col-lg-3">
-            <div class="sticky-top pt-2" style="z-index: 1;">
-                <div class="tips-container">
+        <div class="col-lg-3 d-flex flex-column">
+            <div class="sticky-top-tips">
+                <div class="tips-panel">
                     <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary">
-                        <h5 class="mb-0 text-white fw-bold small text-uppercase" style="letter-spacing: 1px;">
-                            <i class="fas fa-bolt text-warning me-2"></i>Szybkie Tipy
-                        </h5>
-                        <button class="btn-add-tip-cyber" data-bs-toggle="modal" data-bs-target="#addTipModal" title="Dodaj wskazówkę">
+                        <h5 class="mb-0 text-white fw-bold small text-uppercase" style="letter-spacing: 1px;">Szybkie Tipy</h5>
+                        <button class="btn btn-action btn-action-green" style="width: 32px !important; height: 32px !important;" data-bs-toggle="modal" data-bs-target="#addTipModal" title="Dodaj wskazówkę">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
 
-                    @if (Model.Tips == null || !Model.Tips.Any())
-                    {
-                        <div class="text-center text-muted small py-4 opacity-50">Brak wskazówek.</div>
-                    }
-                    else
+                    @if (Model.Tips != null && Model.Tips.Any())
                     {
                         var sortedTips = Model.Tips.OrderByDescending(t => (t.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0) - (t.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0)).ThenByDescending(t => t.CreatedAt).ToList();
-                        <div class="d-flex flex-column gap-2">
+                        int tipCounter = 0;
+
+                        <div class="tips-container-content gap-2">
                             @foreach (var tip in sortedTips)
                             {
-                                int likes = tip.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0;
-                                int dislikes = tip.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0;
-                                int score = likes - dislikes;
+                                int score = (tip.Reactions?.Count(r => r.Type == ReactionType.Like) ?? 0) - (tip.Reactions?.Count(r => r.Type == ReactionType.Dislike) ?? 0);
                                 bool userLiked = currentUserId != Guid.Empty && (tip.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Like) ?? false);
                                 bool userDisliked = currentUserId != Guid.Empty && (tip.Reactions?.Any(r => r.UserId == currentUserId && r.Type == ReactionType.Dislike) ?? false);
                                 bool canEditTip = currentUserId != Guid.Empty && (tip.UserId == currentUserId || canManageMaps);
 
-                                <div class="tip-card">
-                                    <p class="tip-content" id="tip-content-@tip.Id">@tip.Content</p>
-                                    <div class="d-flex justify-content-between align-items-end mt-2 pt-2 border-top border-secondary border-opacity-25">
+                                var tipUserRole = tip.User?.Role?.ToLower();
+                                string tipNameColor = "var(--neon-cyan)";
+                                if (tipUserRole == "admin") tipNameColor = "var(--neon-red)";
+                                else if (tipUserRole == "moderator") tipNameColor = "var(--neon-green)";
+
+                                string accentColor = (tipCounter % 2 == 0) ? "var(--neon-cyan)" : "var(--neon-green)";
+                                tipCounter++;
+
+                                <div class="tip-card-item" style="border-left-color: @accentColor !important; box-shadow: -5px 0 15px color-mix(in srgb, @accentColor 10%, transparent);">
+                                    <p class="tip-content-text" id="tip-content-@tip.Id">@tip.Content</p>
+                                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25">
                                         <div class="d-flex align-items-center">
                                             @if (tip.User?.ProfilePicture != null)
                                             {
-                                                <img src="@Url.Action("GetAvatar", "Profile", new { id = tip.UserId })" class="rounded-circle me-2" style="width: 18px; height: 18px; object-fit: cover;" />
+                                                <img src="@Url.Action("GetAvatar", "Profile", new { id = tip.UserId })" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover; border: 1px solid @tipNameColor;" />
                                             }
-                                            <span class="text-muted small" style="font-size: 0.75rem;">@tip.User?.UserName</span>
+                                            <span class="small fw-bold" style="font-size: 0.8rem; color: @tipNameColor; text-shadow: 0 0 5px @tipNameColor;">@tip.User?.UserName</span>
                                         </div>
                                         <div class="d-flex gap-2 align-items-center">
                                             <form asp-action="ToggleTipReaction" method="post" class="d-inline">
-                                                <input type="hidden" name="tipId" value="@tip.Id" />
-                                                <input type="hidden" name="isUpvote" value="true" />
-                                                <button type="submit" class="btn btn-sm p-0 @(userLiked ? "text-success" : "text-muted")" style="border:none; background:none;"><i class="@(userLiked ? "fas" : "far") fa-thumbs-up"></i></button>
+                                                <input type="hidden" name="tipId" value="@tip.Id" /><input type="hidden" name="isUpvote" value="true" />
+                                                <button type="submit" class="btn-vote vote-up @(userLiked ? "active" : "")" style="width: 28px; height: 28px; font-size: 0.8rem;"><i class="@(userLiked ? "fas" : "far") fa-thumbs-up"></i></button>
                                             </form>
                                             <span class="small fw-bold @(score > 0 ? "text-success" : (score < 0 ? "text-danger" : "text-muted"))">@score</span>
                                             <form asp-action="ToggleTipReaction" method="post" class="d-inline">
-                                                <input type="hidden" name="tipId" value="@tip.Id" />
-                                                <input type="hidden" name="isUpvote" value="false" />
-                                                <button type="submit" class="btn btn-sm p-0 @(userDisliked ? "text-danger" : "text-muted")" style="border:none; background:none;"><i class="@(userDisliked ? "fas" : "far") fa-thumbs-down"></i></button>
+                                                <input type="hidden" name="tipId" value="@tip.Id" /><input type="hidden" name="isUpvote" value="false" />
+                                                <button type="submit" class="btn-vote vote-down @(userDisliked ? "active" : "")" style="width: 28px; height: 28px; font-size: 0.8rem;"><i class="@(userDisliked ? "fas" : "far") fa-thumbs-down"></i></button>
                                             </form>
                                             @if (canEditTip)
                                             {
                                                 <div class="dropdown ms-1">
                                                     <button class="btn btn-sm text-muted p-0" data-bs-toggle="dropdown" style="border:none; background:none;"><i class="fas fa-ellipsis-v"></i></button>
-                                                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow-sm">
-                                                        <li><a class="dropdown-item small" href="#" onclick="openEditTipModal(@tip.Id)">Edytuj</a></li>
-                                                        <li><a class="dropdown-item small text-danger" href="#" onclick="openDeleteTipModal(@tip.Id)">Usuń</a></li>
+                                                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark custom-drop">
+                                                        <li><a class="dropdown-item small text-warning" href="#" onclick="openEditTipModal(@tip.Id)"><i class="fas fa-pencil-alt me-2"></i> Edytuj</a></li>
+                                                        <li><a class="dropdown-item small text-danger" href="#" onclick="openDeleteTipModal(@tip.Id)"><i class="fas fa-trash me-2"></i> Usuń</a></li>
                                                     </ul>
                                                 </div>
                                             }
@@ -798,77 +334,170 @@
                             }
                         </div>
                     }
+                    else
+                    {
+                        <div class="tips-empty-state text-center opacity-50">
+                            <i class="fas fa-lightbulb mb-3 display-6" style="color: var(--neon-cyan);"></i>
+                            <div class="small">Brak wskazówek.</div>
+                            <div class="x-small text-muted mt-1" style="font-size: 0.7rem;">Kliknij +, aby dodać pierwszą!</div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-@* --- MODALE SYSTEMOWE --- *@
-<div class="modal fade" id="addTipModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white border-secondary"><div class="modal-header border-secondary"><h5 class="modal-title">Dodaj wskazówkę</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form asp-action="AddTip" method="post"><div class="modal-body"><input type="hidden" name="gameId" value="@Model.IgdbGameId" /><div class="mb-3"><label class="form-label">Treść</label><textarea name="content" class="form-control bg-secondary text-white border-0" rows="3" maxlength="300" required placeholder="Napisz coś mądrego..."></textarea></div></div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button><button type="submit" class="btn btn-success">Dodaj</button></div></form></div></div></div>
-<div class="modal fade" id="editTipModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white border-secondary"><div class="modal-header border-secondary"><h5 class="modal-title">Edytuj</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form asp-action="EditTip" method="post"><div class="modal-body"><input type="hidden" name="id" id="editTipId" /><textarea name="content" id="editTipContent" class="form-control bg-secondary text-white border-0" rows="3" required></textarea></div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button><button type="submit" class="btn btn-primary">Zapisz</button></div></form></div></div></div>
-<div class="modal fade" id="deleteTipModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white border-secondary"><div class="modal-header border-secondary"><h5 class="modal-title text-danger">Usuń</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Usunąć trwale?</p></div><div class="modal-footer border-secondary"><form asp-action="DeleteTip" method="post"><input type="hidden" name="id" id="deleteTipId" /><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button><button type="submit" class="btn btn-danger">Usuń</button></form></div></div></div></div>
+@* --- MODALE --- *@
 
-@* --- MODAL: DELETE GUIDE (KOSZ) --- *@
+@* ADD TIP MODAL (Purple Border) *@
+<div class="modal fade" id="addTipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        @* ZMIANA: Kolor fioletowy *@
+        <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-purple); box-shadow: 0 0 20px color-mix(in srgb, var(--neon-purple) 20%, transparent);">
+            <form asp-action="AddTip" method="post" class="d-flex flex-column">
+                <div class="modal-header border-0 position-relative justify-content-center pt-3 pb-0">
+                    <h5 class="modal-title text-white text-uppercase fw-bold text-center w-100 m-0 fs-6">Dodaj wskazówkę</h5>
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-white py-3">
+                    <input type="hidden" name="gameId" value="@Model.IgdbGameId" />
+                    <div class="form-floating">
+                        <textarea name="content" class="form-control form-control-tech" style="height: 80px; resize: none;" required placeholder="Napisz coś mądrego..." maxlength="1000"></textarea>
+                        <label>Treść wskazówki</label>
+                    </div>
+                    <div class="form-text text-end text-white-50 mt-1" style="font-size: 0.7rem;">Maks. 1000 znaków.</div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-3 pt-0 gap-2">
+                    <button type="button" class="btn btn-sm btn-ghost-cancel px-3" data-bs-dismiss="modal">Anuluj</button>
+                    @* ZMIANA: Guzik fioletowy *@
+                    <button type="submit" class="btn btn-sm btn-neon-primary px-3">Dodaj</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* EDIT TIP MODAL (Purple Border) *@
+<div class="modal fade" id="editTipModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        @* ZMIANA: Kolor fioletowy *@
+        <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-purple); box-shadow: 0 0 20px color-mix(in srgb, var(--neon-purple) 20%, transparent);">
+            <form asp-action="EditTip" method="post" class="d-flex flex-column">
+                <div class="modal-header border-0 position-relative justify-content-center pt-3 pb-0">
+                    <h5 class="modal-title text-white text-uppercase fw-bold text-center w-100 m-0 fs-6">Edytuj wskazówkę</h5>
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-white py-3">
+                    <input type="hidden" name="id" id="editTipId" />
+                    <div class="form-floating">
+                        @* ZMIANA: Dodano placeholder, resize:none, maxlength *@
+                        <textarea name="content" id="editTipContent" class="form-control form-control-tech" style="height: 80px; resize: none;" placeholder="Edytuj..." required maxlength="1000"></textarea>
+                        <label>Treść</label>
+                    </div>
+                    <div class="form-text text-end text-white-50 mt-1" style="font-size: 0.7rem;">Maks. 1000 znaków.</div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-3 pt-0 gap-2">
+                    <button type="button" class="btn btn-sm btn-ghost-cancel px-3" data-bs-dismiss="modal">Anuluj</button>
+                    @* ZMIANA: Guzik fioletowy *@
+                    <button type="submit" class="btn btn-sm btn-neon-primary px-3">Zapisz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* DELETE TIP MODAL (Red Border) *@
+<div class="modal fade" id="deleteTipModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-red); box-shadow: 0 0 30px rgba(255, 51, 51, 0.2);">
+            <form asp-action="DeleteTip" method="post">
+                <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
+                    <h5 class="modal-title text-neon-danger text-uppercase fw-bold text-center w-100 m-0">Usuń wskazówkę</h5>
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-white d-flex flex-column justify-content-center align-items-center text-center py-4">
+                    <i class="fas fa-trash-alt display-4 text-neon-danger mb-3 d-block"></i>
+                    <p class="fs-5 mb-1">Czy na pewno chcesz trwale usunąć tę wskazówkę?</p>
+                    <p class="text-muted small mb-0">Tej operacji nie można cofnąć.</p>
+                    <input type="hidden" name="id" id="deleteTipId" />
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
+                    <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-danger-custom px-4">Usuń</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* DELETE GUIDE TO TRASH (Red Border) *@
 <div class="modal fade" id="deleteGuideModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-cyber">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-trash me-2"></i>Przenieś do kosza</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <p class="mb-3 text-white-50">Czy chcesz przenieść ten poradnik do kosza?</p>
-                <h4 id="deleteGuideTitle" class="text-white fw-bold mb-0"></h4>
-            </div>
-            <div class="modal-footer justify-content-center border-top-0 pb-4">
-                <form asp-action="Delete" method="post">
+        <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-red); box-shadow: 0 0 20px color-mix(in srgb, var(--neon-red) 20%, transparent);">
+            <form asp-action="Delete" method="post">
+                <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
+                    <h5 class="modal-title text-neon-danger text-uppercase fw-bold text-center w-100 m-0"><i class="fas fa-trash me-2"></i> Do kosza</h5>
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-white text-center py-4">
+                    <p class="mb-3 text-muted">Czy chcesz przenieść ten poradnik do kosza?</p>
+                    <h4 id="deleteGuideTitle" class="text-white fw-bold mb-0"></h4>
                     <input type="hidden" name="id" id="deleteGuideId" />
-                    <button type="button" class="btn btn-secondary me-2 px-4" data-bs-dismiss="modal">Anuluj</button>
-                    <button type="submit" class="btn btn-warning px-4" style="color:#000; font-weight:bold;">
-                        <i class="fas fa-trash me-2"></i> Do kosza
-                    </button>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
+                    <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-danger-custom px-4">Przenieś</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-@* --- MODAL: PERMANENT DELETE (TRWAŁE USUWANIE) - POPRAWIONY IKONA --- *@
+@* DELETE GUIDE PERMANENTLY (Red Border) *@
 <div class="modal fade" id="deletePermanentlyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-cyber-danger">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-radiation me-2"></i>USUWANIE TRWAŁE</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                @* ZMIANA: NOWA KLASA modal-icon-danger *@
-                <i class="fas fa-exclamation-circle modal-icon-danger"></i>
-                <p class="mb-3 text-white-50">Tej operacji nie można cofnąć.</p>
-                <h4 id="deletePermTitle" class="text-white fw-bold mb-0"></h4>
-            </div>
-            <div class="modal-footer justify-content-center border-top-0 pb-4">
-                <form asp-action="DeletePermanently" method="post">
+        <div class="modal-content modal-neon modal-compact modal-danger-neon" style="border-color: var(--neon-red);">
+            <form asp-action="DeletePermanently" method="post">
+                <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
+                    <h5 class="modal-title text-neon-danger text-uppercase fw-bold text-center w-100 m-0"><i class="fas fa-radiation me-2"></i> Usuwanie trwale</h5>
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-white text-center py-4">
+                    <p class="mb-2 text-muted">Tej operacji nie można cofnąć.</p>
+                    <h4 id="deletePermTitle" class="fw-bold mb-0 text-white"></h4>
                     <input type="hidden" name="id" id="deletePermId" />
-                    <button type="button" class="btn btn-secondary me-2 px-4" data-bs-dismiss="modal">Anuluj</button>
-                    <button type="submit" class="btn btn-danger px-4 fw-bold" style="background: var(--neon-red); border: none; box-shadow: 0 0 15px rgba(255, 51, 51, 0.4);">
-                        <i class="fas fa-times me-2"></i> Usuń na zawsze
-                    </button>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
+                    <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-danger-custom px-4 fw-bold">Usuń na zawsze</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+@* MAP MANAGER (Cyan Border) *@
 @if (canManageMaps)
 {
     <div class="modal fade" id="mapManagerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content modal-content-cyber">
-                <div class="modal-header"><h5 class="modal-title"><i class="fas fa-network-wired me-2"></i>Zarządzanie Mapami</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body"><div class="table-responsive"><table class="table table-cyber align-middle mb-0"><thead><tr><th>Podgląd</th><th>Nazwa</th><th>Status</th><th>Akcja</th></tr></thead><tbody id="mapManagerList"></tbody></table></div></div>
-                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button></div>
+            <div class="modal-content modal-neon" style="border-color: var(--neon-cyan); box-shadow: 0 0 20px color-mix(in srgb, var(--neon-cyan) 20%, transparent);">
+                <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
+                    <h5 class="modal-title text-white text-uppercase fw-bold text-center w-100 m-0"><i class="fas fa-network-wired me-2"></i> Zarządzanie Mapami</h5>
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-4 d-block">
+                    <div class="table-responsive">
+                        <table class="table table-admin align-middle mb-0">
+                            <thead><tr><th>Podgląd</th><th>Nazwa</th><th>Akcja</th></tr></thead>
+                            <tbody id="mapManagerList"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4 pt-0">
+                    <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Zamknij</button>
+                </div>
             </div>
         </div>
     </div>
@@ -910,13 +539,12 @@
             $.get('/Maps/GetMapsForManager', { gameId: gameId }, function (data) {
                 var container = $('#mapManagerList');
                 container.empty();
-                if (data.length === 0) { container.html('<tr><td colspan="4" class="text-center py-3">Brak map.</td></tr>'); return; }
+                if (data.length === 0) { container.html('<tr><td colspan="3" class="text-center py-3">Brak map.</td></tr>'); return; }
                 data.forEach(function (map) {
-                    var statusBadge = map.isDeleted ? '<span class="badge bg-danger">Usunięta</span>' : '<span class="badge bg-success" style="background:#00ff9d !important; color:#000;">Aktywna</span>';
-                    var btnClass = map.isDeleted ? "btn-outline-success" : "btn-outline-danger";
+                    var btnClass = map.isDeleted ? "btn-action-green" : "btn-action-red";
                     var btnIcon = map.isDeleted ? "fa-trash-restore" : "fa-trash";
                     var rowClass = map.isDeleted ? "opacity-50" : "";
-                    var html = `<tr class="${rowClass}"><td><img src="${map.imageUrl}" class="rounded border border-secondary" style="width: 80px; height: 45px; object-fit: cover;"></td><td><div class="input-group input-group-sm"><input type="text" class="form-control form-control-cyber" value="${map.name}" id="map-name-${map.id}"><button class="btn btn-outline-info" style="border-color: var(--neon-blue); color: var(--neon-blue);" onclick="renameMap(${map.id})"><i class="fas fa-save"></i></button></div></td><td>${statusBadge}</td><td><button class="btn btn-sm ${btnClass}" onclick="toggleMapStatus(${map.id})"><i class="fas ${btnIcon}"></i></button></td></tr>`;
+                    var html = `<tr class="${rowClass}"><td><img src="${map.imageUrl}" class="rounded border border-secondary" style="width: 80px; height: 45px; object-fit: cover;"></td><td><div class="d-flex gap-2"><input type="text" class="form-control form-control-tech py-1" style="height:auto;" value="${map.name}" id="map-name-${map.id}"><button class="btn-action btn-action-purple" onclick="renameMap(${map.id})"><i class="fas fa-save"></i></button></div></td><td><button class="btn-action ${btnClass}" onclick="toggleMapStatus(${map.id})"><i class="fas ${btnIcon}"></i></button></td></tr>`;
                     container.append(html);
                 });
             });
@@ -928,6 +556,11 @@
         function toggleMapStatus(id) {
             if(!confirm("Zmienić status mapy?")) return;
             $.post('/Maps/ToggleMapStatus', { id: id }, function (res) { if (res.success) loadManagerMaps(); else alert("Błąd."); });
+        }
+
+        function submitSort(val) {
+            document.getElementById('hiddenSortOrder').value = val;
+            document.getElementById('filterForm').submit();
         }
     </script>
 }

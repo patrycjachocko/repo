@@ -6,362 +6,144 @@
 @{
     ViewData["Title"] = "Szczegóły zgłoszenia";
     var currentUser = await UserManager.GetUserAsync(User);
+
+    string GetAvatarBase64(User u)
+    {
+        if (u?.ProfilePicture != null && u.ProfilePicture.Length > 0)
+        {
+            var base64 = Convert.ToBase64String(u.ProfilePicture);
+            var type = u.ProfilePictureContentType ?? "image/jpeg";
+            return $"data:{type};base64,{base64}";
+        }
+        return "/img/default-avatar.png";
+    }
+
+    string currentUserAvatar = GetAvatarBase64(currentUser);
 }
 
-<style>
-    /* --- STYL CZATU (Cyberpunk Messenger) --- */
+@* --- KONTENER NA POWIADOMIENIA (ŚRODEK EKRANU) --- *@
+@* ZMIANA: top-50 start-50 translate-middle centruje element *@
+<div id="toast-container" class="position-fixed top-50 start-50 translate-middle p-3" style="z-index: 9999; min-width: 450px;"></div>
 
-    .chat-container {
-        display: flex;
-        flex-direction: column;
-        height: 70vh; /* Stała wysokość dla okna czatu */
-        background: rgba(22, 22, 28, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-        overflow: hidden;
-    }
+<div class="container mt-4 mb-5 main-container fade-in-up">
 
-    /* Nagłówek Czatu */
-    .chat-header {
-        padding: 20px;
-        background: rgba(30, 30, 35, 0.95);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    /* NOWE: Neonowa ikona biletu */
-    .ticket-icon-neon {
-        color: #00f3ff; /* Neonowy cyjan */
-        text-shadow: 0 0 10px rgba(0, 243, 255, 0.6); /* Poświata */
-        margin-right: 8px;
-        font-size: 1.1rem; /* Nieco większa niż tekst */
-    }
-
-    /* ZAKTUALIZOWANA KLASA: Wyrównanie ID i ikony */
-    .ticket-id {
-        font-size: 0.8rem;
-        color: #888;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        /* Dodajemy flexbox dla idealnego wyrównania */
-        display: flex;
-        align-items: center;
-    }
-
-    .ticket-topic {
-        font-weight: 700;
-        font-size: 1.1rem;
-        color: #fff;
-        margin-top: 5px; /* Lekki odstęp od ID */
-    }
-
-    /* Obszar Wiadomości */
-    .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        background: #0b0b0e;
-        /* Scrollbar styling */
-        scrollbar-width: thin;
-        scrollbar-color: var(--mid-pink) #1a1a20;
-    }
-
-    /* Dymki wiadomości */
-    .msg-wrapper {
-        display: flex;
-        flex-direction: column;
-        max-width: 75%;
-    }
-
-    .msg-bubble {
-        padding: 12px 18px;
-        border-radius: 18px;
-        position: relative;
-        font-size: 0.95rem;
-        line-height: 1.5;
-        word-wrap: break-word;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-
-    /* Wiadomość Użytkownika (Prawa strona) */
-    .msg-user {
-        align-self: flex-end;
-    }
-
-        .msg-user .msg-bubble {
-            background: linear-gradient(135deg, var(--deep-purple), var(--mid-pink));
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .msg-user .msg-meta {
-            text-align: right;
-        }
-
-    /* Wiadomość Admina/Supportu (Lewa strona) */
-    .msg-admin {
-        align-self: flex-start;
-    }
-
-        .msg-admin .msg-bubble {
-            background: #2a2a30;
-            color: #e0e0e0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-bottom-left-radius: 4px;
-        }
-
-        .msg-admin .msg-meta {
-            text-align: left;
-        }
-
-    .msg-meta {
-        font-size: 0.7rem;
-        color: #666;
-        margin-top: 4px;
-        margin-bottom: 2px;
-    }
-
-    /* Załączniki w wiadomości */
-    .msg-attachment {
-        margin-top: 10px;
-        border-radius: 10px;
-        overflow: hidden;
-        border: 1px solid rgba(255,255,255,0.2);
-        cursor: pointer;
-        transition: transform 0.2s;
-    }
-
-        .msg-attachment:hover {
-            transform: scale(1.02);
-        }
-
-    /* Panel wpisywania (Stopka) */
-    .chat-input-area {
-        padding: 15px 20px;
-        background: rgba(30, 30, 35, 0.95);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .input-wrapper {
-        background: #16161c;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 25px;
-        display: flex;
-        align-items: center;
-        padding: 5px 15px;
-        transition: border-color 0.3s;
-    }
-
-        .input-wrapper:focus-within {
-            border-color: var(--mid-pink);
-            box-shadow: 0 0 10px rgba(255, 102, 196, 0.2);
-        }
-
-    .chat-textarea {
-        background: transparent;
-        border: none;
-        color: #fff;
-        resize: none;
-        width: 100%;
-        max-height: 100px;
-        padding: 10px 0;
-        outline: none;
-    }
-
-    .btn-attach {
-        color: #888;
-        background: transparent;
-        border: none;
-        font-size: 1.2rem;
-        margin-right: 10px;
-        transition: color 0.3s;
-    }
-
-        .btn-attach:hover {
-            color: #fff;
-        }
-
-    .btn-send-msg {
-        background: var(--mid-pink);
-        color: #fff;
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-left: 10px;
-        transition: transform 0.2s;
-    }
-
-        .btn-send-msg:hover {
-            transform: scale(1.1);
-            background: #ff3366;
-        }
-
-    /* Miniatury w panelu wysyłania */
-    .upload-preview-container {
-        display: flex;
-        gap: 10px;
-        padding: 10px 0;
-        overflow-x: auto;
-    }
-
-    .upload-thumb-wrapper {
-        position: relative;
-        width: 60px;
-        height: 60px;
-    }
-
-    .upload-thumb {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 8px;
-        border: 1px solid #555;
-    }
-
-    .btn-remove-upload {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #ff3366;
-        color: #fff;
-        border: none;
-        font-size: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-    }
-
-    /* Statusy */
-    .status-badge {
-        font-size: 0.75rem;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .status-open {
-        background: rgba(0, 255, 157, 0.15);
-        color: #00ff9d;
-        border: 1px solid rgba(0, 255, 157, 0.4);
-    }
-
-    .status-progress {
-        background: rgba(255, 193, 7, 0.15);
-        color: #ffc107;
-        border: 1px solid rgba(255, 193, 7, 0.4);
-    }
-
-    .status-closed {
-        background: rgba(108, 117, 125, 0.15);
-        color: #adb5bd;
-        border: 1px solid rgba(108, 117, 125, 0.4);
-    }
-
-</style>
-
-<div class="container mt-4 mb-5">
-
-    <div class="mb-3">
-        <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-            <i class="fas fa-arrow-left me-1"></i> Wróć do listy
+    @* --- PASEK NAWIGACYJNY --- *@
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <a asp-action="Index" class="btn btn-ghost-cancel border border-secondary px-3 btn-sm">
+            <i class="fas fa-arrow-left me-2"></i> WRÓĆ DO LISTY
         </a>
     </div>
 
-    <div class="chat-container">
+    @* --- GŁÓWNY KONTENER CZATU --- *@
+    <div class="ticket-chat-wrapper"
+         style="height: 75vh;
+                background-color: var(--bg-panel);
+                border: 1px solid var(--neon-purple);
+                box-shadow: 0 0 25px rgba(189, 0, 255, 0.15);">
 
         @* --- HEADER --- *@
-        <div class="chat-header">
+        <div class="chat-header-bar">
             <div>
-                @* ZMIANA: Dodano ikonę i poprawiono strukturę *@
-                <div class="ticket-id">
-                    <i class="fas fa-ticket-alt ticket-icon-neon"></i> Ticket #@Model.Id
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="fas fa-ticket-alt text-neon-cyan"></i>
+                    <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 1px;">Ticket #@Model.Id</small>
                 </div>
-                <div class="ticket-topic">@Model.Title</div>
+                <h5 class="text-white mb-0 fw-bold">@Model.Title</h5>
             </div>
             <div>
-                @if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.Oczekujące)
-                {
-                    <span class="status-badge status-open">Oczekujące</span>
+                @{
+                    string statusClass = "status-badge-grey";
+                    string statusLabel = "ZAMKNIĘTE";
+
+                    if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.Oczekujące)
+                    {
+                        statusClass = "status-badge-light text-neon-green border-success";
+                        statusLabel = "OCZEKUJĄCE";
+                    }
+                    else if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
+                    {
+                        statusClass = "status-badge-yellow";
+                        statusLabel = "W TRAKCIE";
+                    }
                 }
-                else if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
-                {
-                    <span class="status-badge status-progress">W trakcie</span>
-                }
-                else
-                {
-                    <span class="status-badge status-closed">Zamknięte</span>
-                }
+                <span class="status-badge @statusClass">@statusLabel</span>
             </div>
         </div>
 
         @* --- OBSZAR WIADOMOŚCI --- *@
-        <div class="chat-messages" id="chatBox">
+        <div class="chat-messages-area" id="chatBox">
 
-            @* Pierwsza wiadomość (Treść zgłoszenia) - Zawsze jako User *@
-            <div class="msg-wrapper msg-user">
-                <div class="msg-meta">Ty • @Model.CreatedAt.ToString("dd.MM HH:mm")</div>
+            <div class="msg-row msg-right msg-role-User">
                 <div class="msg-bubble">
-                    @Model.Content
+                    <div class="msg-meta text-end">Ty • @Model.CreatedAt.ToString("dd.MM HH:mm")</div>
+                    <div class="msg-content">@Model.Content</div>
                 </div>
+                <img src="@currentUserAvatar" class="msg-avatar" style="border-color: var(--neon-cyan);">
             </div>
 
-            @* Pętla po wiadomościach *@
             @foreach (var msg in Model.Messages.OrderBy(m => m.CreatedAt))
             {
                 bool isMe = msg.UserId == currentUser.Id;
-                <div class="msg-wrapper @(isMe ? "msg-user" : "msg-admin")">
-                    <div class="msg-meta">
-                        @(isMe ? "Ty" : msg.User?.UserName ?? "Support") • @msg.CreatedAt.ToString("dd.MM HH:mm")
-                    </div>
+                string userRole = msg.User?.Role ?? "User";
+                string roleClass = $"msg-role-{userRole}";
+                string alignmentClass = isMe ? "msg-right" : "msg-left";
+                string senderName = isMe ? "Ty" : (msg.User?.UserName ?? "Support");
+                string msgAvatar = GetAvatarBase64(msg.User);
+
+                string avatarBorderColor = "var(--neon-cyan)";
+                if (await UserManager.IsInRoleAsync(msg.User, "Admin")) { avatarBorderColor = "var(--neon-red)"; }
+                else if (await UserManager.IsInRoleAsync(msg.User, "Moderator")) { avatarBorderColor = "var(--neon-green)"; }
+                if (isMe) { avatarBorderColor = "var(--neon-cyan)"; }
+
+                <div class="msg-row @alignmentClass @roleClass">
+                    @if (!isMe)
+                    {
+                        <img src="@msgAvatar" class="msg-avatar" style="border-color: @avatarBorderColor;">
+                    }
 
                     <div class="msg-bubble">
-                        @if (!string.IsNullOrEmpty(msg.Message))
-                        {
-                            <div>@msg.Message</div>
-                        }
+                        <div class="msg-meta @(isMe ? "text-end" : "text-start")">
+                            @senderName • @msg.CreatedAt.ToString("dd.MM HH:mm")
+                        </div>
 
-                        @* Załączniki *@
-                        @if (msg.Attachments != null && msg.Attachments.Any())
-                        {
-                            <div class="d-flex flex-wrap gap-2 mt-2">
-                                @foreach (var att in msg.Attachments)
-                                {
-                                    <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)"
-                                         class="msg-attachment"
-                                         style="width: 100px; height: 100px; object-fit: cover;"
-                                         data-bs-toggle="modal" data-bs-target="#imgModal-@att.Id" />
+                        <div class="msg-content">
+                            @if (!string.IsNullOrEmpty(msg.Message))
+                            {
+                                <div>@msg.Message</div>
+                            }
 
-                                    @* Modal podglądu *@
-                                    <div class="modal fade" id="imgModal-@att.Id" tabindex="-1">
-                                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                                            <div class="modal-content bg-transparent border-0 shadow-none">
-                                                <div class="modal-body text-center p-0">
-                                                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
-                                                    <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)" class="img-fluid rounded shadow-lg" />
+                            @if (msg.Attachments != null && msg.Attachments.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @foreach (var att in msg.Attachments)
+                                    {
+                                        string imgBase64 = $"data:{att.ContentType};base64,{Convert.ToBase64String(att.FileContent)}";
+                                        <div class="position-relative">
+                                            <img src="@imgBase64" class="rounded border border-secondary"
+                                                 style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;"
+                                                 data-bs-toggle="modal" data-bs-target="#imgModal-@att.Id" />
+                                        </div>
+
+                                        <div class="modal fade" id="imgModal-@att.Id" tabindex="-1">
+                                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                                <div class="modal-content bg-transparent border-0 shadow-none">
+                                                    <div class="modal-body text-center p-0 position-relative">
+                                                        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-3" data-bs-dismiss="modal"></button>
+                                                        <img src="@imgBase64" class="img-fluid rounded shadow-lg border border-secondary" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                }
-                            </div>
-                        }
+                                    }
+                                </div>
+                            }
+                        </div>
                     </div>
+
+                    @if (isMe)
+                    {
+                        <img src="@msgAvatar" class="msg-avatar" style="border-color: @avatarBorderColor;">
+                    }
                 </div>
             }
         </div>
@@ -369,24 +151,25 @@
         @* --- PANEL WPISYWANIA --- *@
         @if (Model.Status != praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
         {
-            <div class="chat-input-area">
+            <div class="chat-footer">
                 <form asp-action="Reply" method="post" enctype="multipart/form-data" id="replyForm">
                     <input type="hidden" name="id" value="@Model.Id" />
-
-                    @* Kontener na miniatury dodawanych plików *@
-                    <div id="previews" class="upload-preview-container"></div>
+                    <div id="previews" class="mb-2"></div>
 
                     <input type="file" name="attachments" id="attachmentInput" class="d-none" multiple accept="image/*" />
 
-                    <div class="input-wrapper">
-                        <button type="button" class="btn-attach" onclick="document.getElementById('attachmentInput').click()" title="Dodaj plik">
+                    <div class="chat-input-merged">
+                        <button type="button" class="btn-attachment ps-3" onclick="document.getElementById('attachmentInput').click()" title="Dodaj plik">
                             <i class="fas fa-paperclip"></i>
                         </button>
 
-                        <textarea name="message" id="messageInput" class="chat-textarea" rows="1" placeholder="Napisz wiadomość... (Ctrl+V aby wkleić zdjęcie)"></textarea>
+                        <div class="form-floating flex-grow-1">
+                            <textarea name="message" id="messageInput" class="form-control" placeholder="Wpisz wiadomość..." style="height: 55px;"></textarea>
+                            <label for="messageInput">Napisz wiadomość... (Ctrl+V aby wkleić)</label>
+                        </div>
 
-                        <button type="submit" class="btn-send-msg" title="Wyślij">
-                            <i class="fas fa-paper-plane"></i>
+                        <button type="submit" class="btn-send-integrated">
+                            WYŚLIJ <i class="fas fa-paper-plane ms-2"></i>
                         </button>
                     </div>
                 </form>
@@ -394,53 +177,85 @@
         }
         else
         {
-            <div class="p-3 text-center bg-dark border-top border-secondary text-muted">
-                <i class="fas fa-lock me-2"></i> To zgłoszenie zostało zamknięte.
+            <div class="p-4 text-center bg-dark border-top border-secondary text-muted">
+                <i class="fas fa-lock me-2"></i> To zgłoszenie zostało zamknięte. Odpowiadanie jest niemożliwe.
             </div>
         }
     </div>
 </div>
 
 <script>
-    // Automatyczne przewijanie na dół
     var chatBox = document.getElementById('chatBox');
     if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 
-    // Obsługa plików
     const dt = new DataTransfer();
     const attachmentInput = document.getElementById('attachmentInput');
     const previewsDiv = document.getElementById('previews');
 
+    function isImage(file) {
+        return file && file.type.startsWith('image/');
+    }
+
+    // --- FUNKCJA BŁĘDU (POPUP NA ŚRODKU) ---
+    function showError(message) {
+        const container = document.getElementById('toast-container');
+
+        // Stylowanie powiadomienia "na środku" - dodajemy cień i większy padding
+        const alertHtml = document.createElement('div');
+        alertHtml.className = 'alert alert-neon alert-neon-danger d-flex align-items-center mb-3 fade-in-up shadow-lg';
+        alertHtml.role = 'alert';
+        alertHtml.style.borderWidth = '2px'; // Grubsza ramka dla ważności
+
+        alertHtml.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-4 fs-2"></i>
+            <div class="flex-grow-1">
+                <div class="fw-bold text-uppercase mb-1" style="letter-spacing:1px; font-size: 0.9rem;">Błąd Systemu</div>
+                <div class="small opacity-75">${message}</div>
+            </div>
+            <button type="button" class="btn-close btn-close-white ms-3" onclick="this.parentElement.remove()"></button>
+        `;
+
+        container.appendChild(alertHtml);
+
+        setTimeout(() => {
+            alertHtml.classList.add('opacity-0');
+            setTimeout(() => alertHtml.remove(), 500);
+        }, 4000);
+    }
+
     attachmentInput?.addEventListener('change', function(){
+        let invalidFiles = false;
         for(let i = 0; i < this.files.length; i++){
-            dt.items.add(this.files[i]);
+            const file = this.files[i];
+            if(isImage(file)){
+                dt.items.add(file);
+            } else {
+                invalidFiles = true;
+            }
         }
+
+        if(invalidFiles) {
+            showError("Wykryto nieprawidłowy format danych. Dozwolone są tylko pliki graficzne.");
+        }
+
         updateFiles();
     });
 
-    // Obsługa wklejania (Paste)
     document.getElementById('messageInput')?.addEventListener('paste', function (e) {
         var items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (var index in items) {
             var item = items[index];
-            if (item.kind === 'file' && item.type.startsWith('image/')) {
-                dt.items.add(item.getAsFile());
-                updateFiles();
+            if (item.kind === 'file') {
+                var blob = item.getAsFile();
+                if(isImage(blob)){
+                    dt.items.add(blob);
+                    updateFiles();
+                } else {
+                    showError("Schowek zawiera nieobsługiwany typ danych. Wklej obraz.");
+                }
             }
         }
     });
-
-    // Auto-resize textarea
-    const tx = document.getElementById('messageInput');
-    if(tx){
-        tx.setAttribute("style", "height:" + (tx.scrollHeight) + "px;overflow-y:hidden;");
-        tx.addEventListener("input", OnInput, false);
-    }
-
-    function OnInput() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + "px";
-    }
 
     function updateFiles(){
         attachmentInput.files = dt.files;
@@ -454,11 +269,11 @@
             const reader = new FileReader();
             reader.onload = function(e){
                 const div = document.createElement('div');
-                div.className = 'upload-thumb-wrapper';
+                div.className = 'attachment-preview-wrapper';
                 div.innerHTML = `
-                    <img src="${e.target.result}" class="upload-thumb" />
-                    <button type="button" class="btn-remove-upload" onclick="removeFile(${i})">
-                        <i class="fas fa-times"></i>
+                    <img src="${e.target.result}" class="attachment-preview-img" />
+                    <button type="button" class="btn-remove-attachment" onclick="removeFile(${i})">
+                        <i class="fas fa-times-circle"></i>
                     </button>
                 `;
                 previewsDiv.appendChild(div);
