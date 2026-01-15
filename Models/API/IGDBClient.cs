@@ -59,7 +59,7 @@ public class IGDBClient
         }
     }
 
-    public async Task<string> ApiRequestAsync(string endpoint, string queryBody)
+    public virtual async Task<string> ApiRequestAsync(string endpoint, string queryBody)
     {
         if (!IsTokenValid())
         {
