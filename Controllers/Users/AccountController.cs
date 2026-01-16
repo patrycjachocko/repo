@@ -9,10 +9,13 @@ using System;
 using System.Security.Claims;
 using System.Linq;
 using praca_dyplomowa_zesp.Models.API;
-using praca_dyplomowa_zesp.Controllers;
 
 namespace praca_dyplomowa_zesp.Controllers.Users
 {
+    /// <summary>
+    /// Kontroler odpowiedzialny za obsługę procesów uwierzytelniania, rejestracji 
+    /// oraz integracji z zewnętrznymi dostawcami (Steam).
+    /// </summary>
     public class AccountController : Controller
     {
         private readonly UserManager<User> _userManager;
@@ -32,86 +35,95 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             _steamService = steamService;
         }
 
-        // GET: /Account/Login
+        #region Standard Authentication
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
+
             if (TempData["Error"] != null)
             {
                 ModelState.AddModelError(string.Empty, TempData["Error"].ToString());
             }
+
             return View();
         }
 
-        // POST: /Account/Login
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
-            if (ModelState.IsValid)
+
+            if (!ModelState.IsValid)
+                return View(model);
+
+            // Lokalizacja użytkownika na podstawie unikalnego loginu
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.Login == model.Login);
+
+            if (user == null)
             {
-                // Szukamy po polu "Login"
-                var user = await _context.Users.SingleOrDefaultAsync(u => u.Login == model.Login);
-
-                if (user == null)
-                {
-                    ModelState.AddModelError(string.Empty, "Nieprawidłowy login lub hasło.");
-                    TempData["Error"] = "Nieprawidłowy login lub hasło.";
-                    return View(model);
-                }
-
-                // 1. Sprawdzenie BANA
-                if (user.isBanned)
-                {
-                    if (user.BanEnd.HasValue && user.BanEnd > DateTimeOffset.Now)
-                    {
-                        string errorMsg = GetBanMessage(user);
-                        ModelState.AddModelError(string.Empty, errorMsg);
-                        TempData["Error"] = errorMsg;
-                        return View(model);
-                    }
-                    else
-                    {
-                        // Ban minął - zdejmujemy
-                        user.isBanned = false;
-                        user.BanEnd = null;
-                        user.BanReason = null;
-                        await _userManager.UpdateAsync(user);
-                    }
-                }
-
-                // 2. Próba logowania
-                var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
-
-                if (result.Succeeded)
-                {
-                    user.LastActive = DateTime.Now;
-                    await _userManager.UpdateAsync(user);
-                    return RedirectToLocal(returnUrl);
-                }
-
-                if (result.IsLockedOut)
-                {
-                    string errorMsg = "Konto zostało tymczasowo zablokowane z powodu zbyt wielu nieudanych prób.";
-                    ModelState.AddModelError(string.Empty, errorMsg);
-                    TempData["Error"] = errorMsg;
-                    return View(model);
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Nieprawidłowy login lub hasło.");
-                    TempData["Error"] = "Nieprawidłowy login lub hasło.";
-                    return View(model);
-                }
+                SetLoginError("Nieprawidłowy login lub hasło.");
+                return View(model);
             }
+
+            // Weryfikacja blokady konta (Ban)
+            if (user.isBanned)
+            {
+                if (user.BanEnd.HasValue && user.BanEnd > DateTimeOffset.Now)
+                {
+                    string errorMsg = GetBanMessage(user);
+                    SetLoginError(errorMsg);
+                    return View(model);
+                }
+
+                // Automatyczne odblokowanie po upływie czasu kary
+                user.isBanned = false;
+                user.BanEnd = null;
+                user.BanReason = null;
+                await _userManager.UpdateAsync(user);
+            }
+
+            var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
+
+            if (result.Succeeded)
+            {
+                user.LastActive = DateTime.Now;
+                await _userManager.UpdateAsync(user);
+                return RedirectToLocal(returnUrl);
+            }
+
+            if (result.IsLockedOut)
+            {
+                SetLoginError("Konto zostało tymczasowo zablokowane z powodu zbyt wielu nieudanych prób.");
+                return View(model);
+            }
+
+            SetLoginError("Nieprawidłowy login lub hasło.");
             return View(model);
         }
 
-        // GET: /Account/Register
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout(string? returnUrl = null)
+        {
+            await _signInManager.SignOutAsync();
+
+            if (returnUrl != null && Url.IsLocalUrl(returnUrl))
+            {
+                return LocalRedirect(returnUrl);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        #endregion
+
+        #region Registration
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Register(string? returnUrl = null)
@@ -120,61 +132,47 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             return View();
         }
 
-        // POST: /Account/Register
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
-            if (ModelState.IsValid)
+
+            if (!ModelState.IsValid)
+                return View(model);
+
+            if (await _context.Users.AnyAsync(u => u.Login == model.Login))
             {
-                if (await _context.Users.AnyAsync(u => u.Login == model.Login))
-                {
-                    ModelState.AddModelError(nameof(model.Login), "Ten login jest już zajęty.");
-                    TempData["Error"] = "Ten login jest już zajęty.";
-                    return View(model);
-                }
-
-                var user = new User
-                {
-                    UserName = model.UserName, // Nazwa wyświetlana
-                    Login = model.Login,       // Login do logowania
-                    CreatedAt = DateTime.Now,
-                    Role = "User"
-                };
-
-                var result = await _userManager.CreateAsync(user, model.Password);
-                if (result.Succeeded)
-                {
-                    await _userManager.AddToRoleAsync(user, "User");
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    TempData["Success"] = "Rejestracja udana! Witaj w GameHub.";
-                    return RedirectToLocal(returnUrl);
-                }
-                AddErrors(result);
+                ModelState.AddModelError(nameof(model.Login), "Ten login jest już zajęty.");
+                TempData["Error"] = "Ten login jest już zajęty.";
+                return View(model);
             }
+
+            var user = new User
+            {
+                UserName = model.UserName,
+                Login = model.Login,
+                CreatedAt = DateTime.Now,
+                Role = "User"
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(user, "User");
+                await _signInManager.SignInAsync(user, isPersistent: false);
+                TempData["Success"] = "Rejestracja udana! Witaj w GameHub.";
+                return RedirectToLocal(returnUrl);
+            }
+
+            AddErrors(result);
             return View(model);
         }
 
-        // POST: /Account/Logout
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout(string? returnUrl = null) // ZMIANA: Dodano parametr returnUrl
-        {
-            await _signInManager.SignOutAsync();
+        #endregion
 
-            // Jeśli mamy returnUrl, wracamy tam (np. do gry, którą przeglądaliśmy)
-            if (returnUrl != null)
-            {
-                return LocalRedirect(returnUrl);
-            }
-
-            // Fallback: Wróć na stronę główną
-            return RedirectToAction(nameof(HomeController.Index), "Home");
-        }
-
-        // --- STEAM ---
+        #region Steam Integration
 
         [HttpPost]
         [AllowAnonymous]
@@ -200,12 +198,11 @@ namespace praca_dyplomowa_zesp.Controllers.Users
 
             if (string.IsNullOrEmpty(steamId)) return RedirectToAction(nameof(Login));
 
-            // A. UŻYTKOWNIK ISTNIEJE
             var user = await _context.Users.FirstOrDefaultAsync(u => u.SteamId == steamId);
 
+            // Logowanie istniejącego użytkownika Steam
             if (user != null)
             {
-                // Sprawdzamy bana
                 if (user.isBanned && user.BanEnd.HasValue && user.BanEnd > DateTimeOffset.Now)
                 {
                     TempData["Error"] = GetBanMessage(user);
@@ -218,25 +215,13 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 return RedirectToLocal(returnUrl);
             }
 
-            // B. NOWY UŻYTKOWNIK (Steam)
+            // Proces tworzenia nowego konta na podstawie danych ze Steam
             var steamProfile = await _steamService.GetPlayerSummaryAsync(steamId);
             string nick = steamProfile?.PersonaName ?? $"Gracz_{steamId.Substring(0, 5)}";
 
-            var finalUserName = nick;
-            int counter = 1;
-            while (await _userManager.FindByNameAsync(finalUserName) != null)
-            {
-                finalUserName = $"{nick}{counter++}";
-            }
-
-            var finalLogin = finalUserName;
-            counter = 1;
-            while (await _context.Users.AnyAsync(u => u.Login == finalLogin))
-            {
-                finalLogin = $"{nick}{counter++}";
-            }
-
-            //var randomPassword = "SteamPassword!" + Guid.NewGuid().ToString();
+            // Zapewnienie unikalności UserName i Login
+            string finalUserName = await GenerateUniqueUserName(nick);
+            string finalLogin = await GenerateUniqueLogin(nick);
 
             var newUser = new User
             {
@@ -248,6 +233,7 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 LastActive = DateTime.Now
             };
 
+            // Pobieranie awatara z profilu Steam
             if (!string.IsNullOrEmpty(steamProfile?.AvatarFullUrl))
             {
                 var avatarBytes = await _steamService.DownloadAvatarAsync(steamProfile.AvatarFullUrl);
@@ -267,17 +253,46 @@ namespace praca_dyplomowa_zesp.Controllers.Users
                 return RedirectToLocal(returnUrl);
             }
 
-            foreach (var error in createResult.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+            AddErrors(createResult);
             return View("Login");
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private async Task<string> GenerateUniqueUserName(string baseName)
+        {
+            string name = baseName;
+            int counter = 1;
+            while (await _userManager.FindByNameAsync(name) != null)
+            {
+                name = $"{baseName}{counter++}";
+            }
+            return name;
+        }
+
+        private async Task<string> GenerateUniqueLogin(string baseLogin)
+        {
+            string login = baseLogin;
+            int counter = 1;
+            while (await _context.Users.AnyAsync(u => u.Login == login))
+            {
+                login = $"{baseLogin}{counter++}";
+            }
+            return login;
+        }
+
+        private void SetLoginError(string message)
+        {
+            ModelState.AddModelError(string.Empty, message);
+            TempData["Error"] = message;
         }
 
         private IActionResult RedirectToLocal(string? returnUrl)
         {
             if (Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
-            return RedirectToAction(nameof(HomeController.Index), "Home");
+            return RedirectToAction("Index", "Home");
         }
 
         private void AddErrors(IdentityResult result)
@@ -299,5 +314,7 @@ namespace praca_dyplomowa_zesp.Controllers.Users
             }
             return errorMsg;
         }
+
+        #endregion
     }
 }

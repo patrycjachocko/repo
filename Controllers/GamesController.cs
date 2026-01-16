@@ -16,14 +16,16 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
+    /// <summary>
+    /// Kontroler odpowiedzialny za przeglądanie bazy gier (IGDB), wyświetlanie szczegółów 
+    /// oraz obsługę systemu ocen i recenzji.
+    /// </summary>
     [AllowAnonymous]
     public class GamesController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IGDBClient _igdbClient;
         private readonly UserManager<User> _userManager;
-
-        private const int PageSize = 60;
 
         public GamesController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager)
         {
@@ -32,94 +34,67 @@ namespace praca_dyplomowa_zesp.Controllers
             _userManager = userManager;
         }
 
-        private Guid GetCurrentUserId()
-        {
-            var userIdString = _userManager.GetUserId(User);
-            if (Guid.TryParse(userIdString, out Guid userId))
-            {
-                return userId;
-            }
-            return Guid.Empty;
-        }
+        #region Game Browsing
 
-        // GET: Games
+        /// <summary>
+        /// Wyświetla listę gier pobraną z API IGDB z uwzględnieniem filtrów ocen i wyszukiwania.
+        /// </summary>
         public async Task<IActionResult> Index(
             string? searchString,
             int page = 1,
-            int pageSize = 60, // <--- 1. NOWE: Parametr rozmiaru strony
+            int pageSize = 60,
             string mode = "browse",
             bool isFiltered = false,
             bool showUser = false,
             bool showCritic = false,
-            bool showLocal = false
-        )
+            bool showLocal = false)
         {
-            // 2. NOWE: Walidacja (Security Check)
-            // Jeśli ktoś wpisze dziwną liczbę ręcznie w URL, ustawiamy na 60
+            // Walidacja rozmiaru strony
             if (pageSize != 36 && pageSize != 48 && pageSize != 60)
             {
                 pageSize = 60;
             }
 
-            // LOGIKA DOMYŚLNYCH WARTOŚCI (Pierwsze wejście = wszystko włączone)
+            // Domyślne ustawienia filtrów przy pierwszym wejściu
             if (!isFiltered)
             {
-                showUser = true;
-                showCritic = true;
-                showLocal = true;
+                showUser = showCritic = showLocal = true;
             }
 
             if (page < 1) page = 1;
-
-            // 3. NOWE: Obliczanie offsetu na podstawie wybranego pageSize
             int offset = (page - 1) * pageSize;
 
             string safeSearch = searchString?.Replace("\"", "").Trim();
-            string query;
-
             string fields = "fields name, cover.url, rating, aggregated_rating, total_rating, category, version_parent";
             string baseFilter = "where parent_game = null";
 
-            // --- 1. DYNAMICZNE SORTOWANIE API (Dla pobierania danych) ---
+            // Określenie priorytetu sortowania w API
             string sortField = "total_rating";
-
             if (showCritic && !showUser) sortField = "aggregated_rating";
             else if (showUser && !showCritic) sortField = "rating";
 
-            // Limit w API ustawiamy na trochę więcej (np. 100), żeby mieć bufor na filtrowanie in-memory
-            // (bo odrzucamy DLC, bundle itp., więc musimy pobrać więcej niż wyświetlamy)
+            // Pobieranie danych z lekkim nadmiarem dla bufora filtrowania in-memory
             int apiLimit = pageSize + 40;
-
-            if (!string.IsNullOrEmpty(safeSearch))
-            {
-                query = $"{fields}; search \"{safeSearch}\"; {baseFilter} & cover.url != null; limit {apiLimit}; offset {offset};";
-            }
-            else
-            {
-                query = $"{fields}; sort {sortField} desc; {baseFilter} & {sortField} != null & cover.url != null; limit {apiLimit}; offset {offset};";
-            }
+            string query = string.IsNullOrEmpty(safeSearch)
+                ? $"{fields}; sort {sortField} desc; {baseFilter} & {sortField} != null & cover.url != null; limit {apiLimit}; offset {offset};"
+                : $"{fields}; search \"{safeSearch}\"; {baseFilter} & cover.url != null; limit {apiLimit}; offset {offset};";
 
             var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
-
             var gamesFromApi = string.IsNullOrEmpty(jsonResponse)
                 ? new List<ApiGame>()
                 : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
-            // 2. Filtrowanie (DLC itp.)
+            // Filtrowanie treści (pomijanie dodatków, paczek itp.)
             var filteredGames = gamesFromApi
-                .Where(g =>
-                    g.Category == 0 &&
-                    g.Version_parent == null &&
-                    !string.IsNullOrEmpty(g.Name) &&
-                    !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
-                    !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
-                    !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
-                    !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
-                )
-                .Take(pageSize) // <--- 4. NOWE: Bierzemy tyle, ile wybrał użytkownik (36/48/60)
+                .Where(g => g.Category == 0 && g.Version_parent == null && !string.IsNullOrEmpty(g.Name) &&
+                            !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
+                            !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
+                            !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
+                            !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase))
+                .Take(pageSize)
                 .ToList();
 
-            // 3. Pobranie ocen lokalnych
+            // Pobieranie średnich ocen z lokalnej bazy danych
             Dictionary<long, double> localAverages = new Dictionary<long, double>();
             if (showLocal)
             {
@@ -134,53 +109,28 @@ namespace praca_dyplomowa_zesp.Controllers
                     .ToDictionary(g => g.Key, g => g.Average(r => r.Value));
             }
 
-            // 4. Budowanie ViewModelu
+            // Mapowanie wyników i obliczanie wypadkowej oceny
             var finalGamesList = filteredGames.Select(apiGame =>
             {
                 double sum = 0;
                 int count = 0;
 
-                // A. Ocena Graczy IGDB
-                if (showUser && apiGame.Rating.HasValue)
-                {
-                    sum += apiGame.Rating.Value;
-                    count++;
-                }
-
-                // B. Ocena Krytyków IGDB
-                if (showCritic && apiGame.Aggregated_rating.HasValue)
-                {
-                    sum += apiGame.Aggregated_rating.Value;
-                    count++;
-                }
-
-                // C. Ocena Lokalna
-                if (showLocal && localAverages.ContainsKey(apiGame.Id))
-                {
-                    double localAvg = localAverages[apiGame.Id];
-                    sum += (localAvg * 10);
-                    count++;
-                }
-
-                double? finalRating = count > 0 ? sum / count : null;
+                if (showUser && apiGame.Rating.HasValue) { sum += apiGame.Rating.Value; count++; }
+                if (showCritic && apiGame.Aggregated_rating.HasValue) { sum += apiGame.Aggregated_rating.Value; count++; }
+                if (showLocal && localAverages.ContainsKey(apiGame.Id)) { sum += (localAverages[apiGame.Id] * 10); count++; }
 
                 return new ApiGame
                 {
                     Id = apiGame.Id,
                     Name = apiGame.Name,
-                    Total_rating = finalRating,
+                    Total_rating = count > 0 ? sum / count : null,
                     Cover = apiGame.Cover != null ? new ApiCover { Url = apiGame.Cover.Url.Replace("t_thumb", "t_cover_big") } : null
                 };
-            })
-            // --- Sortowanie w pamięci ---
-            .OrderByDescending(g => g.Total_rating ?? -1)
-            .ToList();
-            // -------------------------------------
+            }).OrderByDescending(g => g.Total_rating ?? -1).ToList();
 
-            if (mode == "guides") ViewData["Title"] = "Guides & Tips - Wybierz grę";
-            else ViewData["Title"] = "Przeglądaj Gry";
+            ViewData["Title"] = mode == "guides" ? "Guides & Tips - Wybierz grę" : "Przeglądaj Gry";
 
-            var viewModel = new Models.Modules.Games.GameBrowserViewModel
+            return View(new GameBrowserViewModel
             {
                 Games = finalGamesList,
                 CurrentPage = page,
@@ -189,163 +139,131 @@ namespace praca_dyplomowa_zesp.Controllers
                 ShowIgdbUser = showUser,
                 ShowIgdbCritic = showCritic,
                 ShowLocal = showLocal
-                // Jeśli w ViewModelu masz pole PageSize, możesz je tu przypisać:
-                // PageSize = pageSize 
-            };
-
-            return View(viewModel);
+            });
         }
 
-        // GET: Games/Details/5
+        #endregion
+
+        #region Game Details
+
+        /// <summary>
+        /// Wyświetla szczegółowe informacje o grze, w tym oceny użytkowników i topowe recenzje.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Details(long id)
         {
             var currentUserId = GetCurrentUserId();
 
-            // Sprawdzamy czy gra jest w bibliotece (przekierowanie)
+            // Jeśli użytkownik posiada grę w bibliotece, przekieruj do widoku biblioteki
             if (currentUserId != Guid.Empty)
             {
                 var gameInLibrary = await _context.GamesInLibraries
                     .FirstOrDefaultAsync(g => g.UserId == currentUserId && g.IgdbGameId == id);
 
                 if (gameInLibrary != null)
-                {
                     return RedirectToAction("Details", "Library", new { id = gameInLibrary.Id });
-                }
             }
 
-            // 1. Pobieranie danych z IGDB - DODANO POLA OCEN
             var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human, rating, aggregated_rating; where id = {id}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
 
             if (string.IsNullOrEmpty(gameJsonResponse)) return NotFound();
 
-            var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
+            var gameApiData = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
+            if (gameApiData == null) return NotFound();
 
-            if (gameDetailsFromApi == null) return NotFound();
-
-            // 2. Pobieranie ocen LOKALNYCH (GameRates)
+            // Przetwarzanie ocen lokalnych
             var localRates = await _context.GameRates.Where(r => r.IgdbGameId == id).ToListAsync();
+            double personalRating = currentUserId != Guid.Empty
+                ? localRates.FirstOrDefault(r => r.UserId == currentUserId)?.Value ?? 0
+                : 0;
 
-            double localAvg = localRates.Any() ? localRates.Average(r => r.Value) : 0;
-            int localCount = localRates.Count;
-            double personalRating = 0;
-
-            if (currentUserId != Guid.Empty)
-            {
-                var myRate = localRates.FirstOrDefault(r => r.UserId == currentUserId);
-                if (myRate != null) personalRating = myRate.Value;
-            }
-
-            // 3. Budowanie modelu ocen
-            var ratingsModel = new praca_dyplomowa_zesp.Models.ViewModels.GameRatingViewModel
-            {
-                IgdbGameId = gameDetailsFromApi.Id,
-                IgdbUserRating = gameDetailsFromApi.Rating ?? 0,
-                IgdbCriticRating = gameDetailsFromApi.Aggregated_rating ?? 0,
-                LocalAverageRating = localAvg,
-                LocalRatingCount = localCount,
-                UserPersonalRating = personalRating
-            };
-
-            // 4. NOWE: Pobieranie Top 3 Recenzji
+            // Pobieranie i sortowanie recenzji (Najlepszy wynik Reactions -> Najnowsze)
             var reviews = await _context.GameReviews
                 .Include(r => r.User)
                 .Include(r => r.Reactions)
                 .Where(r => r.IgdbGameId == id)
                 .ToListAsync();
 
-            // Sortowanie w pamięci:
-            // 1. Najpierw według Wyniku (Like - Dislike) malejąco
-            // 2. Jeśli wynik taki sam, to nowsze na górze
             var topReviews = reviews
-                .Select(r => new
-                {
+                .Select(r => new {
                     Review = r,
                     Score = r.Reactions.Count(x => x.Type == ReactionType.Like) - r.Reactions.Count(x => x.Type == ReactionType.Dislike)
                 })
-                .OrderByDescending(x => x.Score)              // Najlepsza ocena
-                .ThenByDescending(x => x.Review.CreatedAt)    // Najnowsze przy remisie
+                .OrderByDescending(x => x.Score)
+                .ThenByDescending(x => x.Review.CreatedAt)
                 .Take(3)
                 .Select(x => x.Review)
                 .ToList();
 
-            var viewModel = new Models.Modules.Games.GameDetailViewModel
+            return View(new GameDetailViewModel
             {
-                IgdbGameId = gameDetailsFromApi.Id,
-                Name = gameDetailsFromApi.Name,
-                CoverUrl = gameDetailsFromApi.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
-                Genres = gameDetailsFromApi.Genres?.Select(g => g.Name).ToList() ?? new List<string>(),
-                Developer = gameDetailsFromApi.Involved_companies?.FirstOrDefault(ic => ic.developer)?.Company?.Name,
-                ReleaseDate = gameDetailsFromApi.Release_dates?.FirstOrDefault()?.Human,
-                Ratings = ratingsModel, // <--- PRZYPISANIE OCEN
-                TopReviews = topReviews // <--- PRZYPISANIE RECENZJI
-            };
-
-            return View(viewModel);
+                IgdbGameId = gameApiData.Id,
+                Name = gameApiData.Name,
+                CoverUrl = gameApiData.Cover?.Url?.Replace("t_thumb", "t_cover_big"),
+                Genres = gameApiData.Genres?.Select(g => g.Name).ToList() ?? new List<string>(),
+                Developer = gameApiData.Involved_companies?.FirstOrDefault(ic => ic.developer)?.Company?.Name,
+                ReleaseDate = gameApiData.Release_dates?.FirstOrDefault()?.Human,
+                TopReviews = topReviews,
+                Ratings = new GameRatingViewModel
+                {
+                    IgdbGameId = gameApiData.Id,
+                    IgdbUserRating = gameApiData.Rating ?? 0,
+                    IgdbCriticRating = gameApiData.Aggregated_rating ?? 0,
+                    LocalAverageRating = localRates.Any() ? localRates.Average(r => r.Value) : 0,
+                    LocalRatingCount = localRates.Count,
+                    UserPersonalRating = personalRating
+                }
+            });
         }
 
-        // Redirect ze Steam
+        #endregion
+
+        #region Steam Integration
+
+        /// <summary>
+        /// Obsługuje przekierowanie z importu Steam, próbując dopasować grę do bazy IGDB.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> SteamRedirect(string query)
         {
             if (string.IsNullOrEmpty(query)) return RedirectToAction("Index");
 
-            // 1. Użycie tego samego czyszczenia nazwy co przy imporcie
-            var cleanName = CleanSteamGameName(query);
-
-            // 2. Zapytanie identyczne jak w 'Etap 2' importu (z aggregated_rating)
-            // Zmieniono limit na 10 (jak w imporcie), aby nie pobierać za dużo śmieci
+            string cleanName = CleanSteamGameName(query);
             var igdbQuery = $"fields id, name, category, version_parent, aggregated_rating; search \"{cleanName}\"; where parent_game = null; limit 10;";
 
             try
             {
                 var jsonResponse = await _igdbClient.ApiRequestAsync("games", igdbQuery);
+                var games = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
-                var games = string.IsNullOrEmpty(jsonResponse)
-                    ? new List<ApiGame>()
-                    : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
-
-                // 3. Rozszerzone filtrowanie (takie samo jak w imporcie)
                 var validCandidates = games.Where(g =>
-                    g.Category == 0 &&
-                    g.Version_parent == null &&
-                    !string.IsNullOrEmpty(g.Name) &&
+                    g.Category == 0 && g.Version_parent == null && !string.IsNullOrEmpty(g.Name) &&
                     !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
-                    !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
-                    !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
-                    !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
-                ).ToList();
+                    !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase)).ToList();
 
                 if (validCandidates.Any())
                 {
-                    // 4. Wybór najlepszego kandydata (tego z oceną krytyków), jeśli istnieje
-                    var bestMatch = validCandidates.FirstOrDefault(g => g.Aggregated_rating != null) ?? validCandidates.FirstOrDefault();
-
-                    if (bestMatch != null)
-                    {
-                        return RedirectToAction("Details", new { id = bestMatch.Id });
-                    }
+                    var bestMatch = validCandidates.FirstOrDefault(g => g.Aggregated_rating != null) ?? validCandidates.First();
+                    return RedirectToAction("Details", new { id = bestMatch.Id });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd podczas wyszukiwania gry ze Steam: {ex.Message}");
+                Console.WriteLine($"Steam Redirect Error: {ex.Message}");
             }
 
-            // Jeśli nie znaleziono idealnego dopasowania, przekieruj do wyszukiwarki z czystą nazwą
-            TempData["ErrorMessage"] = $"Nie udało się automatycznie dopasować gry '{cleanName}'. Spróbuj znaleźć ją na liście poniżej.";
+            TempData["ErrorMessage"] = $"Nie udało się automatycznie dopasować gry '{cleanName}'. Spróbuj wyszukać ją ręcznie.";
             return RedirectToAction("Index", new { searchString = cleanName });
         }
 
-        // --- METODA POMOCNICZA SKOPIOWANA Z ProfileController ---
-        private string CleanSteamGameName(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return "";
-            // Usuwanie znaków handlowych i cudzysłowów
-            return name.Replace("\"", "").Replace("™", "").Replace("®", "").Replace("©", "").Trim();
-        }
+        #endregion
 
+        #region Rating Actions (AJAX)
+
+        /// <summary>
+        /// Zapisuje lub aktualizuje ocenę gry wystawioną przez zalogowanego użytkownika.
+        /// </summary>
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -353,44 +271,77 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (request == null) return BadRequest();
 
-            // Walidacja zakresu oceny
-            double ratingValue = request.RatingValue;
-            if (ratingValue < 0.5) ratingValue = 0.5; // Minimum pół gwiazdki
-            if (ratingValue > 10) ratingValue = 10;   // Maximum 10 gwiazdek
-
-            // Zaokrąglanie do 0.5
-            ratingValue = Math.Round(ratingValue * 2, MidpointRounding.AwayFromZero) / 2;
+            double val = Math.Clamp(request.RatingValue, 0.5, 10);
+            val = Math.Round(val * 2, MidpointRounding.AwayFromZero) / 2;
 
             var userId = GetCurrentUserId();
-
             var existingRate = await _context.GameRates
                 .FirstOrDefaultAsync(r => r.IgdbGameId == request.GameId && r.UserId == userId);
 
             if (existingRate != null)
             {
-                existingRate.Value = ratingValue;
+                existingRate.Value = val;
                 _context.GameRates.Update(existingRate);
             }
             else
             {
-                var rate = new Models.Interactions.Rates.GameRate
+                _context.GameRates.Add(new Models.Interactions.Rates.GameRate
                 {
                     UserId = userId,
                     IgdbGameId = request.GameId,
-                    Value = ratingValue,
+                    Value = val,
                     CreatedAt = DateTime.Now
-                };
-                _context.GameRates.Add(rate);
+                });
             }
 
             await _context.SaveChangesAsync();
 
-            // Przeliczanie nowej średniej do zwrócenia w JSON
             var allRates = await _context.GameRates.Where(r => r.IgdbGameId == request.GameId).ToListAsync();
-            var newAverage = allRates.Any() ? allRates.Average(r => r.Value) : ratingValue;
-            var newCount = allRates.Count;
+            return Ok(new { success = true, newAverage = allRates.Average(r => r.Value), newCount = allRates.Count });
+        }
 
-            return Ok(new { success = true, newAverage = newAverage, newCount = newCount });
+        /// <summary>
+        /// Usuwa ocenę użytkownika oraz powiązane z nią recenzje dla danej gry.
+        /// </summary>
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveRating([FromBody] RemoveRateRequest request)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty) return Json(new { success = false });
+
+            var rating = await _context.GameRates
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.IgdbGameId == request.IgdbGameId);
+
+            if (rating != null) _context.GameRates.Remove(rating);
+
+            var reviews = await _context.GameReviews
+                .Where(r => r.UserId == userId && r.IgdbGameId == request.IgdbGameId)
+                .ToListAsync();
+
+            if (reviews.Any()) _context.GameReviews.RemoveRange(reviews);
+
+            await _context.SaveChangesAsync();
+
+            var allRatings = await _context.GameRates.Where(r => r.IgdbGameId == request.IgdbGameId).ToListAsync();
+            return Json(new { success = true, newAverage = allRatings.Any() ? allRatings.Average(r => r.Value) : 0 });
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private Guid GetCurrentUserId()
+        {
+            var userIdString = _userManager.GetUserId(User);
+            return Guid.TryParse(userIdString, out Guid userId) ? userId : Guid.Empty;
+        }
+
+        private string CleanSteamGameName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            return name.Replace("\"", "").Replace("™", "").Replace("®", "").Replace("©", "").Trim();
         }
 
         public class GameRateRequest
@@ -399,42 +350,6 @@ namespace praca_dyplomowa_zesp.Controllers
             public double RatingValue { get; set; }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RemoveRating([FromBody] RemoveRateRequest request)
-        {
-            var userIdStr = _userManager.GetUserId(User);
-            if (string.IsNullOrEmpty(userIdStr)) return Json(new { success = false });
-            var userId = Guid.Parse(userIdStr);
-
-            // 1. Znajdź i usuń ocenę
-            var rating = await _context.GameRates
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.IgdbGameId == request.IgdbGameId);
-
-            if (rating != null)
-            {
-                _context.GameRates.Remove(rating);
-            }
-
-            // 2. Znajdź i usuń recenzje tego użytkownika dla tej gry
-            // UWAGA: Upewnij się, że GameReview.IgdbGameId to właściwe pole. 
-            // Jeśli w modelu recenzji używasz 'GameId' jako ID z IGDB, zostaw jak jest.
-            var reviews = await _context.GameReviews
-                .Where(r => r.UserId == userId && r.IgdbGameId == request.IgdbGameId)
-                .ToListAsync();
-
-            if (reviews.Any())
-            {
-                _context.GameReviews.RemoveRange(reviews);
-            }
-
-            await _context.SaveChangesAsync();
-
-            // 3. Przelicz nową średnią
-            var allRatings = await _context.GameRates.Where(r => r.IgdbGameId == request.IgdbGameId).ToListAsync();
-            double newAverage = allRatings.Any() ? allRatings.Average(r => r.Value) : 0;
-
-            return Json(new { success = true, newAverage = newAverage });
-        }
+        #endregion
     }
 }

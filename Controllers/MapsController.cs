@@ -5,9 +5,16 @@ using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Users;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
+    /// <summary>
+    /// Kontroler odpowiedzialny za zarządzanie mapami do gier (wgrywanie, listowanie, usuwanie).
+    /// </summary>
     [Authorize]
     public class MapsController : Controller
     {
@@ -15,23 +22,33 @@ namespace praca_dyplomowa_zesp.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IWebHostEnvironment _environment;
 
-        public MapsController(ApplicationDbContext context, UserManager<User> userManager, IWebHostEnvironment environment)
+        public MapsController(
+            ApplicationDbContext context,
+            UserManager<User> userManager,
+            IWebHostEnvironment environment)
         {
             _context = context;
             _userManager = userManager;
             _environment = environment;
         }
 
-        // 1. Dla zwykłego użytkownika (tylko aktywne mapy)
+        #region Public Map Actions
+
+        /// <summary>
+        /// Pobiera listę aktywnych (nieusuniętych) map dla konkretnej gry.
+        /// </summary>
+        /// <param name="gameId">ID gry z IGDB.</param>
+        /// <param name="searchString">Opcjonalna fraza do filtrowania po nazwie.</param>
         [HttpGet]
         public async Task<IActionResult> GetMapsForGame(long gameId, string? searchString)
         {
             var query = _context.GameMaps
-                .Where(m => m.IgdbGameId == gameId && !m.IsDeleted); // TYLKO NIEUSUNIĘTE
+                .Where(m => m.IgdbGameId == gameId && !m.IsDeleted);
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                query = query.Where(m => m.Name.ToLower().Contains(searchString.ToLower()));
+                var searchLower = searchString.ToLower();
+                query = query.Where(m => m.Name.ToLower().Contains(searchLower));
             }
 
             var maps = await query.Select(m => new
@@ -44,13 +61,58 @@ namespace praca_dyplomowa_zesp.Controllers
             return Json(maps);
         }
 
-        // 2. Dla Admina/Moderatora (wszystkie mapy do zarządzania, ale bez usuniętych)
+        /// <summary>
+        /// Obsługuje przesyłanie nowego pliku graficznego mapy na serwer i zapis w bazie.
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> UploadMap(long gameId, string name, IFormFile file)
+        {
+            if (file == null || file.Length == 0) return BadRequest("Nie wybrano pliku.");
+            if (string.IsNullOrWhiteSpace(name)) return BadRequest("Podaj nazwę mapy.");
+
+            // Przygotowanie ścieżki zapisu
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "maps");
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+            // Generowanie unikalnej nazwy pliku
+            var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+
+            var newMap = new GameMap
+            {
+                IgdbGameId = gameId,
+                Name = name,
+                ImageUrl = "/uploads/maps/" + uniqueFileName,
+                UploadedByUserId = user?.Id,
+                IsDeleted = false
+            };
+
+            _context.GameMaps.Add(newMap);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, map = new { newMap.Id, newMap.Name, newMap.ImageUrl } });
+        }
+
+        #endregion
+
+        #region Management Actions (Admin/Moderator)
+
+        /// <summary>
+        /// Pobiera listę map przeznaczoną do panelu zarządzania (tylko dla Admina/Moderatora).
+        /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetMapsForManager(long gameId)
         {
             var maps = await _context.GameMaps
-                .Where(m => m.IgdbGameId == gameId && !m.IsDeleted) // Filtrujemy usunięte
+                .Where(m => m.IgdbGameId == gameId && !m.IsDeleted)
                 .OrderByDescending(m => m.Id)
                 .Select(m => new
                 {
@@ -64,7 +126,9 @@ namespace praca_dyplomowa_zesp.Controllers
             return Json(maps);
         }
 
-        // 3. Zmiana nazwy (Admin/Mod)
+        /// <summary>
+        /// Zmienia nazwę istniejącej mapy.
+        /// </summary>
         [HttpPost]
         [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> RenameMap(int id, string newName)
@@ -80,7 +144,10 @@ namespace praca_dyplomowa_zesp.Controllers
             return Ok(new { success = true });
         }
 
-        // 4. Usuwanie (Soft Delete + Zmiana nazwy)
+        /// <summary>
+        /// Realizuje proces "miękkiego usuwania" mapy (Soft Delete).
+        /// Oznacza mapę jako usuniętą i modyfikuje jej nazwę w celach archiwizacyjnych.
+        /// </summary>
         [HttpPost]
         [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> ToggleMapStatus(int id)
@@ -88,12 +155,9 @@ namespace praca_dyplomowa_zesp.Controllers
             var map = await _context.GameMaps.FindAsync(id);
             if (map == null) return NotFound();
 
-            // 1. Ustawiamy flagę usunięcia
             map.IsDeleted = true;
 
-            // 2. Zmieniamy nazwę, aby było widać w bazie, że usunięta
-            // Dodajemy też timestamp (ticks), żeby nazwa była na 100% unikalna
-            // (np. "[DELETED] Dust2_63832123")
+            // Oznaczanie nazwy jako usuniętej z unikalnym znacznikiem czasu
             if (!map.Name.StartsWith("[DELETED]"))
             {
                 map.Name = $"[DELETED] {map.Name}_{DateTime.Now.Ticks}";
@@ -104,39 +168,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return Ok(new { success = true, isDeleted = true });
         }
 
-        // 5. Upload nowej mapy
-        [HttpPost]
-        public async Task<IActionResult> UploadMap(long gameId, string name, IFormFile file)
-        {
-            if (file == null || file.Length == 0) return BadRequest("Nie wybrano pliku.");
-            if (string.IsNullOrWhiteSpace(name)) return BadRequest("Podaj nazwę mapy.");
-
-            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "maps");
-            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
-
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(fileStream);
-            }
-
-            var user = await _userManager.GetUserAsync(User);
-
-            var newMap = new GameMap
-            {
-                IgdbGameId = gameId,
-                Name = name,
-                ImageUrl = "/uploads/maps/" + uniqueFileName,
-                UploadedByUserId = user != null ? user.Id : null,
-                IsDeleted = false
-            };
-
-            _context.GameMaps.Add(newMap);
-            await _context.SaveChangesAsync();
-
-            return Json(new { success = true, map = new { newMap.Id, newMap.Name, newMap.ImageUrl } });
-        }
+        #endregion
     }
 }

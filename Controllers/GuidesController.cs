@@ -18,9 +18,14 @@ using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using Rotativa.AspNetCore;
+using Microsoft.AspNetCore.Http;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
+    /// <summary>
+    /// Kontroler zarządzający modułem poradników, wskazówek (tips) oraz interakcji użytkowników (oceny, komentarze).
+    /// Obsługuje integrację z API IGDB w celu weryfikacji tożsamości gier.
+    /// </summary>
     [AllowAnonymous]
     public class GuidesController : Controller
     {
@@ -35,571 +40,175 @@ namespace praca_dyplomowa_zesp.Controllers
             _userManager = userManager;
         }
 
+        #region Private Helpers
+
         private Guid GetCurrentUserId()
         {
             var userIdString = _userManager.GetUserId(User);
-            if (Guid.TryParse(userIdString, out Guid userId)) return userId;
-            return Guid.Empty;
+            return Guid.TryParse(userIdString, out Guid userId) ? userId : Guid.Empty;
         }
 
         private bool IsUserMuted(User user)
         {
-            // Zabezpieczenie przed nullem
             if (user == null) return false;
-            // Jeśli BanEnd ma wartość i ta data jest w przyszłości -> użytkownik jest wyciszony
             return user.BanEnd.HasValue && user.BanEnd.Value > DateTimeOffset.Now;
         }
 
-        // GET: Guides/Index/123
+        #endregion
+
+        #region Main Views (List & Details)
+
+        /// <summary>
+        /// Wyświetla listę poradników i wskazówek dla konkretnej gry.
+        /// Obsługuje logikę przekierowań dla gier nadrzędnych (Parent Games/Collections) z IGDB.
+        /// </summary>
         public async Task<IActionResult> Index(long gameId, string searchString, string sortOrder)
         {
             if (gameId <= 0) return NotFound();
 
-            // Przekazanie parametrów do widoku
             ViewData["CurrentFilter"] = searchString;
             ViewData["CurrentSort"] = sortOrder;
 
-            // --- LOGIKA IGDB ---
+            // Weryfikacja struktury gry w IGDB (przekierowania do wersji nadrzędnych)
             var gameQuery = $"fields name, parent_game, version_parent, category, collections.id; where id = {gameId}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
-            var gameDetailsFromApi = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
+            var gameDetails = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
 
-            if (gameDetailsFromApi == null) return NotFound();
+            if (gameDetails == null) return NotFound();
 
-            if (gameDetailsFromApi.Parent_game.HasValue)
-                return RedirectToAction("Index", new { gameId = gameDetailsFromApi.Parent_game.Value });
-            if (gameDetailsFromApi.Version_parent.HasValue)
-                return RedirectToAction("Index", new { gameId = gameDetailsFromApi.Version_parent.Value });
+            if (gameDetails.Parent_game.HasValue)
+                return RedirectToAction(nameof(Index), new { gameId = gameDetails.Parent_game.Value });
 
-            if (gameDetailsFromApi.Category != 0 && gameDetailsFromApi.Collections != null && gameDetailsFromApi.Collections.Any())
+            if (gameDetails.Version_parent.HasValue)
+                return RedirectToAction(nameof(Index), new { gameId = gameDetails.Version_parent.Value });
+
+            // Obsługa kolekcji i dopasowanie głównej gry
+            if (gameDetails.Category != 0 && gameDetails.Collections != null && gameDetails.Collections.Any())
             {
-                var collectionId = gameDetailsFromApi.Collections.First().Id;
+                var collectionId = gameDetails.Collections.First().Id;
                 var collectionQuery = $"fields id, name; where collections = ({collectionId}) & category = 0; limit 50;";
                 var collectionJson = await _igdbClient.ApiRequestAsync("games", collectionQuery);
+
                 if (!string.IsNullOrEmpty(collectionJson))
                 {
                     var mainGames = JsonConvert.DeserializeObject<List<ApiGame>>(collectionJson);
-                    var matched = mainGames?.OrderByDescending(g => g.Name.Length).FirstOrDefault(g => gameDetailsFromApi.Name.Contains(g.Name));
-                    if (matched != null && matched.Id != gameId) return RedirectToAction("Index", new { gameId = matched.Id });
+                    var matched = mainGames?.OrderByDescending(g => g.Name.Length).FirstOrDefault(g => gameDetails.Name.Contains(g.Name));
+                    if (matched != null && matched.Id != gameId) return RedirectToAction(nameof(Index), new { gameId = matched.Id });
                 }
             }
-            // -------------------------------------
 
-            bool isInLibrary = false;
-            var currentUserId = Guid.Empty;
-            bool canSeeAllPending = false;
+            var currentUserId = GetCurrentUserId();
+            bool canSeeAllPending = User.IsInRole("Admin") || User.IsInRole("Moderator");
+            bool isInLibrary = currentUserId != Guid.Empty && await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameId);
 
-            if (User.Identity != null && User.Identity.IsAuthenticated)
-            {
-                currentUserId = GetCurrentUserId();
-                if (currentUserId != Guid.Empty)
-                {
-                    isInLibrary = await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameId);
-                }
-
-                // Sprawdzenie uprawnień do widzenia wszystkich oczekujących
-                canSeeAllPending = User.IsInRole("Admin") || User.IsInRole("Moderator");
-            }
-
-            // --- BUDOWANIE ZAPYTANIA ---
+            // Pobieranie poradników z uwzględnieniem uprawnień (Publiczne / Autor / Administracja)
             var guidesQuery = _context.Guides
                 .Include(g => g.User)
                 .Include(g => g.Rates)
                 .Where(g => g.IgdbGameId == gameId)
-                .Where(g =>
-                    // 1. PUBLICZNE: Zatwierdzone i NIE usunięte
-                    (g.IsApproved == true && g.IsDeleted == false) ||
+                .Where(g => (g.IsApproved && !g.IsDeleted) || (g.UserId == currentUserId && !g.IsDeleted) || canSeeAllPending);
 
-                    // 2. AUTOR: Widzi swoje (szkice, oczekujące, odrzucone), ale NIE te w koszu (kosz tylko dla admina)
-                    (g.UserId == currentUserId && g.IsDeleted == false) ||
-
-                    // 3. WŁADZA: Widzi WSZYSTKO (oczekujące, odrzucone) ORAZ te w KOSZU
-                    (canSeeAllPending == true)
-                )
-                .AsQueryable();
-
-            // 1. Wyszukiwanie
             if (!string.IsNullOrEmpty(searchString))
             {
                 var term = searchString.ToLower();
-                guidesQuery = guidesQuery.Where(s =>
-                    s.Title.ToLower().Contains(term) ||
-                    s.Content.ToLower().Contains(term));
+                guidesQuery = guidesQuery.Where(s => s.Title.ToLower().Contains(term) || s.Content.ToLower().Contains(term));
             }
 
-            // 2. POBRANIE DANYCH DO PAMIĘCI
-            var guidesFromDb = await guidesQuery.ToListAsync();
+            var guidesList = await guidesQuery.ToListAsync();
 
-            // 3. SORTOWANIE W PAMIĘCI
-            switch (sortOrder)
+            // Sortowanie wyników w pamięci
+            guidesList = sortOrder switch
             {
-                case "mine":
-                    if (currentUserId != Guid.Empty)
-                    {
-                        guidesFromDb = guidesFromDb
-                            .OrderByDescending(g => g.UserId == currentUserId)
-                            .ThenByDescending(g => g.CreatedAt)
-                            .ToList();
-                    }
-                    else
-                    {
-                        guidesFromDb = guidesFromDb.OrderByDescending(g => g.CreatedAt).ToList();
-                    }
-                    break;
+                "mine" => currentUserId != Guid.Empty
+                    ? guidesList.OrderByDescending(g => g.UserId == currentUserId).ThenByDescending(g => g.CreatedAt).ToList()
+                    : guidesList.OrderByDescending(g => g.CreatedAt).ToList(),
+                "rating_desc" => guidesList.OrderByDescending(g => g.Rates.Any() ? g.Rates.Average(r => r.Value) : 0).ToList(),
+                _ => guidesList.OrderByDescending(g => g.CreatedAt).ToList(),
+            };
 
-                case "rating_desc":
-                    guidesFromDb = guidesFromDb
-                        .OrderByDescending(g => g.Rates.Any() ? g.Rates.Average(r => r.Value) : 0)
-                        .ToList();
-                    break;
-                case "newest":
-                default:
-                    guidesFromDb = guidesFromDb
-                        .OrderByDescending(g => g.CreatedAt)
-                        .ToList();
-                    break;
-            }
-
-            // --- 2. POBIERANIE TIPÓW ---
-            var tipsFromDb = await _context.Tips
+            var tips = await _context.Tips
                 .Include(t => t.User)
-                .Include(t => t.Reactions) // WAŻNE: Dodane Include dla reakcji
+                .Include(t => t.Reactions)
                 .Where(t => t.IgdbGameId == gameId)
                 .OrderByDescending(t => t.CreatedAt)
-                .Take(20) // Zwiększyłem limit
+                .Take(20)
                 .ToListAsync();
-            // -----------------------------------
 
-            var viewModel = new GuidesViewModel
+            return View(new GuidesViewModel
             {
                 IgdbGameId = gameId,
-                GameName = gameDetailsFromApi.Name ?? "Brak nazwy",
+                GameName = gameDetails.Name ?? "Brak nazwy",
                 IsInLibrary = isInLibrary,
-                Guides = guidesFromDb,
-                Tips = tipsFromDb
-            };
-
-            return View(viewModel);
+                Guides = guidesList,
+                Tips = tips
+            });
         }
 
-        // --- OBSŁUGA TIPÓW (ADD, EDIT, DELETE, REACTIONS) ---
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddTip(long gameId, string content)
-        {
-            if (string.IsNullOrWhiteSpace(content)) return RedirectToAction("Index", new { gameId = gameId });
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Przekierowanie do logowania
-
-            if (IsUserMuted(user))
-            {
-                TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}.";
-                return RedirectToAction("Index", new { gameId = gameId });
-            }
-
-            var tip = new Tip
-            {
-                IgdbGameId = gameId,
-                UserId = user.Id,
-                Content = content,
-                CreatedAt = DateTime.Now
-            };
-
-            _context.Tips.Add(tip);
-            await _context.SaveChangesAsync();
-
-            TempData["Success"] = "Dodano wskazówkę!";
-            return RedirectToAction("Index", new { gameId = gameId });
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditTip(int id, string content)
-        {
-            var tip = await _context.Tips.FindAsync(id);
-            if (tip == null) return NotFound();
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge();
-
-            // Sprawdzenie uprawnień: Autor lub Admin/Moderator
-            bool canEdit = tip.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
-
-            if (!canEdit) return Forbid();
-            if (IsUserMuted(user))
-            {
-                TempData["Error"] = "Jesteś wyciszony.";
-                return RedirectToAction("Index", new { gameId = tip.IgdbGameId });
-            }
-
-            if (!string.IsNullOrWhiteSpace(content))
-            {
-                tip.Content = content;
-                _context.Update(tip);
-                await _context.SaveChangesAsync();
-                TempData["Success"] = "Zaktualizowano wskazówkę.";
-            }
-
-            return RedirectToAction("Index", new { gameId = tip.IgdbGameId });
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteTip(int id)
-        {
-            var tip = await _context.Tips
-                .Include(t => t.Reactions) // WAŻNE: Najpierw pobierz reakcje, żeby usunąć je kaskadowo
-                .FirstOrDefaultAsync(t => t.Id == id);
-
-            if (tip == null) return NotFound();
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge();
-
-            // Sprawdzenie uprawnień: Autor lub Admin/Moderator
-            bool canDelete = tip.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
-
-            if (!canDelete) return Forbid();
-
-            long gameId = tip.IgdbGameId;
-
-            // Usuń powiązane reakcje (jeśli SQLite nie ma włączonego Cascade Delete w bazie)
-            if (tip.Reactions != null && tip.Reactions.Any())
-            {
-                _context.Reactions.RemoveRange(tip.Reactions);
-            }
-
-            // HARD DELETE (Permanentne usunięcie Tipa)
-            _context.Tips.Remove(tip);
-            await _context.SaveChangesAsync();
-
-            TempData["StatusMessage"] = "Wskazówka została usunięta.";
-            return RedirectToAction("Index", new { gameId = gameId });
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleTipReaction(int tipId, bool isUpvote)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Przekierowanie do logowania
-
-            if (IsUserMuted(user)) return Forbid();
-
-            var tip = await _context.Tips.FindAsync(tipId);
-            if (tip == null) return NotFound();
-
-            var existingReaction = await _context.Reactions
-                .FirstOrDefaultAsync(r => r.TipId == tipId && r.UserId == user.Id);
-
-            var targetType = isUpvote ? ReactionType.Like : ReactionType.Dislike;
-
-            if (existingReaction != null)
-            {
-                // Jeśli użytkownik klika to samo co już ma -> usuwamy (toggle off)
-                if (existingReaction.Type == targetType)
-                {
-                    _context.Reactions.Remove(existingReaction);
-                }
-                // Jeśli zmienia zdanie -> aktualizujemy
-                else
-                {
-                    existingReaction.Type = targetType;
-                    _context.Update(existingReaction);
-                }
-            }
-            else
-            {
-                // Nowa reakcja
-                var reaction = new Reaction
-                {
-                    UserId = user.Id,
-                    TipId = tipId,
-                    Type = targetType
-                };
-                _context.Reactions.Add(reaction);
-            }
-
-            await _context.SaveChangesAsync();
-
-            // Wracamy do widoku
-            return RedirectToAction("Index", new { gameId = tip.IgdbGameId });
-        }
-
-        // ----------------------------------------
-
-        // GET: Guides/Details/5
+        /// <summary>
+        /// Wyświetla pełną treść poradnika wraz z ocenami i sekcją komentarzy.
+        /// </summary>
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
 
             var guide = await _context.Guides
                 .Include(g => g.User)
-                .Include(g => g.Rates) // Do obliczenia średniej
+                .Include(g => g.Rates)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (guide == null) return NotFound();
+            if (guide == null || (guide.IsDeleted && !User.IsInRole("Admin") && !User.IsInRole("Moderator")))
+                return NotFound();
 
-            // Pobieranie komentarzy z odpowiedziami i reakcjami
             var comments = await _context.Comments
                 .Where(c => c.GuideId == id)
                 .Include(c => c.Author)
-                .Include(c => c.Reactions) // Reakcje dla głównego komentarza
-                .Include(c => c.Replies)
-                    .ThenInclude(r => r.Author) // Autor odpowiedzi
-                .Include(c => c.Replies)
-                    .ThenInclude(r => r.Reactions) // Reakcje dla odpowiedzi
+                .Include(c => c.Reactions)
+                .Include(c => c.Replies).ThenInclude(r => r.Author)
+                .Include(c => c.Replies).ThenInclude(r => r.Reactions)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
-            var viewModel = new GuideDetailsViewModel
-            {
-                Guide = guide,
-                Comments = comments,
-                UserRating = 0,
-                AverageRating = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0
-            };
-
-            // Sprawdzenie czy user ocenił
+            double userRating = 0;
             if (User.Identity.IsAuthenticated)
             {
                 var userId = GetCurrentUserId();
-                var existingRate = await _context.Rates
-                    .FirstOrDefaultAsync(r => r.GuideId == id && r.UserId == userId);
-
-                if (existingRate != null) viewModel.UserRating = existingRate.Value;
+                userRating = (await _context.Rates.FirstOrDefaultAsync(r => r.GuideId == id && r.UserId == userId))?.Value ?? 0;
             }
 
-            if (guide.IsDeleted && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
+            return View(new GuideDetailsViewModel
             {
-                return NotFound();
-            }
-
-            return View(viewModel);
+                Guide = guide,
+                Comments = comments,
+                UserRating = userRating,
+                AverageRating = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0
+            });
         }
 
-        // --- AKCJE DLA OCEN I KOMENTARZY ---
+        #endregion
 
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RateGuide([FromBody] RateRequest request)
-        {
-            // Zabezpieczenie danych
-            if (request == null) return BadRequest();
+        #region Guide CRUD & Lifecycle
 
-            double ratingValue = request.RatingValue;
-
-            // Logika ograniczeń (1-5, zaokrąglanie do połówek)
-            if (ratingValue < 1) ratingValue = 1;
-            if (ratingValue > 5) ratingValue = 5;
-            ratingValue = Math.Round(ratingValue * 2, MidpointRounding.AwayFromZero) / 2;
-
-            var user = await _userManager.GetUserAsync(User);
-            // Zabezpieczenie przed nullem
-            if (user == null) return Challenge();
-
-            var guide = await _context.Guides.Include(g => g.Rates).FirstOrDefaultAsync(g => g.Id == request.GuideId);
-
-            if (guide == null) return NotFound();
-
-            var existingRate = await _context.Rates
-                .FirstOrDefaultAsync(r => r.GuideId == request.GuideId && r.UserId == user.Id);
-
-            if (existingRate != null)
-            {
-                existingRate.Value = ratingValue;
-                _context.Rates.Update(existingRate);
-            }
-            else
-            {
-                var rate = new Rate
-                {
-                    UserId = user.Id,
-                    GuideId = request.GuideId,
-                    Value = ratingValue,
-                    CreatedAt = DateTime.Now
-                };
-                _context.Rates.Add(rate);
-            }
-
-            await _context.SaveChangesAsync();
-
-            // Oblicz nową średnią, żeby zaktualizować ją na ekranie bez odświeżania
-            var newAverage = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : ratingValue;
-
-            return Ok(new { success = true, message = "Ocena zapisana!", newAverage = newAverage });
-        }
-
-        public class RateRequest
-        {
-            public int GuideId { get; set; }
-            public double RatingValue { get; set; }
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddComment(int guideId, string content)
-        {
-            if (string.IsNullOrWhiteSpace(content)) return RedirectToAction("Details", new { id = guideId });
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
-            // Sprawdzenie Mute przy komentarzach
-            if (IsUserMuted(user))
-            {
-                TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz dodawać komentarzy.";
-                return RedirectToAction("Details", new { id = guideId });
-            }
-
-            var comment = new Comment
-            {
-                GuideId = guideId,
-                UserId = user.Id,
-                Content = content,
-                CreatedAt = DateTime.Now
-            };
-
-            _context.Comments.Add(comment);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Details", new { id = guideId });
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddReply(Guid commentId, int guideId, string content)
-        {
-            if (string.IsNullOrWhiteSpace(content)) return RedirectToAction("Details", new { id = guideId });
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
-            // Sprawdzenie Mute przy odpowiedziach
-            if (IsUserMuted(user))
-            {
-                TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}. Nie możesz odpowiadać.";
-                return RedirectToAction("Details", new { id = guideId });
-            }
-
-            var reply = new Reply
-            {
-                ParentCommentId = commentId,
-                UserId = user.Id,
-                Content = content,
-                CreatedAt = DateTime.Now
-            };
-
-            _context.Add(reply);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Details", new { id = guideId });
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleReaction(Guid? commentId, Guid? replyId, int guideId, bool isUpvote)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
-            // Sprawdzenie czy użytkownik nie ma mute
-            if (IsUserMuted(user)) return Forbid();
-
-            Reaction existingReaction = null;
-
-            // 1. Sprawdzamy, czy to reakcja na KOMENTARZ
-            if (commentId.HasValue)
-            {
-                existingReaction = await _context.Reactions
-                    .FirstOrDefaultAsync(r => r.CommentId == commentId.Value && r.UserId == user.Id);
-            }
-            // 2. Sprawdzamy, czy to reakcja na ODPOWIEDŹ
-            else if (replyId.HasValue)
-            {
-                existingReaction = await _context.Reactions
-                    .FirstOrDefaultAsync(r => r.ReplyId == replyId.Value && r.UserId == user.Id);
-            }
-            else
-            {
-                return BadRequest("Brak ID komentarza lub odpowiedzi.");
-            }
-
-            var targetType = isUpvote ? ReactionType.Like : ReactionType.Dislike;
-
-            if (existingReaction != null)
-            {
-                // Jeśli użytkownik klika to samo co już ma -> usuwamy (toggle off)
-                if (existingReaction.Type == targetType)
-                {
-                    _context.Reactions.Remove(existingReaction);
-                }
-                // Jeśli zmienia zdanie (z like na dislike lub odwrotnie) -> aktualizujemy
-                else
-                {
-                    existingReaction.Type = targetType;
-                    _context.Reactions.Update(existingReaction);
-                }
-            }
-            else
-            {
-                // Nowa reakcja
-                var reaction = new Reaction
-                {
-                    UserId = user.Id,
-                    Type = targetType,
-                    // Ważne: Ustawiamy jedno, drugie zostaje null
-                    CommentId = commentId,
-                    ReplyId = replyId
-                };
-                _context.Reactions.Add(reaction);
-            }
-
-            await _context.SaveChangesAsync();
-
-            // Zachowujemy pozycję na stronie (kotwica)
-            return RedirectToAction("Details", new { id = guideId, section = "comments" });
-        }
-
-        // --- CRUD METODY ---
-
-        // GET: Create
         [Authorize]
         public async Task<IActionResult> Create(long gameId)
         {
             if (gameId <= 0) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
             if (IsUserMuted(user))
             {
                 TempData["Error"] = $"Twoje konto jest wyciszone do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}.";
-                return RedirectToAction("Index", new { gameId = gameId });
+                return RedirectToAction(nameof(Index), new { gameId = gameId });
             }
 
             return View(new Guide { IgdbGameId = gameId });
         }
 
-        // POST: Create
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Guide guide, IFormFile? coverImageFile, string action)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
             if (IsUserMuted(user))
             {
                 ModelState.AddModelError(string.Empty, "Twoje konto jest wyciszone.");
@@ -610,56 +219,39 @@ namespace praca_dyplomowa_zesp.Controllers
             ModelState.Remove("CoverImage");
 
             if (coverImageFile == null || coverImageFile.Length == 0)
-            {
                 ModelState.AddModelError("CoverImage", "Okładka poradnika jest wymagana!");
-            }
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return View(guide);
+
+            guide.UserId = user.Id;
+            guide.CreatedAt = DateTime.Now;
+
+            // Zarządzanie statusem poradnika (Szkic vs Publikacja)
+            if (action == "draft")
             {
-                guide.UserId = user.Id;
-                guide.CreatedAt = DateTime.Now;
-
-                // --- OBSŁUGA AKCJI (DRAFT vs PUBLISH) ---
-                if (action == "draft")
-                {
-                    guide.IsDraft = true;
-                    guide.IsApproved = false;
-                    TempData["StatusMessage"] = "Zapisano jako szkic.";
-                }
-                else // action == "publish"
-                {
-                    guide.IsDraft = false;
-
-                    // Jeśli admin/mod -> od razu zatwierdzone, w przeciwnym razie -> pending
-                    if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
-                    {
-                        guide.IsApproved = true;
-                    }
-                    else
-                    {
-                        guide.IsApproved = false;
-                    }
-                    TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano poradnik!" : "Przesłano do akceptacji.";
-                }
-                // ----------------------------------------
-
-                using (var memoryStream = new MemoryStream())
-                {
-                    await coverImageFile.CopyToAsync(memoryStream);
-                    guide.CoverImage = memoryStream.ToArray();
-                    guide.CoverImageContentType = coverImageFile.ContentType;
-                }
-
-                _context.Add(guide);
-                await _context.SaveChangesAsync();
-
-                return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
+                guide.IsDraft = true;
+                guide.IsApproved = false;
+                TempData["StatusMessage"] = "Zapisano jako szkic.";
+            }
+            else
+            {
+                guide.IsDraft = false;
+                guide.IsApproved = User.IsInRole("Admin") || User.IsInRole("Moderator");
+                TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano poradnik!" : "Przesłano do akceptacji.";
             }
 
-            return View(guide);
+            using (var memoryStream = new MemoryStream())
+            {
+                await coverImageFile.CopyToAsync(memoryStream);
+                guide.CoverImage = memoryStream.ToArray();
+                guide.CoverImageContentType = coverImageFile.ContentType;
+            }
+
+            _context.Add(guide);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
         }
 
-        // GET: Edit/5
         [Authorize]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -668,17 +260,12 @@ namespace praca_dyplomowa_zesp.Controllers
             var guide = await _context.Guides.FindAsync(id);
             if (guide == null) return NotFound();
 
-            var currentUserId = GetCurrentUserId();
-            // Edytować może autor LUB Admin/Mod
-            if (guide.UserId != currentUserId && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
-            {
+            if (guide.UserId != GetCurrentUserId() && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
                 return Forbid();
-            }
 
             return View(guide);
         }
 
-        // POST: Edit/5
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -689,173 +276,312 @@ namespace praca_dyplomowa_zesp.Controllers
             ModelState.Remove("User");
             ModelState.Remove("CoverImage");
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return View(guide);
+
+            var existingGuide = await _context.Guides.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id);
+            if (existingGuide == null) return NotFound();
+
+            bool isAdminOrMod = User.IsInRole("Admin") || User.IsInRole("Moderator");
+            if (existingGuide.UserId != GetCurrentUserId() && !isAdminOrMod) return Forbid();
+
+            // Aktualizacja metadanych
+            guide.UserId = existingGuide.UserId;
+            guide.CreatedAt = existingGuide.CreatedAt;
+            guide.UpdatedAt = DateTime.Now;
+            guide.IsDeleted = existingGuide.IsDeleted;
+            guide.DeletedAt = existingGuide.DeletedAt;
+
+            if (action == "draft")
             {
-                try
-                {
-                    var existingGuide = await _context.Guides.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id);
-                    if (existingGuide == null) return NotFound();
-
-                    var currentUserId = GetCurrentUserId();
-                    bool isAdminOrMod = User.IsInRole("Admin") || User.IsInRole("Moderator");
-
-                    if (existingGuide.UserId != currentUserId && !isAdminOrMod) return Forbid();
-
-                    // Przepisanie danych
-                    guide.UserId = existingGuide.UserId;
-                    guide.CreatedAt = existingGuide.CreatedAt;
-                    guide.UpdatedAt = DateTime.Now;
-                    guide.IsDeleted = existingGuide.IsDeleted;
-                    guide.DeletedAt = existingGuide.DeletedAt;
-
-                    // --- OBSŁUGA AKCJI (DRAFT vs PUBLISH) ---
-                    if (action == "draft")
-                    {
-                        guide.IsDraft = true;
-                        guide.IsApproved = false;
-
-                        // Jeśli był odrzucony, zachowujemy status, żeby autor wiedział co poprawia
-                        guide.IsRejected = existingGuide.IsRejected;
-                        guide.RejectionReason = existingGuide.RejectionReason;
-
-                        TempData["StatusMessage"] = "Zaktualizowano szkic.";
-                    }
-                    else // action == "publish"
-                    {
-                        guide.IsDraft = false;
-
-                        // RESETUJEMY ODRZUCENIE - teraz trafia znów do weryfikacji
-                        guide.IsRejected = false;
-                        guide.RejectionReason = null;
-
-                        // Jeśli to był szkic lub odrzucony -> sprawdzamy uprawnienia do publikacji
-                        if (existingGuide.IsDraft || existingGuide.IsRejected)
-                        {
-                            guide.IsApproved = isAdminOrMod; // Admin od razu, user -> pending
-                            TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano!" : "Przesłano do ponownej akceptacji.";
-                        }
-                        else
-                        {
-                            // Jeśli już był opublikowany/oczekujący -> zachowujemy status
-                            guide.IsApproved = existingGuide.IsApproved;
-                            TempData["StatusMessage"] = "Zapisano zmiany.";
-                        }
-                    }
-                    // ----------------------------------------
-
-                    if (coverImageFile != null && coverImageFile.Length > 0)
-                    {
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            await coverImageFile.CopyToAsync(memoryStream);
-                            guide.CoverImage = memoryStream.ToArray();
-                            guide.CoverImageContentType = coverImageFile.ContentType;
-                        }
-                    }
-                    else
-                    {
-                        guide.CoverImage = existingGuide.CoverImage;
-                        guide.CoverImageContentType = existingGuide.CoverImageContentType;
-                    }
-
-                    _context.Update(guide);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!_context.Guides.Any(e => e.Id == guide.Id)) return NotFound();
-                    else throw;
-                }
-
-                return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
+                guide.IsDraft = true;
+                guide.IsApproved = false;
+                guide.IsRejected = existingGuide.IsRejected;
+                guide.RejectionReason = existingGuide.RejectionReason;
+                TempData["StatusMessage"] = "Zaktualizowano szkic.";
             }
-            return View(guide);
+            else
+            {
+                guide.IsDraft = false;
+                guide.IsRejected = false;
+                guide.RejectionReason = null;
+
+                if (existingGuide.IsDraft || existingGuide.IsRejected)
+                {
+                    guide.IsApproved = isAdminOrMod;
+                    TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano!" : "Przesłano do ponownej akceptacji.";
+                }
+                else
+                {
+                    guide.IsApproved = existingGuide.IsApproved;
+                    TempData["StatusMessage"] = "Zapisano zmiany.";
+                }
+            }
+
+            if (coverImageFile != null && coverImageFile.Length > 0)
+            {
+                using var memoryStream = new MemoryStream();
+                await coverImageFile.CopyToAsync(memoryStream);
+                guide.CoverImage = memoryStream.ToArray();
+                guide.CoverImageContentType = coverImageFile.ContentType;
+            }
+            else
+            {
+                guide.CoverImage = existingGuide.CoverImage;
+                guide.CoverImageContentType = existingGuide.CoverImageContentType;
+            }
+
+            _context.Update(guide);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index), new { gameId = guide.IgdbGameId });
         }
 
-        // GET: Delete/5
         [Authorize]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
 
-            var guide = await _context.Guides
-                .Include(g => g.User)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
+            var guide = await _context.Guides.Include(g => g.User).FirstOrDefaultAsync(m => m.Id == id);
             if (guide == null) return NotFound();
 
-            var currentUserId = GetCurrentUserId();
-            if (guide.UserId != currentUserId && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
-            {
+            if (guide.UserId != GetCurrentUserId() && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
                 return Forbid();
-            }
 
             return View(guide);
         }
 
-        // POST: Delete/5
         [HttpPost, ActionName("Delete")]
         [Authorize]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var guide = await _context.Guides.FindAsync(id);
-            if (guide != null)
+            if (guide == null) return RedirectToAction(nameof(Index), "Games");
+
+            if (guide.UserId != GetCurrentUserId() && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
+                return Forbid();
+
+            long gameId = guide.IgdbGameId;
+
+            // Logika usuwania: Zatwierdzone trafiają do kosza (Soft), pozostałe usuwane są trwale
+            if (guide.IsApproved)
             {
-                var currentUserId = GetCurrentUserId();
-                if (guide.UserId != currentUserId && !User.IsInRole("Admin") && !User.IsInRole("Moderator"))
-                {
-                    return Forbid();
-                }
-
-                long gameId = guide.IgdbGameId;
-
-                // --- ZMIANA LOGIKI USUWANIA ---
-                // Zasada: Tylko ZATWIERDZONE (opublikowane) trafiają do kosza (Soft Delete).
-                // Wszystko co "w toku" lub "robocze" (Szkic, Oczekujący, Odrzucony) usuwamy PERMANENTNIE (Hard Delete).
-
-                if (guide.IsApproved)
-                {
-                    // Soft Delete (Do kosza)
-                    guide.IsDeleted = true;
-                    guide.DeletedAt = DateTime.Now;
-                    _context.Update(guide);
-                    TempData["StatusMessage"] = "Poradnik przeniesiony do kosza.";
-                }
-                else
-                {
-                    // Hard Delete (Trwałe usunięcie)
-                    _context.Guides.Remove(guide);
-                    TempData["StatusMessage"] = "Poradnik został trwale usunięty.";
-                }
-                // ------------------------------
-
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index), new { gameId = gameId });
+                guide.IsDeleted = true;
+                guide.DeletedAt = DateTime.Now;
+                _context.Update(guide);
+                TempData["StatusMessage"] = "Poradnik przeniesiony do kosza.";
             }
-            return RedirectToAction(nameof(Index), "Games");
+            else
+            {
+                _context.Guides.Remove(guide);
+                TempData["StatusMessage"] = "Poradnik został trwale usunięty.";
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index), new { gameId = gameId });
         }
+
+        #endregion
+
+        #region Tip Management
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddTip(long gameId, string content)
+        {
+            if (string.IsNullOrWhiteSpace(content)) return RedirectToAction(nameof(Index), new { gameId });
+
+            var user = await _userManager.GetUserAsync(User);
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = $"Jesteś wyciszony do {user.BanEnd?.ToString("dd.MM.yyyy HH:mm")}.";
+                return RedirectToAction(nameof(Index), new { gameId });
+            }
+
+            _context.Tips.Add(new Tip { IgdbGameId = gameId, UserId = user.Id, Content = content, CreatedAt = DateTime.Now });
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Dodano wskazówkę!";
+            return RedirectToAction(nameof(Index), new { gameId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditTip(int id, string content)
+        {
+            var tip = await _context.Tips.FindAsync(id);
+            var user = await _userManager.GetUserAsync(User);
+            if (tip == null || user == null) return NotFound();
+
+            if (tip.UserId != user.Id && !User.IsInRole("Admin") && !User.IsInRole("Moderator")) return Forbid();
+            if (IsUserMuted(user)) return Forbid();
+
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                tip.Content = content;
+                _context.Update(tip);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Zaktualizowano wskazówkę.";
+            }
+
+            return RedirectToAction(nameof(Index), new { gameId = tip.IgdbGameId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteTip(int id)
+        {
+            var tip = await _context.Tips.Include(t => t.Reactions).FirstOrDefaultAsync(t => t.Id == id);
+            if (tip == null) return NotFound();
+
+            if (tip.UserId != GetCurrentUserId() && !User.IsInRole("Admin") && !User.IsInRole("Moderator")) return Forbid();
+
+            long gameId = tip.IgdbGameId;
+            if (tip.Reactions != null && tip.Reactions.Any()) _context.Reactions.RemoveRange(tip.Reactions);
+
+            _context.Tips.Remove(tip);
+            await _context.SaveChangesAsync();
+            TempData["StatusMessage"] = "Wskazówka została usunięta.";
+            return RedirectToAction(nameof(Index), new { gameId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleTipReaction(int tipId, bool isUpvote)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null || IsUserMuted(user)) return Forbid();
+
+            var tip = await _context.Tips.FindAsync(tipId);
+            if (tip == null) return NotFound();
+
+            var reaction = await _context.Reactions.FirstOrDefaultAsync(r => r.TipId == tipId && r.UserId == user.Id);
+            var targetType = isUpvote ? ReactionType.Like : ReactionType.Dislike;
+
+            if (reaction != null)
+            {
+                if (reaction.Type == targetType) _context.Reactions.Remove(reaction);
+                else { reaction.Type = targetType; _context.Update(reaction); }
+            }
+            else
+            {
+                _context.Reactions.Add(new Reaction { UserId = user.Id, TipId = tipId, Type = targetType });
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index), new { gameId = tip.IgdbGameId });
+        }
+
+        #endregion
+
+        #region Interactions (Ratings, Comments & Reactions)
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RateGuide([FromBody] RateRequest request)
+        {
+            if (request == null) return BadRequest();
+
+            double val = Math.Clamp(request.RatingValue, 1, 5);
+            val = Math.Round(val * 2, MidpointRounding.AwayFromZero) / 2;
+
+            var user = await _userManager.GetUserAsync(User);
+            var guide = await _context.Guides.Include(g => g.Rates).FirstOrDefaultAsync(g => g.Id == request.GuideId);
+            if (user == null || guide == null) return NotFound();
+
+            var existingRate = await _context.Rates.FirstOrDefaultAsync(r => r.GuideId == request.GuideId && r.UserId == user.Id);
+            if (existingRate != null) { existingRate.Value = val; _context.Rates.Update(existingRate); }
+            else _context.Rates.Add(new Rate { UserId = user.Id, GuideId = request.GuideId, Value = val, CreatedAt = DateTime.Now });
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, newAverage = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : val });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddComment(int guideId, string content)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = "Twoje konto jest wyciszone. Nie możesz dodawać komentarzy.";
+                return RedirectToAction(nameof(Details), new { id = guideId });
+            }
+
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                _context.Comments.Add(new Comment { GuideId = guideId, UserId = user.Id, Content = content, CreatedAt = DateTime.Now });
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Details), new { id = guideId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddReply(Guid commentId, int guideId, string content)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (IsUserMuted(user))
+            {
+                TempData["Error"] = "Twoje konto jest wyciszone.";
+                return RedirectToAction(nameof(Details), new { id = guideId });
+            }
+
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                _context.Add(new Reply { ParentCommentId = commentId, UserId = user.Id, Content = content, CreatedAt = DateTime.Now });
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Details), new { id = guideId });
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleReaction(Guid? commentId, Guid? replyId, int guideId, bool isUpvote)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null || IsUserMuted(user)) return Forbid();
+
+            Reaction reaction = commentId.HasValue
+                ? await _context.Reactions.FirstOrDefaultAsync(r => r.CommentId == commentId.Value && r.UserId == user.Id)
+                : await _context.Reactions.FirstOrDefaultAsync(r => r.ReplyId == replyId.Value && r.UserId == user.Id);
+
+            var targetType = isUpvote ? ReactionType.Like : ReactionType.Dislike;
+
+            if (reaction != null)
+            {
+                if (reaction.Type == targetType) _context.Reactions.Remove(reaction);
+                else { reaction.Type = targetType; _context.Reactions.Update(reaction); }
+            }
+            else
+            {
+                _context.Reactions.Add(new Reaction { UserId = user.Id, Type = targetType, CommentId = commentId, ReplyId = replyId });
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id = guideId, section = "comments" });
+        }
+
+        #endregion
+
+        #region PDF Generation & Administrative Actions
 
         public async Task<IActionResult> DownloadPdf(int id)
         {
-            var guide = await _context.Guides
-                .Include(g => g.User)
-                .Include(g => g.Rates)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
+            var guide = await _context.Guides.Include(g => g.User).Include(g => g.Rates).FirstOrDefaultAsync(m => m.Id == id);
             if (guide == null) return NotFound();
 
-            var viewModel = new GuideDetailsViewModel
-            {
-                Guide = guide,
-                AverageRating = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0
-            };
-
+            var viewModel = new GuideDetailsViewModel { Guide = guide, AverageRating = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0 };
             return new ViewAsPdf("DetailsPdf", viewModel)
             {
                 FileName = $"Poradnik_{guide.Title}.pdf",
                 PageSize = Rotativa.AspNetCore.Options.Size.A4,
-                PageOrientation = Rotativa.AspNetCore.Options.Orientation.Portrait,
                 PageMargins = new Rotativa.AspNetCore.Options.Margins(10, 10, 10, 10)
             };
         }
@@ -868,16 +594,14 @@ namespace praca_dyplomowa_zesp.Controllers
             if (guide == null) return NotFound();
 
             guide.IsApproved = true;
-            guide.IsRejected = false; // Na wszelki wypadek czyścimy flagę odrzucenia
+            guide.IsRejected = false;
             guide.RejectionReason = null;
 
             _context.Update(guide);
             await _context.SaveChangesAsync();
-
             return Redirect(Request.Headers["Referer"].ToString());
         }
 
-        // --- NOWA METODA: ODRZUCANIE PORADNIKA ---
         [HttpPost]
         [Authorize(Roles = "Admin,Moderator")]
         [ValidateAntiForgeryToken]
@@ -886,18 +610,34 @@ namespace praca_dyplomowa_zesp.Controllers
             var guide = await _context.Guides.FindAsync(id);
             if (guide == null) return NotFound();
 
-            // Ustawiamy statusy
             guide.IsApproved = false;
             guide.IsRejected = true;
             guide.RejectionReason = reason;
 
             _context.Update(guide);
             await _context.SaveChangesAsync();
-
             TempData["StatusMessage"] = "Poradnik został odrzucony i zwrócony do autora.";
-            return RedirectToAction("Details", new { id = id });
+            return RedirectToAction(nameof(Details), new { id = id });
         }
-        // -----------------------------------------
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> DeletePermanently(int id)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide == null) return RedirectToAction(nameof(Index), "Games");
+
+            long gameId = guide.IgdbGameId;
+            _context.Guides.Remove(guide);
+            await _context.SaveChangesAsync();
+
+            TempData["StatusMessage"] = "Poradnik został usunięty permanentnie.";
+            return RedirectToAction(nameof(Index), new { gameId = gameId });
+        }
+
+        #endregion
+
+        #region Comment/Reply CRUD
 
         [HttpPost]
         [Authorize]
@@ -905,24 +645,14 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> EditComment(Guid commentId, int guideId, string content)
         {
             var comment = await _context.Comments.FindAsync(commentId);
-            if (comment == null) return NotFound();
-
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
-            if (comment.UserId != user.Id) return Forbid();
-
-            if (IsUserMuted(user))
-            {
-                TempData["Error"] = "Jesteś wyciszony, nie możesz edytować.";
-                return RedirectToAction("Details", new { id = guideId });
-            }
+            if (comment == null || user == null || comment.UserId != user.Id) return Forbid();
+            if (IsUserMuted(user)) return Forbid();
 
             comment.Content = content;
             _context.Update(comment);
             await _context.SaveChangesAsync();
-
-            return RedirectToAction("Details", new { id = guideId });
+            return RedirectToAction(nameof(Details), new { id = guideId });
         }
 
         [HttpPost]
@@ -932,19 +662,12 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             var comment = await _context.Comments.FindAsync(commentId);
             if (comment == null) return NotFound();
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
-            bool canDelete = comment.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
-
-            if (!canDelete) return Forbid();
+            if (comment.UserId != GetCurrentUserId() && !User.IsInRole("Admin") && !User.IsInRole("Moderator")) return Forbid();
 
             _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();
-
             TempData["Success"] = "Komentarz został usunięty.";
-            return RedirectToAction("Details", new { id = guideId });
+            return RedirectToAction(nameof(Details), new { id = guideId });
         }
 
         [HttpPost]
@@ -953,24 +676,14 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> EditReply(Guid replyId, int guideId, string content)
         {
             var reply = await _context.Replies.FindAsync(replyId);
-            if (reply == null) return NotFound();
-
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
-            if (reply.UserId != user.Id) return Forbid();
-
-            if (IsUserMuted(user))
-            {
-                TempData["Error"] = "Jesteś wyciszony.";
-                return RedirectToAction("Details", new { id = guideId });
-            }
+            if (reply == null || user == null || reply.UserId != user.Id) return Forbid();
+            if (IsUserMuted(user)) return Forbid();
 
             reply.Content = content;
             _context.Update(reply);
             await _context.SaveChangesAsync();
-
-            return RedirectToAction("Details", new { id = guideId });
+            return RedirectToAction(nameof(Details), new { id = guideId });
         }
 
         [HttpPost]
@@ -980,39 +693,20 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             var reply = await _context.Replies.FindAsync(replyId);
             if (reply == null) return NotFound();
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge(); // Zabezpieczenie
-
-            bool canDelete = reply.UserId == user.Id || User.IsInRole("Admin") || User.IsInRole("Moderator");
-
-            if (!canDelete) return Forbid();
+            if (reply.UserId != GetCurrentUserId() && !User.IsInRole("Admin") && !User.IsInRole("Moderator")) return Forbid();
 
             _context.Replies.Remove(reply);
             await _context.SaveChangesAsync();
-
             TempData["Success"] = "Odpowiedź została usunięta.";
-            return RedirectToAction("Details", new { id = guideId });
+            return RedirectToAction(nameof(Details), new { id = guideId });
         }
 
-        [HttpPost]
-        [Authorize(Roles = "Admin,Moderator")]
-        public async Task<IActionResult> DeletePermanently(int id)
+        #endregion
+
+        public class RateRequest
         {
-            var guide = await _context.Guides.FindAsync(id);
-            if (guide != null)
-            {
-                long gameId = guide.IgdbGameId; // Zapamiętujemy ID gry, żeby wiedzieć gdzie wrócić
-
-                _context.Guides.Remove(guide); // Twarde usunięcie
-                await _context.SaveChangesAsync();
-
-                TempData["StatusMessage"] = "Poradnik został usunięty permanentnie.";
-
-                // WRACAMY DO LISTY PORADNIKÓW GRY (a nie do Admina)
-                return RedirectToAction(nameof(Index), new { gameId = gameId });
-            }
-            return RedirectToAction("Index", "Games");
+            public int GuideId { get; set; }
+            public double RatingValue { get; set; }
         }
     }
 }

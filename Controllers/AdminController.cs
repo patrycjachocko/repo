@@ -2,33 +2,38 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using praca_dyplomowa.Data; // Upewnij się, że ten namespace jest poprawny dla Twojego DbContext
+using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models;
 using praca_dyplomowa_zesp.Models.Modules.Admin;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Users;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    [Authorize(Roles = "Admin,Moderator")] // Pozwalamy też Moderatorom (zgodnie z Twoim opisem)
+    /// <summary>
+    /// Kontroler administracyjny zarządzający użytkownikami, treściami (poradnikami) 
+    /// oraz systemem zgłoszeń technicznych (ticketów).
+    /// </summary>
+    [Authorize(Roles = "Admin,Moderator")]
     public class AdminController : Controller
     {
         private readonly UserManager<User> _userManager;
-        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
-        private readonly ApplicationDbContext _context; // Dodano kontekst bazy
+        private readonly ApplicationDbContext _context;
 
-        public AdminController(UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager, ApplicationDbContext context)
+        public AdminController(UserManager<User> userManager, ApplicationDbContext context)
         {
             _userManager = userManager;
-            _roleManager = roleManager;
             _context = context;
         }
 
-        // GET: /Admin
+        /// <summary>
+        /// Wyświetla główny panel administracyjny z podziałem na sekcje zależne od uprawnień.
+        /// </summary>
         public async Task<IActionResult> Index(string searchString)
         {
             var model = new AdminPanelViewModel
@@ -40,7 +45,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 Tickets = new List<Ticket>()
             };
 
-            // 1. UŻYTKOWNICY - Pobieramy TYLKO jeśli użytkownik jest Adminem
+            // Sekcja zarządzania użytkownikami - dostępna tylko dla Administratora
             if (User.IsInRole("Admin"))
             {
                 var usersQuery = _userManager.Users.AsQueryable();
@@ -52,112 +57,45 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 var usersList = await usersQuery.ToListAsync();
 
-                // Mapowanie użytkowników na DTO
                 foreach (var user in usersList)
                 {
-                    var roles = await _userManager.GetRolesAsync(user);
-                    bool isLocked = await _userManager.IsLockedOutAsync(user);
-                    bool isMuted = user.BanEnd.HasValue && user.BanEnd.Value > DateTimeOffset.Now;
-
                     model.Users.Add(new AdminUserDto
                     {
                         Id = user.Id,
                         UserName = user.UserName,
                         Login = user.Login,
-                        Roles = roles.ToList(),
-                        IsLockedOut = isLocked,
+                        Roles = (await _userManager.GetRolesAsync(user)).ToList(),
+                        IsLockedOut = await _userManager.IsLockedOutAsync(user),
                         LockoutEnd = user.LockoutEnd,
-                        IsMuted = isMuted,
+                        IsMuted = user.BanEnd.HasValue && user.BanEnd.Value > DateTimeOffset.Now,
                         MuteEnd = user.BanEnd,
-                        AvatarUrl = user.ProfilePicture != null
-                            ? $"data:{user.ProfilePictureContentType};base64,{Convert.ToBase64String(user.ProfilePicture)}"
-                            : "/uploads/avatars/default_avatar.png"
+                        AvatarUrl = GetUserAvatar(user)
                     });
                 }
             }
 
-            // 2. POSTY DO AKCEPTACJI
-            // ZMIANA: Dodano && !g.IsRejected -> Odrzucone znikają z tej listy
-            var pendingGuides = await _context.Guides
+            // Pobieranie danych dla Moderatora i Administratora
+            model.PendingGuides = await _context.Guides
                 .Include(g => g.User)
                 .Where(g => !g.IsApproved && !g.IsDeleted && !g.IsDraft && !g.IsRejected)
                 .OrderBy(g => g.CreatedAt)
                 .ToListAsync();
 
-            model.PendingGuides = pendingGuides;
-
-            // 3. POSTY USUNIĘTE (Kosz)
-            var deletedGuides = await _context.Guides
+            model.DeletedGuides = await _context.Guides
                 .Include(g => g.User)
                 .Where(g => g.IsDeleted)
                 .OrderBy(g => g.DeletedAt)
                 .ToListAsync();
 
-            model.DeletedGuides = deletedGuides;
-
-            // 4. ZGŁOSZENIA (Tickety)
-            var tickets = await _context.Tickets
+            model.Tickets = await _context.Tickets
                 .Include(t => t.User)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-            model.Tickets = tickets;
-
             return View(model);
         }
 
-        // --- ZARZĄDZANIE POSTAMI ---
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ApproveGuide(int id)
-        {
-            var guide = await _context.Guides.FindAsync(id);
-            if (guide == null) return NotFound();
-
-            guide.IsApproved = true;
-            _context.Update(guide);
-            await _context.SaveChangesAsync();
-
-            TempData["Success"] = $"Zaakceptowano poradnik: {guide.Title}";
-            return RedirectToAction(nameof(Index)); // Wracamy do panelu (zakładka powinna się przełączyć JS-em lub zostać na głównej)
-        }
-
-        // W pliku Controllers/AdminController.cs
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RejectGuide(int id, string reason) // Dodano parametr reason
-        {
-            var guide = await _context.Guides.FindAsync(id);
-            if (guide == null) return NotFound();
-
-            // ZMIANA LOGIKI:
-            // Zamiast usuwać (IsDeleted = true), oznaczamy jako Odrzucony (IsRejected = true).
-            // Dzięki temu użytkownik zobaczy powód i będzie mógł poprawić poradnik.
-
-            guide.IsRejected = true;       // Ustawiamy flagę odrzucenia
-            guide.RejectionReason = reason; // Zapisujemy powód wpisany w modalu
-            guide.IsApproved = false;      // Dla pewności
-
-            // Upewniamy się, że NIE jest w koszu (jeśli wcześniej tam trafił przez pomyłkę)
-            guide.IsDeleted = false;
-            guide.DeletedAt = null;
-
-            _context.Update(guide);
-            await _context.SaveChangesAsync();
-
-            TempData["Success"] = $"Odrzucono poradnik: {guide.Title} (z powodem: {reason})";
-
-            // Powrót do widoku
-            var referer = Request.Headers["Referer"].ToString();
-            if (!string.IsNullOrEmpty(referer)) return Redirect(referer);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-
-        // --- ZARZĄDZANIE UŻYTKOWNIKAMI (Bez zmian logicznych, tylko autoryzacja Admin) ---
+        #region User Management (Admin Only)
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
@@ -165,49 +103,36 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> ToggleModerator(Guid userId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null) return NotFound();
-
-            if (user.UserName == "Admin" || user.UserName == User.Identity.Name)
+            if (user == null || user.UserName == "Admin" || user.UserName == User.Identity.Name)
             {
-                TempData["Error"] = "Nie możesz zmienić uprawnień tego użytkownika.";
+                TempData["Error"] = "Nie można zmienić uprawnień tego użytkownika.";
                 return RedirectToAction(nameof(Index));
             }
 
             if (await _userManager.IsInRoleAsync(user, "Moderator"))
             {
-                // 1. Odbieramy uprawnienia systemowe
                 await _userManager.RemoveFromRoleAsync(user, "Moderator");
-
-                // 2. NOWOŚĆ: Aktualizujemy pole tekstowe dla kolorów w widoku
                 user.Role = "User";
-                await _userManager.UpdateAsync(user);
-
                 TempData["Success"] = $"Odebrano uprawnienia Moderatora użytkownikowi {user.UserName}.";
             }
             else
             {
-                // 1. Nadajemy uprawnienia systemowe
                 await _userManager.AddToRoleAsync(user, "Moderator");
-
-                // 2. NOWOŚĆ: Aktualizujemy pole tekstowe dla kolorów w widoku
                 user.Role = "Moderator";
-                await _userManager.UpdateAsync(user);
-
                 TempData["Success"] = $"Nadano uprawnienia Moderatora użytkownikowi {user.UserName}.";
             }
 
+            await _userManager.UpdateAsync(user);
             return RedirectToAction(nameof(Index));
         }
 
-        [Authorize(Roles = "Admin")] // Tylko Admin może banować (chyba że chcesz inaczej)
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BanUser(Guid userId, int days, string reason)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null) return NotFound();
-
-            if (user.UserName == "Admin" || user.UserName == User.Identity.Name)
+            if (user == null || user.UserName == "Admin" || user.UserName == User.Identity.Name)
             {
                 TempData["Error"] = "Nie można zbanować tego użytkownika.";
                 return RedirectToAction(nameof(Index));
@@ -218,20 +143,17 @@ namespace praca_dyplomowa_zesp.Controllers
                 var banUntil = DateTimeOffset.Now.AddDays(days);
                 await _userManager.SetLockoutEndDateAsync(user, banUntil);
                 await _userManager.SetLockoutEnabledAsync(user, true);
-
                 user.BanReason = reason;
-                await _userManager.UpdateAsync(user);
-
                 TempData["Success"] = $"Użytkownik {user.UserName} został zbanowany na {days} dni.";
             }
             else
             {
                 await _userManager.SetLockoutEndDateAsync(user, null);
                 user.BanReason = null;
-                await _userManager.UpdateAsync(user);
                 TempData["Success"] = $"Użytkownik {user.UserName} został odbanowany.";
             }
 
+            await _userManager.UpdateAsync(user);
             return RedirectToAction(nameof(Index));
         }
 
@@ -246,23 +168,60 @@ namespace praca_dyplomowa_zesp.Controllers
             if (hours > 0)
             {
                 user.BanEnd = DateTimeOffset.Now.AddHours(hours);
-                user.isBanned = true; // Flaga pomocnicza
-                await _userManager.UpdateAsync(user);
+                user.isBanned = true;
                 TempData["Success"] = $"Użytkownik {user.UserName} został wyciszony na {hours} godzin.";
             }
             else
             {
                 user.BanEnd = null;
                 user.isBanned = false;
-                await _userManager.UpdateAsync(user);
                 TempData["Success"] = $"Użytkownik {user.UserName} został odciszony.";
             }
 
+            await _userManager.UpdateAsync(user);
+            return RedirectToAction(nameof(Index));
+        }
+
+        #endregion
+
+        #region Content Moderation (Guides)
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveGuide(int id)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide == null) return NotFound();
+
+            guide.IsApproved = true;
+            _context.Update(guide);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Zaakceptowano poradnik: {guide.Title}";
             return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Moderator")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectGuide(int id, string reason)
+        {
+            var guide = await _context.Guides.FindAsync(id);
+            if (guide == null) return NotFound();
+
+            guide.IsRejected = true;
+            guide.RejectionReason = reason;
+            guide.IsApproved = false;
+            guide.IsDeleted = false;
+            guide.DeletedAt = null;
+
+            _context.Update(guide);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Odrzucono poradnik: {guide.Title} (Powód: {reason})";
+            return RedirectToReferer();
+        }
+
+        [HttpPost]
         public async Task<IActionResult> RestoreGuide(int id)
         {
             var guide = await _context.Guides.FindAsync(id);
@@ -270,23 +229,15 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 guide.IsDeleted = false;
                 guide.DeletedAt = null;
-                // NIE ZMIENIAMY IsApproved. Jeśli był false (oczekujący), to nadal jest false.
-
                 _context.Update(guide);
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Przywrócono poradnik z kosza.";
             }
 
-            // Jeśli wywołane z Details, wróć do Details, jeśli z Panelu - do Panelu
-            var referer = Request.Headers["Referer"].ToString();
-            if (!string.IsNullOrEmpty(referer)) return Redirect(referer);
-
-            return RedirectToAction("Index");
+            return RedirectToReferer();
         }
 
-        // ZMIANA: long id -> int id
         [HttpPost]
-        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> DeletePermanently(int id)
         {
             var guide = await _context.Guides.FindAsync(id);
@@ -296,42 +247,25 @@ namespace praca_dyplomowa_zesp.Controllers
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Poradnik został usunięty permanentnie.";
             }
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> EmptyTrash()
         {
-            // Tutaj musimy sprawdzić, czy masz już pole IsDeleted w modelu Guide,
-            // jeśli tak - to zadziała:
             var trashGuides = await _context.Guides.Where(g => g.IsDeleted).ToListAsync();
-
             if (trashGuides.Any())
             {
                 _context.Guides.RemoveRange(trashGuides);
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Kosz został opróżniony.";
             }
-            return RedirectToAction("Index");
-        }
-
-        // 2. Zmiana statusu (np. Zamknięcie ticketa)
-        [HttpPost]
-        public async Task<IActionResult> UpdateTicketStatus(int id, TicketStatus status)
-        {
-            var ticket = await _context.Tickets.FindAsync(id);
-            if (ticket == null) return NotFound();
-
-            ticket.Status = status;
-            if (status == TicketStatus.Zamknięte)
-            {
-                ticket.ClosedAt = DateTime.Now;
-            }
-
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+
+        #endregion
+
+        #region Ticket System (Support)
 
         [HttpGet]
         public async Task<IActionResult> TicketDetails(int id)
@@ -340,15 +274,12 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Include(t => t.User)
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.User)
-                // --- DODANE: Pobieranie załączników do wiadomości ---
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Attachments)
-                // ----------------------------------------------------
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (ticket == null) return NotFound();
 
-            // AUTOMATYZACJA: Skoro Admin wszedł, to znaczy że widzi nowe wiadomości
             if (ticket.HasUnreadMessage)
             {
                 ticket.HasUnreadMessage = false;
@@ -358,7 +289,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(ticket);
         }
 
-        // 2. Odpowiedź Admina
         [HttpPost]
         public async Task<IActionResult> AdminReply(int id, string message, List<IFormFile> attachments)
         {
@@ -377,30 +307,13 @@ namespace praca_dyplomowa_zesp.Controllers
                     CreatedAt = DateTime.Now,
                     IsStaffReply = true
                 };
+
                 _context.TicketMessages.Add(msg);
                 await _context.SaveChangesAsync();
 
-                if (attachments != null)
+                if (attachments != null && attachments.Any())
                 {
-                    foreach (var file in attachments)
-                    {
-                        if (file.Length > 0)
-                        {
-                            using (var ms = new MemoryStream())
-                            {
-                                await file.CopyToAsync(ms);
-                                var att = new TicketAttachment
-                                {
-                                    TicketMessageId = msg.Id,
-                                    FileName = file.FileName,
-                                    ContentType = file.ContentType,
-                                    FileContent = ms.ToArray()
-                                };
-                                _context.TicketAttachments.Add(att);
-                            }
-                        }
-                    }
-                    await _context.SaveChangesAsync();
+                    await ProcessTicketAttachments(msg.Id, attachments);
                 }
 
                 ticket.HasUnreadResponse = true;
@@ -413,6 +326,19 @@ namespace praca_dyplomowa_zesp.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> UpdateTicketStatus(int id, TicketStatus status)
+        {
+            var ticket = await _context.Tickets.FindAsync(id);
+            if (ticket == null) return NotFound();
+
+            ticket.Status = status;
+            if (status == TicketStatus.Zamknięte) ticket.ClosedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
         public async Task<IActionResult> CloseTicket(int id)
         {
             var ticket = await _context.Tickets.FindAsync(id);
@@ -420,12 +346,52 @@ namespace praca_dyplomowa_zesp.Controllers
 
             ticket.Status = TicketStatus.Zamknięte;
             ticket.ClosedAt = DateTime.Now;
-            ticket.HasUnreadMessage = false; // Po zamknięciu nie chcemy powiadomień
+            ticket.HasUnreadMessage = false;
 
             await _context.SaveChangesAsync();
-
-            // Wracamy do listy zgłoszeń
             return RedirectToAction(nameof(Index));
         }
+
+        #endregion
+
+        #region Helpers
+
+        private string GetUserAvatar(User user)
+        {
+            return user.ProfilePicture != null
+                ? $"data:{user.ProfilePictureContentType};base64,{Convert.ToBase64String(user.ProfilePicture)}"
+                : "/uploads/avatars/default_avatar.png";
+        }
+
+        private async Task ProcessTicketAttachments(int messageId, List<IFormFile> attachments)
+        {
+            foreach (var file in attachments)
+            {
+                if (file.Length > 0)
+                {
+                    using (var ms = new MemoryStream())
+                    {
+                        await file.CopyToAsync(ms);
+                        var att = new TicketAttachment
+                        {
+                            TicketMessageId = messageId,
+                            FileName = file.FileName,
+                            ContentType = file.ContentType,
+                            FileContent = ms.ToArray()
+                        };
+                        _context.TicketAttachments.Add(att);
+                    }
+                }
+            }
+            await _context.SaveChangesAsync();
+        }
+
+        private IActionResult RedirectToReferer()
+        {
+            var referer = Request.Headers["Referer"].ToString();
+            return !string.IsNullOrEmpty(referer) ? Redirect(referer) : RedirectToAction(nameof(Index));
+        }
+
+        #endregion
     }
 }

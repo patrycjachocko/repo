@@ -5,10 +5,19 @@ using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models;
 using praca_dyplomowa_zesp.Models.Users;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    [Authorize] // Tylko zalogowani mogą pisać tickety
+    /// <summary>
+    /// Kontroler obsługujący system zgłoszeń (support ticket) od strony użytkownika.
+    /// Umożliwia tworzenie zgłoszeń, przeglądanie historii oraz wysyłanie odpowiedzi z załącznikami.
+    /// </summary>
+    [Authorize]
     public class TicketsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -20,7 +29,12 @@ namespace praca_dyplomowa_zesp.Controllers
             _userManager = userManager;
         }
 
-        // Lista zgłoszeń użytkownika
+        #region Actions
+
+        /// <summary>
+        /// Wyświetla listę wszystkich zgłoszeń należących do zalogowanego użytkownika.
+        /// </summary>
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -32,35 +46,29 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(tickets);
         }
 
-        // Formularz tworzenia (GET)
+        /// <summary>
+        /// Wyświetla formularz tworzenia nowego zgłoszenia.
+        /// </summary>
+        [HttpGet]
         public IActionResult Create()
         {
             return View();
         }
 
-        // Wysyłanie zgłoszenia (POST)
+        /// <summary>
+        /// Przetwarza formularz nowego zgłoszenia wraz z opcjonalnymi załącznikami graficznymi.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Ticket ticket, List<IFormFile> attachments)
         {
             var user = await _userManager.GetUserAsync(User);
-            ModelState.Remove("User");
-            ModelState.Remove("UserId");
 
-            // --- DODANA WALIDACJA PLIKÓW ---
-            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
-            if (attachments != null && attachments.Any())
-            {
-                foreach (var file in attachments)
-                {
-                    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-                    if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
-                    {
-                        ModelState.AddModelError("attachments", $"Plik {file.FileName} ma niedozwolone rozszerzenie. Dozwolone są tylko obrazy (jpg, png, gif).");
-                    }
-                }
-            }
-            // -------------------------------
+            // Usunięcie walidacji dla pól przypisywanych ręcznie w kontrolerze
+            ModelState.Remove(nameof(Ticket.User));
+            ModelState.Remove(nameof(Ticket.UserId));
+
+            ValidateAttachments(attachments);
 
             if (ModelState.IsValid)
             {
@@ -72,10 +80,9 @@ namespace praca_dyplomowa_zesp.Controllers
                 _context.Add(ticket);
                 await _context.SaveChangesAsync();
 
-                // Obsługa wielu załączników
                 if (attachments != null && attachments.Any())
                 {
-                    var msg = new TicketMessage
+                    var initialMessage = new TicketMessage
                     {
                         TicketId = ticket.Id,
                         UserId = user.Id,
@@ -83,55 +90,43 @@ namespace praca_dyplomowa_zesp.Controllers
                         CreatedAt = DateTime.Now,
                         IsStaffReply = false
                     };
-                    _context.TicketMessages.Add(msg);
+
+                    _context.TicketMessages.Add(initialMessage);
                     await _context.SaveChangesAsync();
 
-                    foreach (var file in attachments)
-                    {
-                        if (file.Length > 0)
-                        {
-                            using (var ms = new MemoryStream())
-                            {
-                                await file.CopyToAsync(ms);
-                                var attachment = new TicketAttachment
-                                {
-                                    TicketMessageId = msg.Id,
-                                    FileName = file.FileName,
-                                    ContentType = file.ContentType,
-                                    FileContent = ms.ToArray()
-                                };
-                                _context.TicketAttachments.Add(attachment);
-                            }
-                        }
-                    }
-                    await _context.SaveChangesAsync();
+                    await ProcessAndSaveAttachments(initialMessage.Id, attachments);
                 }
 
                 TempData["Success"] = "Zgłoszenie zostało wysłane pomyślnie!";
                 return RedirectToAction(nameof(Index));
             }
 
-            // Jeśli ModelState jest niepoprawny (np. przez złe pliki), wracamy do widoku z błędami
             return View(ticket);
         }
 
+        /// <summary>
+        /// Wyświetla szczegóły konkretnego zgłoszenia wraz z historią wiadomości.
+        /// </summary>
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
-
             var ticket = await _context.Tickets
                 .Include(t => t.User)
                 .Include(t => t.Messages)
-                    .ThenInclude(m => m.User) // Żeby widzieć kto napisał wiadomość
+                    .ThenInclude(m => m.User)
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Attachments)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
-            // Zabezpieczenie: user widzi tylko swoje tickety (chyba że jest adminem, ale tu jest kontroler usera)
-            if (ticket == null || ticket.UserId != user.Id) return NotFound();
+            if (ticket == null || ticket.UserId != user.Id)
+            {
+                return NotFound();
+            }
 
+            // Oznaczanie odpowiedzi od personelu jako przeczytanej przez użytkownika
             if (ticket.HasUnreadResponse)
             {
                 ticket.HasUnreadResponse = false;
@@ -141,58 +136,94 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(ticket);
         }
 
-        // 2. Wysyłanie odpowiedzi (User)
+        /// <summary>
+        /// Dodaje nową wiadomość użytkownika do istniejącego zgłoszenia.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Reply(int id, string message, List<IFormFile> attachments) // Zmiana na List
+        public async Task<IActionResult> Reply(int id, string message, List<IFormFile> attachments)
         {
             var ticket = await _context.Tickets.FindAsync(id);
             var user = await _userManager.GetUserAsync(User);
 
             if (ticket == null || ticket.UserId != user.Id) return NotFound();
-            if (ticket.Status == TicketStatus.Zamknięte) return RedirectToAction(nameof(Details), new { id = id });
+            if (ticket.Status == TicketStatus.Zamknięte) return RedirectToAction(nameof(Details), new { id });
 
             if (!string.IsNullOrWhiteSpace(message) || (attachments != null && attachments.Any()))
             {
-                var msg = new TicketMessage
+                var newMessage = new TicketMessage
                 {
                     TicketId = id,
                     UserId = user.Id,
-                    Message = message ?? "",
+                    Message = message ?? string.Empty,
                     CreatedAt = DateTime.Now,
                     IsStaffReply = false
                 };
-                _context.TicketMessages.Add(msg);
+
+                _context.TicketMessages.Add(newMessage);
                 await _context.SaveChangesAsync();
 
-                if (attachments != null)
+                if (attachments != null && attachments.Any())
                 {
-                    foreach (var file in attachments)
-                    {
-                        if (file.Length > 0)
-                        {
-                            using (var ms = new MemoryStream())
-                            {
-                                await file.CopyToAsync(ms);
-                                var att = new TicketAttachment
-                                {
-                                    TicketMessageId = msg.Id,
-                                    FileName = file.FileName,
-                                    ContentType = file.ContentType,
-                                    FileContent = ms.ToArray()
-                                };
-                                _context.TicketAttachments.Add(att);
-                            }
-                        }
-                    }
-                    await _context.SaveChangesAsync();
+                    await ProcessAndSaveAttachments(newMessage.Id, attachments);
                 }
 
                 ticket.HasUnreadMessage = true;
                 await _context.SaveChangesAsync();
             }
 
-            return RedirectToAction(nameof(Details), new { id = id });
+            return RedirectToAction(nameof(Details), new { id });
         }
+
+        #endregion
+
+        #region Private Helpers
+
+        /// <summary>
+        /// Sprawdza, czy przesłane załączniki mają dozwolone rozszerzenia graficzne.
+        /// </summary>
+        private void ValidateAttachments(List<IFormFile> attachments)
+        {
+            if (attachments == null || !attachments.Any()) return;
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            foreach (var file in attachments)
+            {
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+                {
+                    ModelState.AddModelError("attachments",
+                        $"Plik {file.FileName} ma niedozwolone rozszerzenie. Dozwolone formaty: jpg, png, gif.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Konwertuje pliki przesłane przez formularz na format binarny i zapisuje je w bazie danych.
+        /// </summary>
+        private async Task ProcessAndSaveAttachments(int messageId, List<IFormFile> files)
+        {
+            foreach (var file in files)
+            {
+                if (file.Length > 0)
+                {
+                    using var memoryStream = new MemoryStream();
+                    await file.CopyToAsync(memoryStream);
+
+                    var attachment = new TicketAttachment
+                    {
+                        TicketMessageId = messageId,
+                        FileName = file.FileName,
+                        ContentType = file.ContentType,
+                        FileContent = memoryStream.ToArray()
+                    };
+
+                    _context.TicketAttachments.Add(attachment);
+                }
+            }
+            await _context.SaveChangesAsync();
+        }
+
+        #endregion
     }
 }

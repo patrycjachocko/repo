@@ -8,33 +8,29 @@
 
 <div class="container-fluid px-4 main-container mt-4 mb-5">
 
-    @* --- HERO SECTION --- *@
+    @* --- SEKCJA HERO: INFORMACJE O GRZE I PASKI POSTĘPU --- *@
     <div class="game-hero mb-4 fade-in-up">
         <div class="hero-bg" style="background-image: url('@(Model.CoverUrl ?? "")');"></div>
         <div class="hero-content w-100">
             <div class="row g-4 align-items-center">
-                @* Okładka *@
+                @* Okładka gry *@
                 <div class="col-12 col-md-auto d-flex justify-content-center justify-content-md-start">
-                    <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")" class="img-fluid game-cover-hero shadow-lg" style="max-width: 200px; width: 100%; height: auto;" alt="@Model.Name">
+                    <img src="@(Model.CoverUrl ?? "https://via.placeholder.com/264x352.png?text=Brak+okładki")"
+                         class="img-fluid game-cover-hero shadow-lg"
+                         style="max-width: 200px; width: 100%; height: auto;" alt="@Model.Name">
                 </div>
 
-                @* Info *@
+                @* Dane tekstowe i akcje *@
                 <div class="col-12 col-md game-info text-center text-md-start ps-md-4">
-
-                    @* 1. TYTUŁ *@
                     <h1 class="game-details-title mb-2" style="font-size: 3rem;">@Model.Name</h1>
 
-                    @* 2. WIERSZ: METADANE + GUZIKI *@
                     <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-3">
-
-                        @* Metadane *@
                         <div class="d-flex gap-4 justify-content-center justify-content-md-start flex-wrap">
-                            <div><span class="info-label d-block text-start">Deweloper</span><div class="info-value">@(Model.Developer ?? "Unknown")</div></div>
+                            <div><span class="info-label d-block text-start">Deweloper</span><div class="info-value">@(Model.Developer ?? "Nieznany")</div></div>
                             <div><span class="info-label d-block text-start">Data Wydania</span><div class="info-value">@(Model.ReleaseDate ?? "TBA")</div></div>
                             <div><span class="info-label d-block text-start">Dodano</span><div class="info-value">@Model.DateAddedToLibrary.ToString("dd.MM.yyyy")</div></div>
                         </div>
 
-                        @* Guziki *@
                         <div class="d-flex gap-2 justify-content-center ms-auto ms-md-0">
                             <a asp-controller="Guides" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" class="btn btn-action-glow btn-glow-purple" title="Poradniki"><i class="bi bi-book fs-5"></i></a>
                             <a asp-controller="Reviews" asp-action="Index" asp-route-gameId="@Model.IgdbGameId" asp-route-gameName="@Model.Name" class="btn btn-action-glow btn-glow-cyan" title="Recenzje"><i class="bi bi-chat-text fs-5"></i></a>
@@ -42,10 +38,10 @@
                         </div>
                     </div>
 
-                    @* Pasek Postępu *@
+                    @* Panel postępu użytkownika *@
                     <div class="glass-panel p-3 mt-3 border-0" style="background: rgba(0,0,0,0.3);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="info-label mb-0 text-neon-cyan"><i class="bi bi-controller me-2"></i>Twój Postęp</span>
+                            <span class="info-label mb-0 text-neon-cyan"><i class="bi bi-controller me-2"></i>Postęp w tytule</span>
                             <div>
                                 <span id="@(hasAchievements ? "auto-progress-label" : "manual-progress-label")" class="fw-bold text-white fs-5">@Model.CurrentUserStoryProgressPercent%</span>
                                 @if (!hasAchievements)
@@ -55,7 +51,9 @@
                             </div>
                         </div>
                         <div class="position-relative" style="height: 20px;">
-                            <div class="progress-neon-track"><div id="@(hasAchievements ? "game-progress-bar" : "manual-visual-bar")" class="progress-neon-fill" style="width: @Model.CurrentUserStoryProgressPercent%;"></div></div>
+                            <div class="progress-neon-track">
+                                <div id="@(hasAchievements ? "game-progress-bar" : "manual-visual-bar")" class="progress-neon-fill" style="width: @Model.CurrentUserStoryProgressPercent%;"></div>
+                            </div>
                             @if (!hasAchievements)
                             {
                                 <input type="range" class="range-overlay" min="0" max="100" step="1" id="manual-progress-range" value="@Model.CurrentUserStoryProgressPercent">
@@ -67,7 +65,7 @@
         </div>
     </div>
 
-    @* --- SEKCJA OCEN --- *@
+    @* --- SEKCJA OCEN SPOŁECZNOŚCI I WŁASNYCH --- *@
     @if (Model.Ratings != null)
     {
         <div class="mb-4 fade-in-up" style="animation-delay: 0.1s;">
@@ -77,42 +75,46 @@
         </div>
     }
 
-    @* --- GRID CONTENTU --- *@
     <div class="row g-4 square-row">
 
-        @* --- LEWA KOLUMNA (QUESTY) --- *@
+        @* --- KOLUMNA LEWA: QUESTY (CELE) --- *@
         <div class="col-lg-4 col-full-height fade-in-up" style="animation-delay: 0.2s;">
             <div class="settings-card h-100 d-flex flex-column">
                 <div class="settings-header d-flex justify-content-between align-items-center flex-shrink-0" style="min-height: 70px;">
-                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-check2-square me-2 text-neon-green"></i>Cele / Questy</span>
+                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-check2-square me-2 text-neon-green"></i>Dziennik Zadań</span>
                     <div>
                         <button class="btn btn-action-glow btn-glow-yellow btn-sm" onclick="showDeleteCompletedModal()" title="Usuń ukończone" style="width:36px; height:36px;"><i class="bi bi-trash"></i></button>
-                        <button class="btn btn-action-glow btn-glow-red btn-sm" onclick="showResetTasksModal()" title="Reset" style="width:36px; height:36px;"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        <button class="btn btn-action-glow btn-glow-red btn-sm" onclick="showResetTasksModal()" title="Resetuj dziennik" style="width:36px; height:36px;"><i class="bi bi-arrow-counterclockwise"></i></button>
                     </div>
                 </div>
 
                 <div class="p-3 d-flex flex-column flex-grow-1" style="min-height: 0;">
-                    <div class="admin-search-merged mb-3 w-100 flex-shrink-0">
+                    <div class="admin-search-merged mb-4 w-100 flex-shrink-0">
                         <div class="admin-search-merged-inner">
                             <div class="form-floating flex-grow-1">
-                                <input type="text" id="newToDoInput" class="form-control border-0 bg-transparent text-white" placeholder="Dodaj nowy cel..." style="box-shadow: none;">
+                                <input type="text" id="newToDoInput" class="form-control border-0 bg-transparent text-white" placeholder="Nowe zadanie...">
                                 <label for="newToDoInput">Dodaj nowy cel...</label>
                             </div>
-                            <button type="button" class="btn-search-integrated text-neon-purple" style="text-shadow: none;" onclick="addToDoItem()"><i class="bi bi-plus-lg fs-5"></i></button>
+                            <button type="button" class="btn-search-integrated text-neon-purple" onclick="addToDoItem()"><i class="bi bi-plus-lg fs-5"></i></button>
                         </div>
                     </div>
+
                     <div id="todo-empty-info" class="d-flex align-items-center justify-content-center text-muted small mb-3 flex-shrink-0" style="@(Model.ToDoItems.Any() ? "display:none !important;" : "display:flex !important;")">
-                        <span><i class="bi bi-clipboard me-1"></i> Brak aktywnych questów.</span>
+                        <span><i class="bi bi-clipboard me-1"></i> Dziennik jest pusty.</span>
                     </div>
-                    <ul id="toDoList" class="list-group list-group-flush custom-scroll" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
+
+                    <ul id="toDoList" class="list-unstyled custom-scroll" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
                         @foreach (var item in Model.ToDoItems)
                         {
-                            <li class="list-group-item todo-list-item d-flex justify-content-between align-items-center px-2 py-2" id="item-@item.Id">
-                                <div class="form-check flex-grow-1 ms-2">
+                            @* Klasa is-done zmienia kolor paska bocznego na szary *@
+                            <li class="quest-field-item d-flex justify-content-between align-items-center p-2 mb-2 @(item.IsCompleted ? "is-done" : "")" id="item-@item.Id">
+                                <div class="form-check flex-grow-1 ms-2" style="min-width: 0;">
                                     <input class="form-check-input bg-dark border-secondary" type="checkbox" onchange="toggleToDo(@item.Id, this)" id="todo-check-@item.Id" @(item.IsCompleted ? "checked" : "")>
-                                    <label class="form-check-label w-100 ps-2 @(item.IsCompleted ? "todo-completed" : "")" for="todo-check-@item.Id" style="cursor: pointer; font-size: 0.95rem;">@item.Content</label>
+                                    <label class="form-check-label w-100 ps-2 @(item.IsCompleted ? "todo-completed" : "")"
+                                           for="todo-check-@item.Id"
+                                           style="cursor: pointer; font-size: 0.95rem; word-break: break-all;">@item.Content</label>
                                 </div>
-                                <button class="btn btn-action btn-action-red btn-sm" onclick="deleteToDo(@item.Id)"><i class="bi bi-x"></i></button>
+                                <button class="btn btn-action btn-action-red btn-sm ms-2" onclick="deleteToDo(@item.Id)"><i class="bi bi-x"></i></button>
                             </li>
                         }
                     </ul>
@@ -120,19 +122,20 @@
             </div>
         </div>
 
-        @* --- PRAWA KOLUMNA (OSIĄGNIĘCIA + NOTATKI) --- *@
+        @* --- KOLUMNA PRAWA: OSIĄGNIĘCIA I NOTATKI --- *@
         <div class="col-lg-8 col-full-height d-flex flex-column gap-4">
-            @* 1. OSIĄGNIĘCIA *@
+
+            @* OSIĄGNIĘCIA (Integracja ze Steam/Lokalne) *@
             <div class="settings-card achievements-box d-flex flex-column fade-in-up" style="animation-delay: 0.3s; margin-bottom: 0;">
                 <div class="settings-header d-flex align-items-center flex-shrink-0" style="min-height: 70px;">
-                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-trophy me-2 text-warning"></i>Osiągnięcia</span>
+                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-trophy me-2 text-warning"></i>Lista Osiągnięć</span>
                 </div>
                 <div class="p-3 d-flex flex-column flex-grow-1" style="min-height: 0; overflow: hidden;">
                     @if (Model.IsSteamGame && !Model.IsSteamConnected)
                     {
                         <div class="alert alert-neon alert-neon-danger mb-3 py-2 d-flex align-items-center flex-shrink-0">
                             <i class="bi bi-steam me-3 fs-4"></i>
-                            <div><strong>Brak synchronizacji!</strong><br /><small>Połącz konto Steam.</small></div>
+                            <div><strong>Brak połączenia!</strong><br /><small>Połącz konto Steam, aby pobrać trofea.</small></div>
                         </div>
                     }
                     <div class="custom-scroll flex-grow-1" style="overflow-y: auto; padding-right: 5px;">
@@ -142,10 +145,12 @@
                                 @foreach (var ach in Model.Achievements)
                                 {
                                     var safeId = ach.ExternalId.Replace(" ", "_").Replace(".", "_");
-                                    var checkboxId = "ach-" + safeId;
                                     bool isSteamUnlocked = Model.SteamUnlockedAchievementIds != null && Model.SteamUnlockedAchievementIds.Contains(ach.ExternalId);
+
                                     <div class="col-12 col-xl-6">
-                                        <div class="achievement-row p-2 d-flex align-items-center justify-content-between h-100">
+                                        @* Pełny opis w atrybucie Title *@
+                                        <div class="achievement-row p-2 d-flex align-items-center justify-content-between h-100"
+                                             title="@ach.Name: @ach.Description" style="cursor: help;">
                                             <div class="d-flex align-items-center" style="overflow: hidden;">
                                                 <img src="@ach.IconUrl" alt="Icon" id="img-@safeId" class="achievement-icon @(ach.IsUnlocked ? "unlocked" : "locked")">
                                                 <div style="min-width: 0;">
@@ -155,12 +160,13 @@
                                             </div>
                                             @if (isSteamUnlocked)
                                             {
-                                                <span class="badge bg-primary me-2 ms-2"><i class="bi bi-steam"></i></span>
+                                                <span class="badge me-2 ms-2" style="background-color: var(--neon-cyan); color: #000; box-shadow: 0 0 10px var(--neon-cyan);"><i class="bi bi-steam"></i></span>
                                             }
                                             else
                                             {
-
-                                                <div class="form-check form-switch me-2 ms-2 switch-cyan"><input class="form-check-input achievement-checkbox" type="checkbox" role="switch" id="@checkboxId" data-external-id="@ach.ExternalId" @(ach.IsUnlocked ? "checked" : "")></div>
+                                                <div class="form-check form-switch me-2 ms-2 switch-cyan">
+                                                    <input class="form-check-input achievement-checkbox" type="checkbox" role="switch" id="ach-@safeId" data-external-id="@ach.ExternalId" @(ach.IsUnlocked ? "checked" : "")>
+                                                </div>
                                             }
                                         </div>
                                     </div>
@@ -169,21 +175,24 @@
                         }
                         else
                         {
-                            <div class="alert alert-neon alert-neon-success d-flex align-items-center"><i class="bi bi-info-circle me-3 fs-4"></i><div><strong>Gra manualna</strong><br /><small>Użyj suwaka postępu.</small></div></div>
+                            <div class="alert alert-neon alert-neon-success d-flex align-items-center">
+                                <i class="bi bi-info-circle me-3 fs-4"></i>
+                                <div><strong>Tryb manualny</strong><br /><small>Używaj suwaka, aby zaznaczać postępy.</small></div>
+                            </div>
                         }
                     </div>
                 </div>
             </div>
 
-            @* 2. NOTATKI *@
+            @* NOTATKI *@
             <div class="settings-card notes-box d-flex flex-column fade-in-up" style="animation-delay: 0.4s; margin-bottom: 0;">
                 <div class="settings-header d-flex align-items-center flex-shrink-0" style="min-height: 70px;">
-                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-journal-text me-2 text-neon-purple"></i>Notatki</span>
+                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-journal-text me-2 text-neon-purple"></i>Notatnik Gracza</span>
                 </div>
                 <div class="p-3 d-flex flex-column flex-grow-1" style="min-height: 0;">
                     <div class="form-floating w-100 h-100">
-                        <textarea id="notes-area" class="form-control form-control-tech no-resize" style="height: 100% !important; resize: none;" placeholder="Wpisz notatkę...">@(Model.Notes)</textarea>
-                        <label for="notes-area" style="padding-left: 0.75rem;">Twoje notatki...</label>
+                        <textarea id="notes-area" class="form-control form-control-tech no-resize" style="height: 100% !important; resize: none;" placeholder="Notatki...">@(Model.Notes)</textarea>
+                        <label for="notes-area" style="padding-left: 0.75rem;">Zapisuj tu kody, sekrety lub przemyślenia...</label>
                     </div>
                 </div>
             </div>
@@ -191,88 +200,60 @@
     </div>
 </div>
 
-@* --- 1. MODAL USUWANIA GRY --- *@
+@* --- MODALE SYSTEMOWE --- *@
+
 <div class="modal fade" id="deleteGameModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-red);">
-
-            @* Header *@
             <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
-                <h5 class="modal-title text-neon-danger text-uppercase fw-bold text-center w-100 m-0">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Usuwanie gry
-                </h5>
+                <h5 class="modal-title text-neon-danger text-uppercase fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Usuwanie Gry</h5>
                 <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
             </div>
-
-            @* Body *@
-            <div class="modal-body d-flex flex-column justify-content-center align-items-center text-center py-4">
-                <p class="fs-5 mb-2">Czy na pewno chcesz usunąć <strong class="text-neon-cyan">@Model.Name</strong>?</p>
-                <p class="text-muted small mb-0">Utracisz wszystkie notatki, postępy i statusy zadań.</p>
+            <div class="modal-body text-center py-4">
+                <p class="fs-5">Czy na pewno usunąć grę <strong class="text-neon-cyan">@Model.Name</strong>?</p>
             </div>
-
-            @* Footer *@
             <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
                 <form asp-controller="Library" asp-action="Delete" method="post" style="display: contents;">
                     <input type="hidden" name="Id" value="@Model.DbId" />
-                    <button type="button" class="btn btn-ghost-cancel px-4 btn-modal-action" data-bs-dismiss="modal">Anuluj</button>
-                    <button type="submit" class="btn btn-danger-custom px-4 btn-modal-action">Tak, usuń</button>
+                    <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-danger-custom px-4">Potwierdzam</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-@* --- 2. MODAL USUWANIA UKOŃCZONYCH TASKÓW --- *@
 <div class="modal fade" id="confirmDeleteCompletedModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-yellow);">
-
-            @* Header *@
             <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
-                <h5 class="modal-title text-neon-warning text-uppercase fw-bold text-center w-100 m-0">
-                    <i class="bi bi-check2-all me-2"></i>Czyszczenie listy
-                </h5>
+                <h5 class="modal-title text-neon-warning text-uppercase fw-bold"><i class="bi bi-check2-all me-2"></i>Czyszczenie</h5>
                 <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
             </div>
-
-            @* Body *@
-            <div class="modal-body d-flex flex-column justify-content-center align-items-center text-center py-4">
-                <p class="fs-5 mb-1">Czy usunąć wszystkie <strong>ukończone</strong> cele?</p>
-                <p class="text-muted small mb-0">Tej operacji nie można cofnąć.</p>
+            <div class="modal-body text-center py-4">
+                <p class="fs-5">Usunąć wszystkie <strong>ukończone</strong> zadania?</p>
             </div>
-
-            @* Footer *@
             <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
-                <button type="button" class="btn btn-ghost-cancel px-4 btn-modal-action" data-bs-dismiss="modal">Anuluj</button>
-                <button type="button" class="btn btn-action-glow btn-glow-yellow px-4 fw-bold btn-modal-action" onclick="performDeleteCompleted()" style="border:1px solid var(--neon-yellow); width: auto; height: 45px;">Usuń</button>
+                <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-action-glow btn-glow-yellow px-4" onclick="performDeleteCompleted()">Tak, usuń</button>
             </div>
         </div>
     </div>
 </div>
 
-@* --- 3. MODAL RESETOWANIA TASKÓW --- *@
 <div class="modal fade" id="confirmResetTasksModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-neon modal-compact" style="border-color: var(--neon-red);">
-
-            @* Header *@
             <div class="modal-header border-0 position-relative justify-content-center pt-4 pb-0">
-                <h5 class="modal-title text-neon-danger text-uppercase fw-bold text-center w-100 m-0">
-                    <i class="bi bi-radioactive me-2"></i>Reset zadań
-                </h5>
+                <h5 class="modal-title text-neon-danger text-uppercase fw-bold"><i class="bi bi-radioactive me-2"></i>Reset Dziennika</h5>
                 <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
             </div>
-
-            @* Body *@
-            <div class="modal-body d-flex flex-column justify-content-center align-items-center text-center py-4">
-                <p class="fs-5 mb-1">Czy na pewno usunąć <strong>WSZYSTKIE</strong> cele?</p>
-                <p class="text-muted small mb-0">Lista zostanie całkowicie wyczyszczona.</p>
+            <div class="modal-body text-center py-4">
+                <p class="fs-5">Wyczyścić <strong>wszystkie</strong> wpisy?</p>
             </div>
-
-            @* Footer *@
             <div class="modal-footer border-0 justify-content-center pb-4 pt-0 gap-3">
-                <button type="button" class="btn btn-ghost-cancel px-4 btn-modal-action" data-bs-dismiss="modal">Anuluj</button>
-                <button type="button" class="btn btn-danger-custom px-4 btn-modal-action" onclick="performResetTasks()">Resetuj wszystko</button>
+                <button type="button" class="btn btn-ghost-cancel px-4" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-danger-custom px-4" onclick="performResetTasks()">Resetuj</button>
             </div>
         </div>
     </div>
@@ -282,16 +263,10 @@
 <script>
     const libraryGameId = @Model.DbId;
 
-    // --- MODAL HELPERS ---
-    function showDeleteCompletedModal() {
-        new bootstrap.Modal(document.getElementById('confirmDeleteCompletedModal')).show();
-    }
+    // --- OBSŁUGA MODALI ---
+    function showDeleteCompletedModal() { new bootstrap.Modal(document.getElementById('confirmDeleteCompletedModal')).show(); }
+    function showResetTasksModal() { new bootstrap.Modal(document.getElementById('confirmResetTasksModal')).show(); }
 
-    function showResetTasksModal() {
-        new bootstrap.Modal(document.getElementById('confirmResetTasksModal')).show();
-    }
-
-    // --- ACTIONS ---
     function performDeleteCompleted() {
         $.post('/Library/DeleteCompletedToDoItems', { gameId: libraryGameId }, function (data) {
             if (data.success) location.reload();
@@ -303,21 +278,18 @@
             if (data.success) {
                 document.getElementById('toDoList').innerHTML = '';
                 checkEmptyState();
-                var modalEl = document.getElementById('confirmResetTasksModal');
-                var modal = bootstrap.Modal.getInstance(modalEl);
-                modal.hide();
+                bootstrap.Modal.getInstance(document.getElementById('confirmResetTasksModal')).hide();
             }
         });
     }
 
-    // --- STANDARD JS ---
     function checkEmptyState() {
         const list = document.getElementById('toDoList');
         const emptyInfo = document.getElementById('todo-empty-info');
-        if (list.children.length === 0) emptyInfo.style.setProperty('display', 'flex', 'important');
-        else emptyInfo.style.setProperty('display', 'none', 'important');
+        emptyInfo.style.setProperty('display', list.children.length === 0 ? 'flex' : 'none', 'important');
     }
 
+    // --- LOGIKA DZIENNIKA ZADAŃ ---
     function addToDoItem() {
         const input = document.getElementById('newToDoInput');
         const content = input.value;
@@ -325,7 +297,14 @@
         $.post('/Library/AddToDoItem', { gameId: libraryGameId, content: content }, function (data) {
             if (data.success) {
                 const list = document.getElementById('toDoList');
-                const newItemHtml = `<li class="list-group-item todo-list-item d-flex justify-content-between align-items-center px-2 py-2" id="item-${data.id}"><div class="form-check flex-grow-1 ms-2"><input class="form-check-input bg-dark border-secondary" type="checkbox" onchange="toggleToDo(${data.id}, this)"><label class="form-check-label w-100 ps-2" style="cursor: pointer; font-size: 0.95rem;">${escapeHtml(data.content)}</label></div><button class="btn btn-action btn-action-red btn-sm" onclick="deleteToDo(${data.id})"><i class="bi bi-x"></i></button></li>`;
+                const newItemHtml = `
+                    <li class="quest-field-item d-flex justify-content-between align-items-center p-2 mb-2" id="item-${data.id}">
+                        <div class="form-check flex-grow-1 ms-2" style="min-width: 0;">
+                            <input class="form-check-input bg-dark border-secondary" type="checkbox" onchange="toggleToDo(${data.id}, this)">
+                            <label class="form-check-label w-100 ps-2" style="cursor: pointer; font-size: 0.95rem; word-break: break-all;">${escapeHtml(data.content)}</label>
+                        </div>
+                        <button class="btn btn-action btn-action-red btn-sm ms-2" onclick="deleteToDo(${data.id})"><i class="bi bi-x"></i></button>
+                    </li>`;
                 list.insertAdjacentHTML('beforeend', newItemHtml);
                 input.value = '';
                 checkEmptyState();
@@ -336,9 +315,17 @@
     function toggleToDo(id, checkbox) {
         $.post('/Library/ToggleToDoItem', { itemId: id }, function (data) {
             if (data.success) {
+                const li = document.getElementById(`item-${id}`);
                 const label = checkbox.nextElementSibling;
-                if (data.isCompleted) label.classList.add('todo-completed');
-                else label.classList.remove('todo-completed');
+
+                // Zmiana stylu dymka i paska bocznego po kliknięciu
+                if (data.isCompleted) {
+                    label.classList.add('todo-completed');
+                    li.classList.add('is-done');
+                } else {
+                    label.classList.remove('todo-completed');
+                    li.classList.remove('is-done');
+                }
             }
         });
     }
@@ -346,8 +333,7 @@
     function deleteToDo(id) {
         $.post('/Library/DeleteToDoItem', { itemId: id }, function (data) {
             if (data.success) {
-                const item = document.getElementById(`item-${id}`);
-                if(item) item.remove();
+                document.getElementById(`item-${id}`)?.remove();
                 checkEmptyState();
             }
         });
@@ -359,31 +345,95 @@
     }
 
     $(document).ready(function () {
+        // --- MANUALNY POSTĘP ---
         const slider = document.getElementById('manual-progress-range');
         if (slider) {
-            $(slider).on('input', function() { $('#manual-visual-bar').css('width', $(this).val() + '%'); $('#manual-progress-label').text($(this).val() + '%'); });
+            $(slider).on('input', function() {
+                const val = $(this).val();
+                $('#manual-visual-bar').css('width', val + '%');
+                $('#manual-progress-label').text(val + '%');
+            });
             $(slider).on('change', function() {
                 var statusSpan = $('#progress-save-status');
-                statusSpan.text("Zapisywanie...").css('color', 'gray').css('opacity', 1);
-                $.ajax({ url: '@Url.Action("UpdateProgress", "Library")', type: 'POST', data: { id: libraryGameId, percent: $(this).val() }, headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() }, success: function (r) { if (r.success) { statusSpan.text("Zapisano").css('color', '#00f3ff'); setTimeout(() => statusSpan.css('opacity', 0), 2000); } else statusSpan.text("Błąd").css('color', 'red'); }, error: () => statusSpan.text("Błąd sieci").css('color', 'red') });
+                statusSpan.text("Zapisywanie...").css('opacity', 1);
+                $.ajax({
+                    url: '@Url.Action("UpdateProgress", "Library")',
+                    type: 'POST',
+                    data: { id: libraryGameId, percent: $(this).val() },
+                    headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+                    success: function (r) {
+                        if (r.success) {
+                            statusSpan.text("Zapisano");
+                            setTimeout(() => statusSpan.css('opacity', 0), 2000);
+                        }
+                    }
+                });
             });
         }
+
+        // --- OSIĄGNIĘCIA I AUTO-POSTĘP ---
         function recalculateProgress() {
             var totalAll = $('.achievement-row').length;
             if (totalAll === 0) return;
             var unlocked = $('.achievement-icon.unlocked').length;
             var percent = Math.round((unlocked / totalAll) * 100);
-            var progressBar = $('#game-progress-bar');
-            if(progressBar.length) { progressBar.css('width', percent + '%'); }
+            $('#game-progress-bar').css('width', percent + '%');
             $('#auto-progress-label').text(percent + '%');
         }
+
         $('.achievement-checkbox').change(function () {
-            var igdbGameId = @Model.IgdbGameId, aid = $(this).data('external-id'), chk = $(this), row = chk.closest('.achievement-row'), img = row.find('.achievement-icon');
-            $.ajax({ url: '@Url.Action("ToggleAchievement", "Library")', type: 'POST', data: { igdbGameId: igdbGameId, achievementExternalId: aid }, headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() }, success: function (r) { if (r.success) { if (r.isUnlocked) img.removeClass('locked').addClass('unlocked'); else img.removeClass('unlocked').addClass('locked'); recalculateProgress(); } else chk.prop('checked', !chk.is(':checked')); }, error: () => chk.prop('checked', !chk.is(':checked')) });
+            var igdbGameId = @Model.IgdbGameId, aid = $(this).data('external-id'), chk = $(this);
+            var img = chk.closest('.achievement-row').find('.achievement-icon');
+            $.ajax({
+                url: '@Url.Action("ToggleAchievement", "Library")',
+                type: 'POST',
+                data: { igdbGameId: igdbGameId, achievementExternalId: aid },
+                headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) {
+                        img.toggleClass('unlocked', r.isUnlocked).toggleClass('locked', !r.isUnlocked);
+                        recalculateProgress();
+                    } else chk.prop('checked', !chk.is(':checked'));
+                }
+            });
         });
+
+        // --- NOTATKI ---
         $('#notes-area').on('blur', function () {
-            $.ajax({ url: '@Url.Action("UpdateNotes", "Library")', type: 'POST', data: { id: libraryGameId, notes: $(this).val() }, headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() } });
+            $.ajax({
+                url: '@Url.Action("UpdateNotes", "Library")',
+                type: 'POST',
+                data: { id: libraryGameId, notes: $(this).val() },
+                headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() }
+            });
         });
+
         $('#newToDoInput').keypress(function (e) { if (e.which == 13) { addToDoItem(); return false; } });
     });
 </script>
+
+<style>
+    /* STYLIZACJA PÓL ZADAŃ */
+    .quest-field-item {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        border-left: 4px solid var(--neon-green);
+        transition: border-color 0.25s ease, background 0.2s ease;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    }
+
+        .quest-field-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            /* Usunięto podnoszenie się kafelka */
+        }
+
+        /* Stan ukończonego zadania - szary kolor */
+        .quest-field-item.is-done {
+            border-left-color: #6c757d;
+        }
+
+    .todo-completed {
+        text-decoration: line-through;
+        opacity: 0.5;
+    }
+</style>

@@ -1,204 +1,149 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using praca_dyplomowa_zesp.Models.Users
-
-@inject UserManager<praca_dyplomowa_zesp.Models.Users.User> UserManager
-@model praca_dyplomowa_zesp.Models.Ticket
+@using praca_dyplomowa_zesp.Models.Interactions
+@inject UserManager<User> UserManager
+@model Ticket
 
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Obsługa zgłoszenia #" + Model.Id;
+    ViewData["Title"] = $"Obsługa zgłoszenia #{Model.Id}";
 
-    // --- LOGIKA RANGI AUTORA (LEWY PANEL) ---
-    string authorColor = "var(--neon-cyan)";
-    string shadowColor = "rgba(0, 243, 255, 0.5)";
+    // Pobranie ID zalogowanego admina do rozróżnienia nadawcy "Ty"
+    var currentAdminId = UserManager.GetUserId(User);
 
-    // Pobieramy role autora zgłoszenia (Usera), żeby ładnie wyświetlić w panelu bocznym
-    if (Model.User != null)
+    // Metoda pomocnicza do pobierania kolorów na podstawie ról
+    async Task<string> GetUserRoleColor(User user)
     {
-        var roles = await UserManager.GetRolesAsync(Model.User);
-        if (roles.Contains("Admin"))
-        {
-            authorColor = "var(--neon-red)";
-            shadowColor = "rgba(255, 51, 51, 0.6)";
-        }
-        else if (roles.Contains("Moderator"))
-        {
-            authorColor = "var(--neon-green)";
-            shadowColor = "rgba(0, 255, 157, 0.6)";
-        }
+        if (user == null) return "var(--neon-cyan)";
+        if (await UserManager.IsInRoleAsync(user, "Admin")) return "var(--neon-red)";
+        if (await UserManager.IsInRoleAsync(user, "Moderator")) return "var(--neon-green)";
+        return "var(--neon-cyan)";
     }
+
+    string authorColor = await GetUserRoleColor(Model.User);
 }
 
-@* --- POWIADOMIENIA BŁĘDÓW (TOAST) --- *@
+@* Kontener na powiadomienia systemowe *@
 <div id="toast-container" class="position-fixed top-50 start-50 translate-middle p-3" style="z-index: 9999; min-width: 450px;"></div>
 
 <div class="container-fluid admin-container fade-in-up" style="margin-top: 30px; height: calc(100vh - 140px);">
 
-    @* HEADER *@
+    @* Nagłówek panelu *@
     <div class="d-flex justify-content-between align-items-center mb-4 flex-shrink-0">
-        <h2 class="admin-title text-start m-0" style="font-size: 1.8rem;">
-            Zgłoszenie #@Model.Id
-        </h2>
-        <div class="d-flex gap-2">
-            <a asp-controller="Admin" asp-action="Index" class="btn btn-low-tier btn-sm h-100">
-                <i class="bi bi-arrow-return-left me-2"></i> POWRÓT
-            </a>
-        </div>
+        <h2 class="admin-title text-start m-0" style="font-size: 1.8rem;">Zgłoszenie #@Model.Id</h2>
+        <a asp-controller="Admin" asp-action="Index" class="btn btn-low-tier btn-sm h-100">
+            <i class="bi bi-arrow-return-left me-2"></i> POWRÓT
+        </a>
     </div>
 
-    @* LAYOUT *@
     <div class="ticket-layout">
 
-        @* LEWY PANEL - INFO O AUTORZE *@
+        @* Lewy panel: Szczegóły zgłaszającego i status *@
         <div class="ticket-info-panel">
             <div class="d-flex flex-column gap-4 w-100">
                 <div class="info-group">
                     <div class="d-flex align-items-center gap-3">
                         <div class="flex-shrink-0">
-                            @if (Model.User?.ProfilePicture != null && Model.User.ProfilePicture.Length > 0)
-                            {
-                                <img src="data:@(Model.User.ProfilePictureContentType ?? "image/png");base64,@Convert.ToBase64String(Model.User.ProfilePicture)"
-                                     class="author-avatar" style="border-color: @authorColor; box-shadow: 0 0 15px @shadowColor;">
-                            }
-                            else
-                            {
-                                <img src="/img/default-avatar.png" class="author-avatar" style="border-color: @authorColor; box-shadow: 0 0 15px @shadowColor;">
-                            }
+                            <img src="@Url.Action("GetAvatar", "Profile", new { id = Model.UserId })"
+                                 class="author-avatar"
+                                 style="border-color: @authorColor; box-shadow: 0 0 15px @authorColor.Replace("var", "rgba").Replace(")", ", 0.4)");">
                         </div>
                         <div>
                             <div class="info-label mb-1">Autor zgłoszenia</div>
-                            <h4 class="text-white mb-0 fw-bold">@(Model.User?.UserName ?? "Nieznany")</h4>
+                            <h4 class="text-white mb-0 fw-bold">@(Model.User?.UserName ?? "Użytkownik")</h4>
                             <small class="text-muted" style="font-size: 0.7rem;">ID: @Model.UserId</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="info-group">
-                    <div class="info-label">Temat zgłoszenia</div>
+                    <div class="info-label">Temat</div>
                     <div class="info-value text-white">@Model.Title</div>
                 </div>
 
                 <div class="info-group">
                     <div class="info-label">Status</div>
-                    <div class="info-value">
-                        @if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.Oczekujące)
-                        {
-                            <span class="status-badge status-badge-light text-neon-green border-success ms-0">OCZEKUJĄCE</span>
+                    <div>
+                        @{
+                            var statusBadge = Model.Status switch
+                            {
+                                TicketStatus.Oczekujące => "status-badge-light text-neon-green border-success",
+                                TicketStatus.W_trakcie => "status-badge-yellow",
+                                _ => "status-badge-grey"
+                            };
                         }
-                        else if (Model.Status == praca_dyplomowa_zesp.Models.TicketStatus.W_trakcie)
-                        {
-                            <span class="status-badge status-badge-yellow ms-0">W TRAKCIE</span>
-                        }
-                        else
-                        {
-                            <span class="status-badge status-badge-grey ms-0">ZAMKNIĘTE</span>
-                        }
+                        <span class="status-badge @statusBadge ms-0">@Model.Status.ToString().ToUpper().Replace("_", " ")</span>
                     </div>
                 </div>
 
-                <div class="info-group">
-                    <div class="info-label">Data Utworzenia</div>
-                    <div class="info-value">@Model.CreatedAt.ToString("dd.MM.yyyy") <span class="text-muted ms-1">@Model.CreatedAt.ToString("HH:mm")</span></div>
-                </div>
-
-                @if (Model.Status != praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
+                @if (Model.Status != TicketStatus.Zamknięte)
                 {
-                    <div class="mt-3">
-                        <form asp-action="CloseTicket" method="post" onsubmit="return confirm('Czy na pewno chcesz zamknąć to zgłoszenie?');">
-                            <input type="hidden" name="id" value="@Model.Id" />
-                            <button type="submit" class="btn btn-danger-custom w-100 py-3" style="font-weight: 700;">
-                                <i class="bi bi-lock-fill me-2"></i> ZAMKNIJ ZGŁOSZENIE
-                            </button>
-                        </form>
-                    </div>
+                    <form asp-action="CloseTicket" method="post" onsubmit="return confirm('Czy na pewno chcesz zamknąć to zgłoszenie?');" class="mt-auto">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-danger-custom w-100 py-3 fw-bold">
+                            <i class="bi bi-lock-fill me-2"></i> ZAMKNIJ ZGŁOSZENIE
+                        </button>
+                    </form>
                 }
             </div>
         </div>
 
-        @* PRAWY PANEL - CHAT *@
-        <div class="ticket-chat-wrapper"
-             style="background-color: var(--bg-panel); border: 2px solid var(--neon-purple); box-shadow: 0 0 25px rgba(189, 0, 255, 0.15);">
-
+        @* Prawy panel: Historia konwersacji *@
+        <div class="ticket-chat-wrapper" style="border-color: var(--neon-purple); box-shadow: 0 0 25px rgba(189, 0, 255, 0.1);">
             <div class="chat-header-bar">
-                <span class="fw-bold text-white"><i class="bi bi-chat-text-fill me-2 text-neon-purple"></i>HISTORIA</span>
+                <span class="fw-bold text-white"><i class="bi bi-chat-text-fill me-2 text-neon-purple"></i>HISTORIA CZATU</span>
                 <span class="text-muted" style="font-size: 0.8rem;">Wiadomości: @(Model.Messages.Count + 1)</span>
             </div>
 
             <div class="chat-messages-area" id="adminChatBox">
-                @* Treść pierwotnego zgłoszenia *@
+                @* Wiadomość inicjująca *@
                 <div class="initial-problem">
-                    <h6 class="text-uppercase fw-bold mb-2" style="font-size: 0.75rem;">Treść zgłoszenia</h6>
+                    <h6 class="text-uppercase fw-bold mb-2 text-muted" style="font-size: 0.7rem;">Treść pierwotna:</h6>
                     <p class="mb-0 text-white" style="white-space: pre-wrap;">@Model.Content</p>
                 </div>
 
                 @foreach (var msg in Model.Messages.OrderBy(m => m.CreatedAt))
                 {
-                    // W panelu Admina:
-                    // Jeśli wiadomość jest od Staffu -> to "Ty" (Admin), więc align Right + styl Admina
-                    // Jeśli wiadomość od Usera -> align Left + styl Usera
                     bool isStaff = msg.IsStaffReply;
+                    bool isMe = msg.UserId.ToString() == currentAdminId;
+                    string msgColor = await GetUserRoleColor(msg.User);
 
-                    string alignClass = isStaff ? "msg-right" : "msg-left";
-                    string roleClass = isStaff ? "msg-role-Admin" : "msg-role-User";
-                    string displayName = isStaff ? "SUPPORT (Ty)" : (msg.User?.UserName ?? "Użytkownik");
-
-                    // Kolor ramki avatara: Admin(Red), User(Cyan)
-                    string avatarBorder = isStaff ? "var(--neon-red)" : "var(--neon-cyan)";
-
-                    // Pobieranie avatara
-                    string avatarSrc = "/img/default-avatar.png";
-                    if (msg.User?.ProfilePicture != null && msg.User.ProfilePicture.Length > 0)
-                    {
-                        var b64 = Convert.ToBase64String(msg.User.ProfilePicture);
-                        var t = msg.User.ProfilePictureContentType ?? "image/jpeg";
-                        avatarSrc = $"data:{t};base64,{b64}";
-                    }
-
-                    <div class="msg-row @alignClass @roleClass">
-
-                        @* Avatar po lewej (jeśli to user) *@
+                    <div class="msg-row @(isStaff ? "msg-right" : "msg-left")">
                         @if (!isStaff)
                         {
-                            <div class="d-flex flex-column align-items-center">
-                                <img src="@avatarSrc" class="msg-avatar" style="border-color: @avatarBorder;">
-                            </div>
+                            <img src="@Url.Action("GetAvatar", "Profile", new { id = msg.UserId })" class="msg-avatar" style="border-color: @msgColor;">
                         }
 
-                        <div class="msg-bubble @(isStaff ? "bg-primary bg-opacity-10 border border-primary" : "bg-dark border border-secondary")">
-                            <div class="msg-meta @(isStaff ? "text-end text-neon-red" : "text-start text-neon-cyan")">
-                                @displayName <span class="text-muted ms-2 fw-normal" style="font-size: 0.65rem;">@msg.CreatedAt.ToString("dd.MM HH:mm")</span>
+                        <div class="msg-bubble" style="border: 1px solid @(msgColor) !important;">
+                            <div class="msg-meta @(isStaff ? "text-end" : "text-start")" style="color: @msgColor;">
+                                @if (isStaff)
+                                {
+                                    <span>SUPPORT @(isMe ? "(Ty)" : $"({msg.User?.UserName})")</span>
+                                }
+                                else
+                                {
+                                    <span>@(msg.User?.UserName ?? "Użytkownik")</span>
+                                }
+                                <span class="text-muted ms-2 fw-normal" style="font-size: 0.65rem;">@msg.CreatedAt.ToString("dd.MM HH:mm")</span>
                             </div>
-
                             <div class="msg-content">@msg.Message</div>
 
-                            @if (msg.Attachments != null && msg.Attachments.Any())
+                            @* Wyświetlanie załączników w wiadomości *@
+                            @if (msg.Attachments?.Any() == true)
                             {
-                                <div class="d-flex flex-wrap gap-2 mt-3 pt-2 border-top border-secondary" style="border-color: rgba(255,255,255,0.1) !important;">
+                                <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top border-secondary" style="border-color: rgba(255,255,255,0.1) !important;">
                                     @foreach (var att in msg.Attachments)
                                     {
-                                        string imgBase64 = $"data:{att.ContentType};base64,{Convert.ToBase64String(att.FileContent)}";
+                                        <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)"
+                                             class="rounded border border-secondary" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;"
+                                             data-bs-toggle="modal" data-bs-target="#img-@att.Id" />
 
-                                        <div class="position-relative">
-                                            <img src="@imgBase64"
-                                                 class="rounded border border-secondary"
-                                                 style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;"
-                                                 data-bs-toggle="modal" data-bs-target="#imgModal-@att.Id" />
-                                        </div>
-
-                                        @* MODAL PODGLĄDU *@
-                                        <div class="modal fade" id="imgModal-@att.Id" tabindex="-1">
+                                        <div class="modal fade" id="img-@att.Id" tabindex="-1">
                                             <div class="modal-dialog modal-dialog-centered modal-lg">
                                                 <div class="modal-content bg-transparent border-0 shadow-none">
-                                                    <div class="modal-body p-0 position-relative text-center">
-
-                                                        @* FIX: Przycisk zamknięcia z wysokim Z-Index *@
-                                                        <button type="button"
-                                                                class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-3 bg-black rounded-circle p-2"
-                                                                data-bs-dismiss="modal"
-                                                                aria-label="Close"
-                                                                style="opacity: 1; box-shadow: 0 0 10px black;"></button>
-
-                                                        <img src="@imgBase64" class="img-fluid rounded shadow-lg border border-secondary bg-black" style="max-height: 80vh;" />
+                                                    <div class="modal-body p-0 text-center position-relative">
+                                                        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-3" data-bs-dismiss="modal"></button>
+                                                        <img src="data:@att.ContentType;base64,@Convert.ToBase64String(att.FileContent)" class="img-fluid rounded border border-secondary" />
                                                     </div>
                                                 </div>
                                             </div>
@@ -208,39 +153,30 @@
                             }
                         </div>
 
-                        @* Avatar po prawej (jeśli to admin/ty) *@
                         @if (isStaff)
                         {
-                            <div class="d-flex flex-column align-items-center">
-                                <img src="@avatarSrc" class="msg-avatar" style="border-color: @avatarBorder;">
-                            </div>
+                            <img src="@Url.Action("GetAvatar", "Profile", new { id = msg.UserId })" class="msg-avatar" style="border-color: @msgColor;">
                         }
                     </div>
                 }
             </div>
 
-            @if (Model.Status != praca_dyplomowa_zesp.Models.TicketStatus.Zamknięte)
+            @if (Model.Status != TicketStatus.Zamknięte)
             {
                 <div class="chat-footer">
                     <form asp-action="AdminReply" method="post" enctype="multipart/form-data">
                         <input type="hidden" name="id" value="@Model.Id" />
-
-                        @* Kontener na miniatury *@
-                        <div id="adminPreviews" class="d-flex flex-wrap mb-2 ps-1"></div>
-
-                        @* Walidacja HTML *@
+                        <div id="adminPreviews" class="d-flex flex-wrap mb-2"></div>
                         <input type="file" name="attachments" id="adminAttachmentInput" class="d-none" multiple accept="image/*" />
 
                         <div class="d-flex align-items-center">
-                            @* Guzik spinacza *@
                             <button type="button" class="btn-attachment me-2" onclick="document.getElementById('adminAttachmentInput').click()" title="Dodaj plik">
                                 <i class="bi bi-paperclip"></i>
                             </button>
-
                             <div class="chat-input-merged flex-grow-1">
                                 <div class="form-floating flex-grow-1">
-                                    <textarea name="message" id="adminMessageInput" class="form-control" placeholder="Tresc" style="height: 55px;"></textarea>
-                                    <label for="adminMessageInput">Treść wiadomości...</label>
+                                    <textarea name="message" id="adminMessageInput" class="form-control" placeholder="Odpowiedź" style="height: 55px;"></textarea>
+                                    <label for="adminMessageInput">Wpisz odpowiedź do użytkownika...</label>
                                 </div>
                                 <button type="submit" class="btn-send-integrated">
                                     WYŚLIJ <i class="bi bi-send-fill ms-2"></i>
@@ -253,9 +189,7 @@
             else
             {
                 <div class="chat-footer text-center">
-                    <div class="p-3 text-muted border border-secondary rounded d-inline-block" style="background: rgba(0,0,0,0.2);">
-                        <i class="bi bi-lock-fill me-2"></i> Zgłoszenie zostało zamknięte.
-                    </div>
+                    <div class="p-3 text-muted"><i class="bi bi-lock-fill me-2"></i> Zgłoszenie zostało zamknięte.</div>
                 </div>
             }
         </div>
@@ -263,115 +197,41 @@
 </div>
 
 <script>
-    // Scroll na dół
-    document.addEventListener("DOMContentLoaded", function() {
-        var box = document.getElementById('adminChatBox');
-        if (box) box.scrollTop = box.scrollHeight;
+    // Automatyczny scroll do najnowszej wiadomości
+    document.addEventListener("DOMContentLoaded", () => {
+        const chatBox = document.getElementById('adminChatBox');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
     });
 
+    // Obsługa podglądu załączników przed wysłaniem
     const dtAdmin = new DataTransfer();
     const adminInput = document.getElementById('adminAttachmentInput');
     const adminPreviewsDiv = document.getElementById('adminPreviews');
 
-    // Helper walidacji
-    function isImage(file) {
-        return file && file.type.startsWith('image/');
-    }
-
-    // Funkcja Toast Błędu (zgapiona z widoku Usera)
-    function showError(message) {
-        const container = document.getElementById('toast-container');
-
-        const alertHtml = document.createElement('div');
-        alertHtml.className = 'alert alert-neon alert-neon-danger d-flex align-items-center mb-3 fade-in-up shadow-lg';
-        alertHtml.role = 'alert';
-        alertHtml.style.borderWidth = '2px';
-
-        alertHtml.innerHTML = `
-            <i class="fas fa-exclamation-triangle me-4 fs-2"></i>
-            <div class="flex-grow-1">
-                <div class="fw-bold text-uppercase mb-1" style="letter-spacing:1px; font-size: 0.9rem;">Błąd Systemu</div>
-                <div class="small opacity-75">${message}</div>
-            </div>
-            <button type="button" class="btn-close btn-close-white ms-3" onclick="this.parentElement.remove()"></button>
-        `;
-
-        container.appendChild(alertHtml);
-
-        setTimeout(() => {
-            alertHtml.classList.add('opacity-0');
-            setTimeout(() => alertHtml.remove(), 500);
-        }, 4000);
-    }
-
-    // Obsługa wyboru pliku
-    if (adminInput) {
-        adminInput.addEventListener('change', function () {
-            let invalidFiles = false;
-            for (let i = 0; i < this.files.length; i++) {
-                const file = this.files[i];
-                if (isImage(file)) {
-                    dtAdmin.items.add(file);
-                } else {
-                    invalidFiles = true;
-                }
-            }
-
-            if (invalidFiles) {
-                showError("Wykryto nieprawidłowy format pliku. Dozwolone są tylko obrazy.");
-            }
-
-            updateAdminFiles();
-        });
-    }
-
-    // Obsługa wklejania
-    document.getElementById('adminMessageInput')?.addEventListener('paste', function (e) {
-        var items = (e.clipboardData || e.originalEvent.clipboardData).items;
-        for (var index in items) {
-            var item = items[index];
-            if (item.kind === 'file') {
-                var blob = item.getAsFile();
-                if (isImage(blob)) {
-                    dtAdmin.items.add(blob);
-                    updateAdminFiles();
-                } else {
-                    showError("Schowek zawiera nieobsługiwany typ danych. Wklej obraz.");
-                }
+    adminInput?.addEventListener('change', function () {
+        for (let i = 0; i < this.files.length; i++) {
+            const file = this.files[i];
+            if (file.type.startsWith('image/')) {
+                dtAdmin.items.add(file);
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const div = document.createElement('div');
+                    div.className = 'attachment-preview-wrapper';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" class="attachment-preview-img">
+                        <button type="button" class="btn-remove-attachment" onclick="removeAdminFile(${dtAdmin.items.length - 1})"><i class="bi bi-x"></i></button>
+                    `;
+                    adminPreviewsDiv.appendChild(div);
+                };
+                reader.readAsDataURL(file);
             }
         }
+        adminInput.files = dtAdmin.files;
     });
 
-    function updateAdminFiles() {
-        if(adminInput) adminInput.files = dtAdmin.files;
-        renderAdminPreviews();
-    }
-
-    function renderAdminPreviews() {
-        if(!adminPreviewsDiv) return;
-        adminPreviewsDiv.innerHTML = '';
-        for (let i = 0; i < dtAdmin.files.length; i++) {
-            const file = dtAdmin.files[i];
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                // Używamy klas z site.css
-                const div = document.createElement('div');
-                div.className = 'attachment-preview-wrapper';
-
-                div.innerHTML = `
-                    <img src="${e.target.result}" class="attachment-preview-img">
-                    <button type="button" class="btn-remove-attachment" onclick="removeAdminFile(${i})" title="Usuń">
-                        <i class="bi bi-x"></i>
-                    </button>
-                `;
-                adminPreviewsDiv.appendChild(div);
-            }
-            reader.readAsDataURL(file);
-        }
-    }
-
-    window.removeAdminFile = function (index) {
+    function removeAdminFile(index) {
         dtAdmin.items.remove(index);
-        updateAdminFiles();
+        adminInput.files = dtAdmin.files;
+        adminPreviewsDiv.children[index].remove();
     }
 </script>
