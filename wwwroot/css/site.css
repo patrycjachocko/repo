@@ -3668,20 +3668,30 @@ body.pdf-document {
    ANIMACJA NAWIGACJI (EFEKT PODNOSZENIA)
    ========================================================================== */
 
+/* 1. Definicja tranzycji dla wszystkich elementów nawigacji */
 .navbar-nav .nav-item {
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-    /* ZMIANA TUTAJ:
-   Dodano selektor :has(.show) 
-   Dzięki temu element pozostaje uniesiony, gdy dropdown jest otwarty (ma klasę .show)
-*/
-    .navbar-nav .nav-item:hover,
-    .navbar-nav .nav-item:has(.show) {
+    /* 2. Unoszenie przy najechaniu MYSZKĄ */
+    /* ZMIANA: Dodano :not(.no-lift), żeby wykluczyć guzik rejestracji */
+    .navbar-nav .nav-item:not(.no-lift):hover {
         transform: translateY(-4px);
     }
 
-    /* Margines dla dropdownu, żeby nie "odklejał się" przy animacji */
+    /* 3. UTRZYMANIE UNIESIENIA, GDY DROPDOWN JEST OTWARTY */
+    .navbar-nav .nav-item:has(.dropdown-menu.show),
+    .navbar-nav .nav-item.show {
+        transform: translateY(-4px);
+    }
+
+        /* Podświetlenie tekstu, gdy dropdown otwarty */
+        .navbar-nav .nav-item.show .nav-link {
+            color: var(--white) !important;
+            text-shadow: 0 0 8px var(--neon-purple);
+        }
+
+    /* Margines dla dropdownu */
     .navbar-nav .nav-item.dropdown:hover .dropdown-menu {
         margin-top: 10px;
     }
@@ -3699,6 +3709,45 @@ body.pdf-document {
     .nav-link-cyan:hover {
         color: var(--white) !important;
         text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan) !important;
-        /* ZMIANA TUTAJ: Usunięto transform: scale(1.05); */
-        /* Teraz guzik tylko zmienia kolor i poświatę, a unosi się dzięki regule .nav-item wyżej */
+    }
+
+/* ==========================================================================
+   KOLOROWANIE LISTY GIER (POPULARNE)
+   ========================================================================== */
+
+.guides-dropdown .dropdown-item:nth-child(odd) {
+    color: var(--neon-cyan);
+}
+
+    .guides-dropdown .dropdown-item:nth-child(odd):hover {
+        color: var(--white);
+        background: linear-gradient(90deg, rgba(0, 243, 255, 0.2) 0%, transparent 100%);
+        border-left-color: var(--neon-cyan);
+        text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+.guides-dropdown .dropdown-item:nth-child(even) {
+    color: var(--neon-green);
+}
+
+    .guides-dropdown .dropdown-item:nth-child(even):hover {
+        color: var(--white);
+        background: linear-gradient(90deg, rgba(0, 255, 157, 0.2) 0%, transparent 100%);
+        border-left-color: var(--neon-green);
+        text-shadow: 0 0 8px var(--neon-green);
+    }
+
+.guides-dropdown .dropdown-item:last-child {
+    color: var(--neon-purple) !important;
+    font-weight: 700;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 5px;
+    padding-top: 10px;
+}
+
+    .guides-dropdown .dropdown-item:last-child:hover {
+        color: var(--white) !important;
+        background: linear-gradient(90deg, rgba(189, 0, 255, 0.2) 0%, transparent 100%);
+        border-left-color: var(--neon-purple);
+        text-shadow: 0 0 8px var(--neon-purple);
     }

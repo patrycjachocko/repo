@@ -14,14 +14,18 @@
                 <form asp-controller="Account" asp-action="Login" method="post">
                     <input type="hidden" name="returnUrl" class="current-url-input" />
 
+                    @* Usunięto asp-validation-summary i wszystkie spany błędów *@
+
                     <div class="form-floating mb-3">
                         <input name="Login" type="text" class="form-control form-control-tech" placeholder="Login" required />
                         <label>Login</label>
+                        @* TU BYŁ SPAN BŁĘDU - USUNIĘTY *@
                     </div>
 
                     <div class="form-floating mb-3">
                         <input name="Password" type="password" class="form-control form-control-tech" placeholder="Hasło" required />
                         <label>Hasło</label>
+                        @* TU BYŁ SPAN BŁĘDU - USUNIĘTY *@
                     </div>
 
                     <div class="form-check mb-4">
@@ -32,7 +36,6 @@
                     </div>
 
                     <div class="d-grid mb-3">
-                        @* ZMIANA NA ZIELONY *@
                         <button type="submit" class="btn btn-neon-green btn-lg">
                             Zaloguj się
                         </button>
@@ -74,28 +77,33 @@
                 <form asp-controller="Account" asp-action="Register" method="post">
                     <input type="hidden" name="returnUrl" class="current-url-input" />
 
+                    @* Usunięto asp-validation-summary i wszystkie spany błędów *@
+
                     <div class="form-floating mb-3">
                         <input name="Login" type="text" class="form-control form-control-tech" placeholder="Login" required />
                         <label>Login (ID)</label>
+                        @* TU BYŁ SPAN BŁĘDU - USUNIĘTY *@
                     </div>
 
                     <div class="form-floating mb-3">
                         <input name="UserName" type="text" class="form-control form-control-tech" placeholder="Nick" required />
                         <label>Nazwa gracza</label>
+                        @* TU BYŁ SPAN BŁĘDU - USUNIĘTY *@
                     </div>
 
                     <div class="form-floating mb-3">
                         <input name="Password" type="password" class="form-control form-control-tech" placeholder="Hasło" required />
                         <label>Hasło</label>
+                        @* TU BYŁ SPAN BŁĘDU - USUNIĘTY *@
                     </div>
 
                     <div class="form-floating mb-4">
                         <input name="ConfirmPassword" type="password" class="form-control form-control-tech" placeholder="Powtórz hasło" required />
                         <label>Powtórz hasło</label>
+                        @* TU BYŁ SPAN BŁĘDU - USUNIĘTY *@
                     </div>
 
                     <div class="d-grid mb-4">
-                        @* ZMIANA NA ZIELONY *@
                         <button type="submit" class="btn btn-neon-green btn-lg">
                             Stwórz konto
                         </button>
@@ -114,7 +122,6 @@
 </div>
 
 <script>
-    // Globalna funkcja do inteligentnego otwierania modali z paska nawigacji i linków
     function openAuthModal(modalType) {
         var loginModalEl = document.getElementById('loginModal');
         var registerModalEl = document.getElementById('registerModal');
@@ -122,26 +129,19 @@
         var loginInstance = bootstrap.Modal.getInstance(loginModalEl);
         var registerInstance = bootstrap.Modal.getInstance(registerModalEl);
 
-        // 1. Jeśli chcemy otworzyć LOGOWANIE
         if (modalType === 'login') {
-            // Jeśli otwarte jest rejestracja -> zamknij ją najpierw
             if (registerInstance && registerModalEl.classList.contains('show')) {
                 registerInstance.hide();
-                // Poczekaj chwilę na animację zamknięcia, potem otwórz logowanie
                 setTimeout(function() {
                     new bootstrap.Modal(loginModalEl).show();
-                }, 300); // 300ms to standardowy czas animacji Bootstrapa
+                }, 300);
             } else {
-                // Jeśli nic nie jest otwarte -> po prostu otwórz
                 if (!loginInstance || !loginModalEl.classList.contains('show')) {
                     new bootstrap.Modal(loginModalEl).show();
                 }
             }
         }
-
-        // 2. Jeśli chcemy otworzyć REJESTRACJĘ
         else if (modalType === 'register') {
-            // Jeśli otwarte jest logowanie -> zamknij je najpierw
             if (loginInstance && loginModalEl.classList.contains('show')) {
                 loginInstance.hide();
                 setTimeout(function() {
@@ -155,16 +155,9 @@
         }
     }
 
-    // Funkcje pomocnicze dla linków wewnątrz samych modali ("Nie masz konta?", "Masz już ID?")
-    function switchToRegister() {
-        openAuthModal('register');
-    }
+    function switchToRegister() { openAuthModal('register'); }
+    function switchToLogin() { openAuthModal('login'); }
 
-    function switchToLogin() {
-        openAuthModal('login');
-    }
-
-    // Ustawianie ReturnUrl
     document.addEventListener("DOMContentLoaded", function() {
         var currentUrl = window.location.pathname + window.location.search;
         var inputs = document.querySelectorAll('.current-url-input');

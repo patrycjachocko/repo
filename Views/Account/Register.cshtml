@@ -14,7 +14,7 @@
                     <h2 class="text-neon-title">Rejestracja</h2>
 
                     <form asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger bg-transparent border-danger text-danger py-2 small mb-3"></div>
+                        @* USUNIĘTO asp-validation-summary *@
 
                         <div class="form-floating mb-3">
                             <input asp-for="Login" class="form-control form-control-tech" placeholder="Login" required />
@@ -41,7 +41,6 @@
                         </div>
 
                         <div class="d-grid mb-4">
-                            @* ZMIANA NA ZIELONY *@
                             <button type="submit" class="btn btn-neon-green">
                                 Stwórz konto
                             </button>

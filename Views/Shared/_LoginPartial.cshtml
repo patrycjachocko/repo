@@ -9,22 +9,20 @@
     {
         var user = await UserManager.GetUserAsync(User);
 
-        @* --- SCENARIUSZ 1: UŻYTKOWNIK ISTNIEJE (WSZYSTKO OK) --- *@
+        @* --- SCENARIUSZ 1: UŻYTKOWNIK ISTNIEJE --- *@
         if (user != null)
         {
             var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
             var isMod = await UserManager.IsInRoleAsync(user, "Moderator");
 
-            // Kolor ramki avatara
             string borderColor = "var(--neon-cyan)";
             if (isAdmin) { borderColor = "var(--neon-red)"; }
             else if (isMod) { borderColor = "var(--neon-green)"; }
 
             bool hasSteam = !string.IsNullOrEmpty(user.SteamId);
 
-            @* --- PRZYCISK "POŁĄCZ STEAM" --- *@
-            @* ZMIANA: Usunięto 'btn-static', dodano 'btn-steam-connect' *@
-            @if (!hasSteam)
+            @* POŁĄCZ STEAM (Jeśli brak) *@
+            if (!hasSteam)
             {
                 <li class="nav-item me-3 d-none d-md-block">
                     <a asp-controller="Profile" asp-action="Index" class="btn btn-sm btn-steam-connect" title="Połącz Steam" style="padding: 5px 15px; font-size: 0.7rem;">
@@ -33,10 +31,9 @@
                 </li>
             }
 
-            @* --- DROPDOWN UŻYTKOWNIKA --- *@
+            @* DROPDOWN UŻYTKOWNIKA *@
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    @* AVATAR *@
                     <div style="position: relative;">
                         @if (user.ProfilePicture != null)
                         {
@@ -57,7 +54,6 @@
                 </a>
 
                 <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark custom-drop" aria-labelledby="userDropdown">
-
                     @* HEADER *@
                     <li>
                         <div class="px-3 py-2">
@@ -67,70 +63,34 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
-                    @* --- SEKCJA ADMINA (CZERWONY) --- *@
                     @if (isAdmin)
                     {
-                        <li>
-                            <a class="dropdown-item text-danger" asp-controller="Admin" asp-action="Index">
-                                <i class="fas fa-user-shield"></i> Panel Admina
-                            </a>
-                        </li>
+                        <li><a class="dropdown-item text-danger" asp-controller="Admin" asp-action="Index"><i class="fas fa-user-shield me-2"></i> Panel Admina</a></li>
                     }
-
-                    @* --- SEKCJA MODERATORA (ZIELONY) --- *@
                     @if (isMod)
                     {
-                        <li>
-                            <a class="dropdown-item text-neon-green" asp-controller="Admin" asp-action="Index">
-                                <i class="fas fa-user-check"></i> Panel Moderatora
-                            </a>
-                        </li>
+                        <li><a class="dropdown-item text-neon-green" asp-controller="Admin" asp-action="Index"><i class="fas fa-user-check me-2"></i> Panel Moderatora</a></li>
                     }
-
                     @if (isAdmin || isMod)
                     {
                         <li><hr class="dropdown-divider"></li>
                     }
 
-                    @* --- STANDARDOWE OPCJE (CYJAN) --- *@
-                    <li>
-                        <a class="dropdown-item text-neon-cyan" asp-controller="Profile" asp-action="Index">
-                            <i class="bi bi-person-circle"></i> Mój Profil
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item text-neon-cyan" asp-controller="Library" asp-action="Index">
-                            <i class="bi bi-collection-play"></i> Moja Biblioteka
-                        </a>
-                    </li>
+                    @* MENU OPTIONS *@
+                    <li><a class="dropdown-item text-neon-cyan" asp-controller="Profile" asp-action="Index"><i class="bi bi-person-circle me-2"></i> Mój Profil</a></li>
+                    <li><a class="dropdown-item text-neon-green" asp-controller="Library" asp-action="Index"><i class="bi bi-collection-play me-2"></i> Moja Biblioteka</a></li>
 
-                    @* Biblioteka Steam (Też Cyjan, dla spójności bibliotek) *@
                     @if (hasSteam)
                     {
-                        <li>
-                            <a class="dropdown-item text-neon-cyan" asp-controller="Profile" asp-action="SteamLibrary">
-                                <i class="bi bi-steam"></i> Biblioteka Steam
-                            </a>
-                        </li>
+                        <li><a class="dropdown-item text-neon-purple" asp-controller="Profile" asp-action="SteamLibrary"><i class="bi bi-steam me-2"></i> Biblioteka Steam</a></li>
                     }
 
                     <li><hr class="dropdown-divider"></li>
-
-                    @* --- ZGŁOŚ PROBLEM (ŻÓŁTY) --- *@
-                    <li>
-                        <a class="dropdown-item text-warning" asp-controller="Tickets" asp-action="Index">
-                            <i class="fas fa-headset"></i> Zgłoś problem
-                        </a>
-                    </li>
-
+                    <li><a class="dropdown-item text-warning" asp-controller="Tickets" asp-action="Index"><i class="fas fa-headset me-2"></i> Zgłoś problem</a></li>
                     <li><hr class="dropdown-divider"></li>
-
-                    @* --- WYLOGUJ (CZERWONY) --- *@
                     <li>
                         <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">
-                            <button type="submit" class="dropdown-item text-danger fw-bold w-100 text-start">
-                                <i class="bi bi-box-arrow-right"></i> WYLOGUJ
-                            </button>
+                            <button type="submit" class="dropdown-item text-danger fw-bold w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> WYLOGUJ</button>
                         </form>
                     </li>
                 </ul>
@@ -141,9 +101,7 @@
             @* --- SCENARIUSZ 2: GHOST USER --- *@
             <li class="nav-item">
                 <form class="form-inline" asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">
-                    <button type="submit" class="btn btn-sm btn-danger fw-bold" style="box-shadow: 0 0 15px red; animation: pulse 1.5s infinite;">
-                        <i class="fas fa-exclamation-triangle me-1"></i> NAPRAW BŁĄD SESJI
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> NAPRAW BŁĄD SESJI</button>
                 </form>
             </li>
         }
@@ -156,8 +114,9 @@
                 ZALOGUJ
             </a>
         </li>
-        <li class="nav-item ms-2">
-            <a class="btn btn-sm btn-primary" href="#" onclick="openAuthModal('register'); return false;" style="padding: 6px 20px;">
+        @* ZMIANA: Dodano klasę 'no-lift', żeby ten konkretny przycisk nie skakał *@
+        <li class="nav-item ms-2 no-lift">
+            <a class="btn btn-sm btn-neon-primary fw-bold" href="#" onclick="openAuthModal('register'); return false;" style="padding: 6px 20px;">
                 <i class="bi bi-person-plus me-1"></i> REJESTRACJA
             </a>
         </li>
