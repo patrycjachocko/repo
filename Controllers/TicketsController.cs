@@ -41,11 +41,26 @@ namespace praca_dyplomowa_zesp.Controllers
         // Wysyłanie zgłoszenia (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Ticket ticket, List<IFormFile> attachments) // Zmiana na List
+        public async Task<IActionResult> Create(Ticket ticket, List<IFormFile> attachments)
         {
             var user = await _userManager.GetUserAsync(User);
             ModelState.Remove("User");
             ModelState.Remove("UserId");
+
+            // --- DODANA WALIDACJA PLIKÓW ---
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            if (attachments != null && attachments.Any())
+            {
+                foreach (var file in attachments)
+                {
+                    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                    if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+                    {
+                        ModelState.AddModelError("attachments", $"Plik {file.FileName} ma niedozwolone rozszerzenie. Dozwolone są tylko obrazy (jpg, png, gif).");
+                    }
+                }
+            }
+            // -------------------------------
 
             if (ModelState.IsValid)
             {
@@ -69,7 +84,7 @@ namespace praca_dyplomowa_zesp.Controllers
                         IsStaffReply = false
                     };
                     _context.TicketMessages.Add(msg);
-                    await _context.SaveChangesAsync(); // Zapisz żeby mieć msg.Id
+                    await _context.SaveChangesAsync();
 
                     foreach (var file in attachments)
                     {
@@ -95,6 +110,8 @@ namespace praca_dyplomowa_zesp.Controllers
                 TempData["Success"] = "Zgłoszenie zostało wysłane pomyślnie!";
                 return RedirectToAction(nameof(Index));
             }
+
+            // Jeśli ModelState jest niepoprawny (np. przez złe pliki), wracamy do widoku z błędami
             return View(ticket);
         }
 
