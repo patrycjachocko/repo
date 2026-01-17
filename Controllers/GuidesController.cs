@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using praca_dyplomowa.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +13,11 @@ using praca_dyplomowa_zesp.Models.Modules.Guides;
 using System.IO;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
-using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using Rotativa.AspNetCore;
 using Microsoft.AspNetCore.Http;
+using praca_dyplomowa_zesp.Data;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -64,7 +63,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var gameQuery = $"fields name, parent_game, version_parent, category, collections.id; where id = {gameId}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
-            var gameDetails = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
+            var gameDetails = (JsonConvert.DeserializeObject<List<IGDBGameDtos>>(gameJsonResponse) ?? new List<IGDBGameDtos>()).FirstOrDefault();
 
             if (gameDetails == null) return NotFound();
 
@@ -84,7 +83,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (!string.IsNullOrEmpty(collectionJson))
                 {
-                    var mainGames = JsonConvert.DeserializeObject<List<ApiGame>>(collectionJson);
+                    var mainGames = JsonConvert.DeserializeObject<List<IGDBGameDtos>>(collectionJson);
                     var matched = mainGames?.OrderByDescending(g => g.Name.Length).FirstOrDefault(g => gameDetails.Name.Contains(g.Name));
                     if (matched != null && matched.Id != gameId) return RedirectToAction(nameof(Index), new { gameId = matched.Id });
                 }

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Modules.Libraries;
 using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
@@ -14,6 +13,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using praca_dyplomowa_zesp.Services;
+using praca_dyplomowa_zesp.Data;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -88,7 +89,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 var pagedDbList = filteredDbList.Skip((page - 1) * PageSize).Take(PageSize).ToList();
                 var pageIgdbIds = pagedDbList.Select(g => g.IgdbGameId).Distinct().ToList();
 
-                var pageApiGames = new List<ApiGame>();
+                var pageApiGames = new List<IGDBGameDtos>();
                 if (pageIgdbIds.Any())
                 {
                     var idsString = string.Join(",", pageIgdbIds);
@@ -473,20 +474,20 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction("Index", "Games", new { mode = "browse" });
         }
 
-        private async Task<List<ApiGame>> ExecuteIgdbQuery(string query)
+        private async Task<List<IGDBGameDtos>> ExecuteIgdbQuery(string query)
         {
             try
             {
                 var json = await _igdbClient.ApiRequestAsync("games", query);
-                if (string.IsNullOrEmpty(json)) return new List<ApiGame>();
-                return JsonConvert.DeserializeObject<List<ApiGame>>(json) ?? new List<ApiGame>();
+                if (string.IsNullOrEmpty(json)) return new List<IGDBGameDtos>();
+                return JsonConvert.DeserializeObject<List<IGDBGameDtos>>(json) ?? new List<IGDBGameDtos>();
             }
-            catch { return new List<ApiGame>(); }
+            catch { return new List<IGDBGameDtos>(); }
         }
 
-        private async Task<List<ApiGame>> FetchApiGamesInBatches(List<long> ids)
+        private async Task<List<IGDBGameDtos>> FetchApiGamesInBatches(List<long> ids)
         {
-            var allApiGames = new List<ApiGame>();
+            var allApiGames = new List<IGDBGameDtos>();
             //przetwarzanie duzych ilosci identyfikatorow w paczkach po 50 rekordow
             for (int i = 0; i < ids.Count; i += 50)
             {
@@ -497,7 +498,7 @@ namespace praca_dyplomowa_zesp.Controllers
             return allApiGames;
         }
 
-        private MainLibraryViewModel MapToMainLibraryViewModel(GameInLibrary dbGame, ApiGame? apiGame)
+        private MainLibraryViewModel MapToMainLibraryViewModel(GameInLibrary dbGame, IGDBGameDtos? apiGame)
         {
             return new MainLibraryViewModel
             {
@@ -509,7 +510,7 @@ namespace praca_dyplomowa_zesp.Controllers
             };
         }
 
-        private async Task<string?> ResolveSteamAppId(ApiGame? apiGame)
+        private async Task<string?> ResolveSteamAppId(IGDBGameDtos? apiGame)
         {
             if (apiGame == null) return null;
 

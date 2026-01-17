@@ -3,7 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using praca_dyplomowa.Data;
+using praca_dyplomowa_zesp.Data;
 
 #nullable disable
 

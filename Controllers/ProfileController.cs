@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
 using praca_dyplomowa_zesp.Models.Users;
@@ -14,6 +13,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using praca_dyplomowa_zesp.Services;
+using praca_dyplomowa_zesp.Data;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -390,14 +391,14 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Helpers
 
-        private async Task<List<ApiGame>> ExecuteIgdbSearch(string query)
+        private async Task<List<IGDBGameDtos>> ExecuteIgdbSearch(string query)
         {
             try
             {
                 var json = await _igdbClient.ApiRequestAsync("games", query);
-                return string.IsNullOrEmpty(json) ? new List<ApiGame>() : JsonConvert.DeserializeObject<List<ApiGame>>(json);
+                return string.IsNullOrEmpty(json) ? new List<IGDBGameDtos>() : JsonConvert.DeserializeObject<List<IGDBGameDtos>>(json);
             }
-            catch { return new List<ApiGame>(); }
+            catch { return new List<IGDBGameDtos>(); }
         }
 
         private async Task SaveImportedGames(User user, Dictionary<long, int> gamesToImport)

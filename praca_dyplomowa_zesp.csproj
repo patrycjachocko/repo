@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Models\ViewModels\" />
     <Folder Include="wwwroot\uploads\avatars\" />
     <Folder Include="wwwroot\uploads\maps\" />
   </ItemGroup>

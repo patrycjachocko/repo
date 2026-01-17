@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using praca_dyplomowa.Data;
+using praca_dyplomowa_zesp.Data;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Games;
@@ -223,7 +223,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 var json = await _igdbClient.ApiRequestAsync("games", query);
                 if (!string.IsNullOrEmpty(json))
                 {
-                    var gameInfo = JsonConvert.DeserializeObject<List<ApiGame>>(json)?.FirstOrDefault();
+                    var gameInfo = JsonConvert.DeserializeObject<List<IGDBGameDtos>>(json)?.FirstOrDefault();
                     if (gameInfo != null)
                     {
                         model.IgdbUserRating = gameInfo.Rating ?? 0;

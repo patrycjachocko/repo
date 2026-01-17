@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa_zesp.Models;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
-using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
@@ -14,7 +13,7 @@ using praca_dyplomowa_zesp.Models.Users;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-namespace praca_dyplomowa.Data
+namespace praca_dyplomowa_zesp.Data
 {
     public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
     {

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp;
+using praca_dyplomowa_zesp.Data;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Users;
 using praca_dyplomowa_zesp.Services;

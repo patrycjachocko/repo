@@ -3,7 +3,7 @@ using praca_dyplomowa_zesp.Models.Users;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace praca_dyplomowa_zesp.Models.Interactions.Comments.Replies
+namespace praca_dyplomowa_zesp.Models.Interactions.Comments
 {
     public class Reply
     {

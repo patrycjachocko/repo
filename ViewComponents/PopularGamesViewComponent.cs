@@ -25,14 +25,14 @@ namespace praca_dyplomowa_zesp.ViewComponents
             // Dzięki temu dostaniemy "najlepsze" gry ogółem.
             string query = "fields name, cover.url, total_rating, category, version_parent; sort total_rating desc; where total_rating != null & cover.url != null & parent_game = null; limit 50;";
 
-            List<ApiGame> games = new List<ApiGame>();
+            List<IGDBGameDtos> games = new List<IGDBGameDtos>();
 
             try
             {
                 var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
                 if (!string.IsNullOrEmpty(jsonResponse))
                 {
-                    games = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
+                    games = JsonConvert.DeserializeObject<List<IGDBGameDtos>>(jsonResponse) ?? new List<IGDBGameDtos>();
                 }
             }
             catch (Exception ex)

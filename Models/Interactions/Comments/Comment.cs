@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Users;

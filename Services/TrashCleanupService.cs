@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using praca_dyplomowa.Data; // Twój namespace z DbContext
+using praca_dyplomowa_zesp.Data; // Twój namespace z DbContext
 
 namespace praca_dyplomowa_zesp.Services
 {

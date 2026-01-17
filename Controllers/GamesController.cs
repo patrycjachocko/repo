@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using praca_dyplomowa.Data;
+using praca_dyplomowa_zesp.Data;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Games;
@@ -76,8 +76,8 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
             var gamesFromApi = string.IsNullOrEmpty(jsonResponse)
-                ? new List<ApiGame>()
-                : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
+                ? new List<IGDBGameDtos>()
+                : JsonConvert.DeserializeObject<List<IGDBGameDtos>>(jsonResponse) ?? new List<IGDBGameDtos>();
 
             //odfiltrowanie dodatkow, kolekcji i innych elementow niebedacych pełnymi grami
             var filteredGames = gamesFromApi
@@ -114,7 +114,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 if (showCritic && apiGame.Aggregated_rating.HasValue) { sum += apiGame.Aggregated_rating.Value; count++; }
                 if (showLocal && localAverages.ContainsKey(apiGame.Id)) { sum += (localAverages[apiGame.Id] * 10); count++; }
 
-                return new ApiGame
+                return new IGDBGameDtos
                 {
                     Id = apiGame.Id,
                     Name = apiGame.Name,
@@ -162,7 +162,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (string.IsNullOrEmpty(gameJsonResponse)) return NotFound();
 
-            var gameApiData = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
+            var gameApiData = (JsonConvert.DeserializeObject<List<IGDBGameDtos>>(gameJsonResponse) ?? new List<IGDBGameDtos>()).FirstOrDefault();
             if (gameApiData == null) return NotFound();
 
             //pobranie personalnej oceny zalogowanego uzytkownika dla tej gry
@@ -226,7 +226,7 @@ namespace praca_dyplomowa_zesp.Controllers
             try
             {
                 var jsonResponse = await _igdbClient.ApiRequestAsync("games", igdbQuery);
-                var games = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
+                var games = JsonConvert.DeserializeObject<List<IGDBGameDtos>>(jsonResponse) ?? new List<IGDBGameDtos>();
 
                 //selekcja najbardziej wiarygodnego kandydata sposrod wynikow wyszukiwania
                 var validCandidates = games.Where(g =>

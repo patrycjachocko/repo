@@ -1,13 +1,11 @@
-﻿// Plik: IGDBClient.cs
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-// Prosta klasa do przechowywania tokena i czasu jego wygaśnięcia
-internal class AuthToken
+internal class AuthToken//klasa przechowująca dane uwierzytelniające z twitch api
 {
     [JsonProperty("access_token")]
     public string AccessToken { get; set; }
@@ -18,7 +16,7 @@ internal class AuthToken
     public DateTime ExpiryTime { get; set; }
 }
 
-public class IGDBClient
+public class IGDBClient//klient obsługujący komunikację z zewnętrznym api igdb
 {
     private readonly string _clientId;
     private readonly string _clientSecret;
@@ -29,15 +27,17 @@ public class IGDBClient
     {
         _clientId = clientId ?? throw new ArgumentNullException(nameof(clientId));
         _clientSecret = clientSecret ?? throw new ArgumentNullException(nameof(clientSecret));
+
+        _httpClient.DefaultRequestHeaders.Accept.Clear();
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
 
-    private bool IsTokenValid() => _token != null && _token.ExpiryTime > DateTime.UtcNow;
+    private bool IsTokenValid() => _token != null && _token.ExpiryTime > DateTime.UtcNow;//weryfikacja czy aktualny token nie wygasł
 
-    private async Task GetAccessTokenAsync()
+    private async Task GetAccessTokenAsync()//procedura uzyskiwania nowego tokena dostępu
     {
-        Console.WriteLine("Pobieram nowy token dostępu...");
         var authUrl = $"https://id.twitch.tv/oauth2/token?client_id={_clientId}&client_secret={_clientSecret}&grant_type=client_credentials";
+
         try
         {
             var response = await _httpClient.PostAsync(authUrl, null);
@@ -48,18 +48,16 @@ public class IGDBClient
 
             if (_token != null)
             {
-                _token.ExpiryTime = DateTime.UtcNow.AddSeconds(_token.ExpiresIn - 10);
-                Console.WriteLine("Token został pomyślnie uzyskany.");
+                _token.ExpiryTime = DateTime.UtcNow.AddSeconds(_token.ExpiresIn - 10);//odjęcie marginesu błędu od czasu wygaśnięcia
             }
         }
-        catch (HttpRequestException e)
+        catch (HttpRequestException)
         {
-            Console.WriteLine($"Błąd podczas uzyskiwania tokena: {e.Message}");
             _token = null;
         }
     }
 
-    public virtual async Task<string> ApiRequestAsync(string endpoint, string queryBody)
+    public virtual async Task<string> ApiRequestAsync(string endpoint, string queryBody)//wysyłanie zapytań do konkretnych modułów api
     {
         if (!IsTokenValid())
         {
@@ -71,27 +69,24 @@ public class IGDBClient
         {
             Method = HttpMethod.Post,
             RequestUri = new Uri($"https://api.igdb.com/v4/{endpoint}"),
-            Content = new StringContent(queryBody, Encoding.UTF8, "text/plain"),
-            Headers =
-            {
-                { "Client-ID", _clientId },
-                { "Authorization", $"Bearer {_token.AccessToken}" }
-            }
+            Content = new StringContent(queryBody, Encoding.UTF8, "text/plain")
         };
+
+        request.Headers.Add("Client-ID", _clientId);
+        request.Headers.Add("Authorization", $"Bearer {_token.AccessToken}");//nagłówek wymagany do autoryzacji zapytania
 
         try
         {
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
+
             return await response.Content.ReadAsStringAsync();
         }
         catch (HttpRequestException e)
         {
-            Console.WriteLine($"Błąd zapytania do API: {e.Message}");
             if (e.StatusCode == System.Net.HttpStatusCode.Unauthorized || e.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
-                _token = null;
-                Console.WriteLine("Token unieważniony. Następne zapytanie spróbuje go odświeżyć.");
+                _token = null;//wymuszenie odświeżenia tokena przy następnej próbie
             }
             return null;
         }

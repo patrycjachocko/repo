@@ -5,7 +5,7 @@ namespace praca_dyplomowa_zesp.Models.Modules.Games
 {
     public class GameBrowserViewModel
     {
-        public List<ApiGame> Games { get; set; } = new List<ApiGame>();
+        public List<IGDBGameDtos> Games { get; set; } = new List<IGDBGameDtos>();
         public int CurrentPage { get; set; } = 1;
         public string? SearchString { get; set; }
         public string Mode { get; set; } = "browse";

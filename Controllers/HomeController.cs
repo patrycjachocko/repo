@@ -3,7 +3,6 @@ using praca_dyplomowa_zesp.Models;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using praca_dyplomowa_zesp.Models.Users;
-using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.API;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -12,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using praca_dyplomowa_zesp.Data;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
@@ -86,7 +86,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
                     if (!string.IsNullOrEmpty(jsonResponse))
                     {
-                        var apiGames = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
+                        var apiGames = JsonConvert.DeserializeObject<List<IGDBGameDtos>>(jsonResponse);
                         if (apiGames != null)
                         {
                             foreach (var game in apiGames)
@@ -110,7 +110,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var jsonResponse = await _igdbClient.ApiRequestAsync("games", query);
             if (!string.IsNullOrEmpty(jsonResponse))
             {
-                var popularGames = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
+                var popularGames = JsonConvert.DeserializeObject<List<IGDBGameDtos>>(jsonResponse);
                 if (popularGames != null)
                 {
                     //reczne filtrowanie dlc i pakietow w pamieci serwera
@@ -136,7 +136,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
         }
 
-        private HomeGameDisplay MapToHomeDisplay(ApiGame apiGame, bool isInLibrary)
+        private HomeGameDisplay MapToHomeDisplay(IGDBGameDtos apiGame, bool isInLibrary)
         {
             return new HomeGameDisplay
             {

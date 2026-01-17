@@ -1,5 +1,4 @@
 ﻿using praca_dyplomowa_zesp.Models.Interactions.Comments;
-using praca_dyplomowa_zesp.Models.Interactions.Comments.Replies;
 using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using praca_dyplomowa_zesp.Models.Users;
 using System.ComponentModel.DataAnnotations;

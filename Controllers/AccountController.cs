@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using praca_dyplomowa_zesp.Models.Users;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using praca_dyplomowa.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Security.Claims;
 using System.Linq;
+using praca_dyplomowa_zesp.Services;
 using praca_dyplomowa_zesp.Models.API;
+using praca_dyplomowa_zesp.Data;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
