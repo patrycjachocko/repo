@@ -1295,21 +1295,22 @@ body.home-page {
     position: relative;
 }
 
+/* wwwroot/css/site.css */
 .hero-content {
     margin-bottom: 0;
     text-align: center;
     z-index: 20;
-    transform: translateY(-5vh);
+    transform: translateY(-5vh); /* Zmieniono z -5vh na -2vh, żeby napis był niżej */
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 5px; /* Zmniejszono gap z 15px na 10px, by napis i podtytuł były bliżej */
 }
 
 .neon-logo {
     /* Obniżamy minimum do 1.5rem i używamy 9vw jako wartości preferowanej */
-    font-size: clamp(1.5rem, 9vw, 8rem);
+    font-size: clamp(1.2rem, 7vw, 6rem);
     font-weight: 900;
     text-transform: uppercase;
     color: var(--white);
@@ -1336,9 +1337,9 @@ body.home-page {
 /* Home Swiper */
 body.home-page .swiper {
     width: 100%;
-    padding-top: 20px !important;
+    padding-top: 50px !important;
     padding-bottom: 60px !important;
-    margin-top: -40px;
+    margin-top: -70px;
     overflow: visible !important;
     mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
@@ -1382,7 +1383,7 @@ body.home-page .game-info {
     bottom: 0;
     left: 0;
     width: 100%;
-    padding: 20px 15px 12px 15px;
+    padding: 30px 15px 25px 15px;
     background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 60%, transparent 100%);
     opacity: 0;
     visibility: hidden;
