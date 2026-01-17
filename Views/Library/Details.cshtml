@@ -41,7 +41,7 @@
                     @* Panel postępu użytkownika *@
                     <div class="glass-panel p-3 mt-3 border-0" style="background: rgba(0,0,0,0.3);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="info-label mb-0 text-neon-cyan"><i class="bi bi-controller me-2"></i>Postęp w tytule</span>
+                            <span class="info-label mb-0 text-neon-cyan"><i class="bi bi-controller me-2"></i>Postęp w grze</span>
                             <div>
                                 <span id="@(hasAchievements ? "auto-progress-label" : "manual-progress-label")" class="fw-bold text-white fs-5">@Model.CurrentUserStoryProgressPercent%</span>
                                 @if (!hasAchievements)
@@ -187,7 +187,7 @@
             @* NOTATKI *@
             <div class="settings-card notes-box d-flex flex-column fade-in-up" style="animation-delay: 0.4s; margin-bottom: 0;">
                 <div class="settings-header d-flex align-items-center flex-shrink-0" style="min-height: 70px;">
-                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-journal-text me-2 text-neon-purple"></i>Notatnik Gracza</span>
+                    <span class="fw-bold text-uppercase fs-6" style="letter-spacing: 1px;"><i class="bi bi-journal-text me-2 text-neon-purple"></i>Notatnik</span>
                 </div>
                 <div class="p-3 d-flex flex-column flex-grow-1" style="min-height: 0;">
                     <div class="form-floating w-100 h-100">
