@@ -1288,58 +1288,70 @@ body.home-page {
     height: 100%;
     display: flex;
     flex-direction: column;
+    /* Zmieniamy na space-evenly, aby rozłożyć napisy i swiper w pionie */
     justify-content: center;
     align-items: center;
     background: radial-gradient(circle at center, var(--hero-center) 0%, var(--bg-body) 70%, #000000 100%);
     overflow: hidden;
     position: relative;
+    /* Dodajemy padding, żeby napisy nie przyklejały się do góry na małych ekranach */
+    padding-top: 2vh;
 }
 
 /* wwwroot/css/site.css */
+/* 1. Wyśrodkowanie logo w wolnej przestrzeni i zbliżenie podtytułu */
 .hero-content {
     margin-bottom: 0;
     text-align: center;
     z-index: 20;
-    transform: translateY(-5vh); /* Zmieniono z -5vh na -2vh, żeby napis był niżej */
+    /* Usuwamy transform, który mógłby psuć centrowanie w pionie */
+    transform: none;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px; /* Zmniejszono gap z 15px na 10px, by napis i podtytuł były bliżej */
+    /* Gap kontroluje odległość logo od napisu - dajemy małą wartość */
+    gap: 0;
 }
 
 .neon-logo {
-    /* Obniżamy minimum do 1.5rem i używamy 9vw jako wartości preferowanej */
-    font-size: clamp(1.2rem, 7vw, 6rem);
+    /* Zwiększamy nieco bazowy rozmiar i letter-spacing, żeby logo "rozpychało" się na boki */
+    font-size: clamp(1.8rem, 10vw, 7rem);
     font-weight: 900;
     text-transform: uppercase;
     color: var(--white);
     margin-bottom: 0;
-    /* Zmieniamy stałe 5px na wartość relatywną, żeby odstępy też malały */
-    letter-spacing: 0.1em;
-    line-height: 1;
+    line-height: 0.85;
+    letter-spacing: 0.15em; /* Zwiększony odstęp między literami rozszerza logo */
     text-align: center;
     width: 100%;
-    max-width: 100vw;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(189, 0, 255, 0.5), 0 0 40px rgba(189, 0, 255, 0.5), 0 0 80px rgba(189, 0, 255, 0.8), 0 0 120px rgba(100, 0, 255, 0.8);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(189, 0, 255, 0.6), 0 0 60px rgba(189, 0, 255, 0.4);
 }
 
 .hero-subtitle {
-    font-size: clamp(0.9rem, 2vh, 1.3rem);
+    /* Używamy mniejszego mnożnika vw (1.9vw), żeby przy 10vw loga 
+       ten tekst (mimo że ma więcej liter) był fizycznie krótszy */
+    font-size: clamp(0.6rem, 1.9vw, 1.3rem);
     color: var(--text-muted);
-    font-weight: 300;
+    font-weight: 400;
     letter-spacing: 2px;
-    margin-top: 20px;
+    /* Zwiększony odstęp od loga (z 5px na 15px) */
+    margin-top: 15px;
     text-transform: uppercase;
-    text-shadow: 0 2px 5px var(--bg-overlay-dark);
+    /* KLUCZOWE: tekst w jednej linii */
+    white-space: nowrap;
+    display: block;
+    width: fit-content;
+    /* Cień dla czytelności */
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
 }
 
 /* Home Swiper */
 body.home-page .swiper {
     width: 100%;
-    padding-top: 50px !important;
-    padding-bottom: 60px !important;
-    margin-top: -70px;
+    padding-top: 70px !important; /* Duży padding na górną poświatę gier */
+    padding-bottom: 50px !important;
+    margin-top: -10px; /* Lekka korekta pozycji po zwiększeniu paddingu */
     overflow: visible !important;
     mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
@@ -2614,9 +2626,13 @@ footer.footer {
     }
 
     .hero-content {
-        padding: 0 10px; /* Dodatkowy margines bezpieczeństwa */
-        width: 100%;
-        box-sizing: border-box;
+        margin-bottom: 0;
+        text-align: center;
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
     }
 }
 
@@ -3760,3 +3776,20 @@ body.pdf-document {
         border-left-color: var(--neon-purple);
         text-shadow: 0 0 8px var(--neon-purple);
     }
+
+/* 1. Nowy styl dla napisu "W BIBLIOTECE" - styl logo GAMEHUB */
+.badge-library-neon {
+    display: inline-block;
+    color: #fff;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.75rem; /* Zachowujemy obecny mały rozmiar */
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    /* Poświata identyczna jak w logo, tylko dopasowana do skali */
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8), 0 0 10px rgba(189, 0, 255, 0.7), 0 0 20px rgba(189, 0, 255, 0.5);
+    /* Jeśli chcesz, żeby miał delikatną obwódkę jak "badge", odkomentuj poniższe: */
+    /* border: 1px solid rgba(189, 0, 255, 0.3); */
+    /* padding: 2px 10px; */
+    /* border-radius: 50px; */
+}
