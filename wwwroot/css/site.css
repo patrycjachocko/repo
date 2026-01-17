@@ -1328,7 +1328,7 @@ body.home-page {
 }
 
 .hero-subtitle {
-    font-size: clamp(0.8rem, 0.5vw, 2.5rem);
+    font-size: clamp(0.8rem, 0.5vw, 3rem);
     color: var(--text-muted);
     font-weight: 400;
     letter-spacing: 2px;
