@@ -1295,7 +1295,7 @@ body.home-page {
     background: radial-gradient(circle at center, var(--hero-center) 0%, var(--bg-body) 70%, #000000 100%);
     overflow: hidden;
     position: relative;
-    padding-top: 1.5vh;
+    padding-top: clamp(2rem, 2vh, 5rem);
 }
 
 .hero-content {
