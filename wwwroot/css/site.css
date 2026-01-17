@@ -1283,73 +1283,79 @@ body.home-page {
         overflow: hidden;
     }
 
+/* wwwroot/css/site.css */
+
 .hero-section {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
-    /* Zmieniamy na space-evenly, aby rozłożyć napisy i swiper w pionie */
     justify-content: center;
     align-items: center;
     background: radial-gradient(circle at center, var(--hero-center) 0%, var(--bg-body) 70%, #000000 100%);
     overflow: hidden;
     position: relative;
-    /* Dodajemy padding, żeby napisy nie przyklejały się do góry na małych ekranach */
     padding-top: 2vh;
 }
 
-/* wwwroot/css/site.css */
-/* 1. Wyśrodkowanie logo w wolnej przestrzeni i zbliżenie podtytułu */
 .hero-content {
     margin-bottom: 0;
     text-align: center;
     z-index: 20;
-    /* Usuwamy transform, który mógłby psuć centrowanie w pionie */
     transform: none;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Gap kontroluje odległość logo od napisu - dajemy małą wartość */
     gap: 0;
 }
 
 .neon-logo {
-    /* Zwiększamy nieco bazowy rozmiar i letter-spacing, żeby logo "rozpychało" się na boki */
-    font-size: clamp(1.8rem, 10vw, 7rem);
+    /* --- ZMIANA: Skalowanie względem ekranu --- */
+    /* clamp(MINIMUM, IDEALNIE, MAXIMUM) */
+    /* 1. Minimum: 3rem (to co wyglądało ok na Twoim ekranie - nie zmniejszy się bardziej) */
+    /* 2. Idealnie: 6vw (na monitorze 1920px to będzie aż 115px/7rem - czyli urośnie) */
+    /* 3. Maximum: 10rem (żeby na gigantycznych ekranach nie zajęło wszystkiego) */
+    font-size: clamp(3rem, 3vw, 10rem);
     font-weight: 900;
     text-transform: uppercase;
     color: var(--white);
     margin-bottom: 0;
     line-height: 0.85;
-    letter-spacing: 0.15em; /* Zwiększony odstęp między literami rozszerza logo */
+    letter-spacing: 0.15em;
     text-align: center;
     width: 100%;
     text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(189, 0, 255, 0.6), 0 0 60px rgba(189, 0, 255, 0.4);
 }
 
 .hero-subtitle {
-    /* Używamy mniejszego mnożnika vw (1.9vw), żeby przy 10vw loga 
-       ten tekst (mimo że ma więcej liter) był fizycznie krótszy */
-    font-size: clamp(0.6rem, 1.9vw, 1.3rem);
+    font-size: clamp(1rem, 1vw, 2.5rem);
     color: var(--text-muted);
     font-weight: 400;
     letter-spacing: 2px;
-    /* Zwiększony odstęp od loga (z 5px na 15px) */
-    margin-top: 15px;
+    margin-top: 2vh;
     text-transform: uppercase;
-    /* KLUCZOWE: tekst w jednej linii */
     white-space: nowrap;
     display: block;
     width: fit-content;
-    /* Cień dla czytelności */
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+/* Home Swiper - bez zmian, wygląda dobrze */
+body.home-page .swiper {
+    width: 100%;
+    padding-top: 50px !important;
+    padding-bottom: 50px !important;
+    margin-top: -10px;
+    overflow: visible !important;
+    mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
 }
 
 /* Home Swiper */
 body.home-page .swiper {
     width: 100%;
-    padding-top: 70px !important; /* Duży padding na górną poświatę gier */
+    padding-top: 50px !important; /* Duży padding na górną poświatę gier */
     padding-bottom: 50px !important;
     margin-top: -10px; /* Lekka korekta pozycji po zwiększeniu paddingu */
     overflow: visible !important;
