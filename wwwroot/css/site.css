@@ -1287,76 +1287,70 @@ body.home-page {
 
 .hero-section {
     width: 100%;
-    height: 100%;
+    height: 100vh;
     display: flex;
     flex-direction: column;
+    /* ZMIANA: Zamiast rozrzucać po ekranie, centrujemy wszystko w grupie */
     justify-content: center;
     align-items: center;
+    /* TO JEST TWÓJ STEROWNIK ODSTĘPÓW:
+       Ustawiasz tu sztywny odstęp między sekcją Logo a sekcją Gry.
+       Możesz dać 2vh (bardzo blisko), 5vh (średnio) itd. */
+    gap: 3vh;
     background: radial-gradient(circle at center, var(--hero-center) 0%, var(--bg-body) 70%, #000000 100%);
     overflow: hidden;
     position: relative;
-    padding-top: clamp(2rem, 2vh, 3rem);
+    /* Opcjonalnie: Przesunięcie całości lekko w górę, żeby optycznie było na środku
+       (bo slider jest "ciężki" na dole). */
+    padding-bottom: 5vh;
+    box-sizing: border-box;
 }
 
 .hero-content {
-    margin-bottom: 0;
     text-align: center;
     z-index: 20;
-    transform: none;
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
+    flex-shrink: 0;
 }
 
 .neon-logo {
-    font-size: clamp(3rem, 5vw, 10rem);
+    /* Wielkość bez zmian */
+    font-size: clamp(3rem, 5vw, 9rem);
     font-weight: 900;
     text-transform: uppercase;
     color: var(--white);
-    margin-bottom: 0.5rem;
-    line-height: 0.85;
+    margin: 0;
+    line-height: 0.9;
     letter-spacing: 0.15em;
-    text-align: center;
-    width: 100%;
     text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(189, 0, 255, 0.6), 0 0 60px rgba(189, 0, 255, 0.4);
 }
 
 .hero-subtitle {
-    font-size: clamp(0.6rem, 1vw, 3rem);
+    font-size: clamp(0.8rem, 0.5vw, 2.5rem);
     color: var(--text-muted);
     font-weight: 400;
     letter-spacing: 2px;
-    margin-top: 2vh;
-    margin-bottom: 2.5vh;
+    margin-top: 15px;
     text-transform: uppercase;
     white-space: nowrap;
-    display: block;
-    width: fit-content;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
 }
 
-/* Home Swiper - bez zmian, wygląda dobrze */
+/* Home Swiper - Twój oryginał */
 body.home-page .swiper {
     width: 100%;
+    /* Paddingi i maski ZOSTAWIAMY PO STAREMU (poświata działa) */
     padding-top: 50px !important;
     padding-bottom: 50px !important;
-    margin-top: 2vh;
+    /* Trick: Ponieważ padding wynosi 50px, slider "technicznie" zaczyna się 50px wyżej niż obrazek.
+       Dajemy ujemny margines, żeby zniwelować ten pusty obszar i zbliżyć gry do loga. */
+    margin-top: -30px;
     overflow: visible !important;
     mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
-}
-
-/* Home Swiper */
-body.home-page .swiper {
-    width: 100%;
-    padding-top: 50px !important; /* Duży padding na górną poświatę gier */
-    padding-bottom: 50px !important;
-    margin-top: -10px; /* Lekka korekta pozycji po zwiększeniu paddingu */
-    overflow: visible !important;
-    mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%);
+    flex-shrink: 1;
 }
 
 body.home-page .swiper-slide {
