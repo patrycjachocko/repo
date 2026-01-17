@@ -71,7 +71,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var userIdString = _userManager.GetUserId(User);
             if (Guid.TryParse(userIdString, out Guid userId))
             {
-                //wyciagniecie z bazy id gier igdb przypisanych do konta
+                //wyciagniecie z bazy id gier IGDB przypisanych do konta
                 var userLibraryIds = await _context.GamesInLibraries
                     .Where(g => g.UserId == userId)
                     .OrderByDescending(g => g.DateAddedToLibrary)
