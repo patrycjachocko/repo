@@ -10,7 +10,7 @@ using System.Security.Claims;
 using System.Linq;
 using praca_dyplomowa_zesp.Models.API;
 
-namespace praca_dyplomowa_zesp.Controllers.Users
+namespace praca_dyplomowa_zesp.Controllers
 {
     /// <summary>
     /// Kontroler odpowiedzialny za obsługę procesów uwierzytelniania, rejestracji 
