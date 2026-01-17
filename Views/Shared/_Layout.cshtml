@@ -143,15 +143,60 @@
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container text-center">
-            &copy; 2025 - @DateTime.Now.Year GameHub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
-            <span class="mx-2 text-secondary">|</span>
-            <a asp-controller="Tickets" asp-action="Index">
-                <i class="fas fa-headset me-1"></i> Support / Kontakt
-            </a>
+    <footer class="border-top footer text-muted py-4">
+        <div class="container">
+            <div class="text-center mb-3">
+                <span class="fw-bold text-uppercase" style="letter-spacing: 2px;">
+                    &copy; 2025 - @DateTime.Now.Year
+                    @* ZMIANA: Czysty fioletowy kolor, bez poświaty *@
+                    <span style="color: #bc13fe;">GAMEHUB</span>
+                </span>
+                <span class="mx-2 text-secondary">|</span>
+                <a asp-area="" asp-controller="Home" asp-action="Privacy" class="footer-link">Privacy Policy</a>
+                <span class="mx-2 text-secondary">|</span>
+                <a asp-controller="Tickets" asp-action="Index" class="footer-link">
+                    <i class="fas fa-headset me-1"></i> Support / Kontakt
+                </a>
+            </div>
+
+            <div class="text-center small opacity-75">
+                <div class="mb-2">
+                    <span class="me-3">
+                        <i class="fab fa-steam me-1"></i> Powered by <strong>Steam</strong>
+                    </span>
+                    <span>
+                        <i class="fas fa-database me-1"></i> Data provided by <a href="https://www.igdb.com" target="_blank" rel="noopener" class="footer-link">IGDB.com</a>
+                    </span>
+                </div>
+
+                <p class="mb-0" style="font-size: 0.75rem; line-height: 1.2;">
+                    Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries.
+                    This site is not associated with Valve Corporation.
+                    <br />
+                    All game titles, data, and images are property of their respective owners.
+                </p>
+            </div>
         </div>
     </footer>
+
+    @* Opcjonalny styl dla linków w stopce, żeby pasował do reszty *@
+    <style>
+        .footer-link {
+            color: inherit;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+            .footer-link:hover {
+                color: var(--role-color);
+                text-shadow: 0 0 8px var(--role-color);
+            }
+
+        .footer {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+        }
+    </style>
 
     @* MODALE LOGOWANIA/REJESTRACJI *@
     <partial name="_AuthModals" />

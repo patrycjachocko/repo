@@ -44,12 +44,19 @@
 
                     <div class="text-center text-muted small mb-3" style="letter-spacing: 2px;">LUB</div>
 
-                    <form asp-controller="Account" asp-action="LoginWithSteam" method="post" class="d-grid mb-4">
+                    <form asp-controller="Account" asp-action="LoginWithSteam" method="post" class="d-grid mb-2">
                         <button type="submit" class="btn btn-steam-connect justify-content-center gap-2">
                             <i class="bi bi-steam fs-5"></i>
                             <span>Zaloguj przez Steam</span>
                         </button>
                     </form>
+
+                    <div class="text-center mb-4">
+                        <p class="text-muted" style="font-size: 0.7rem; line-height: 1.2; opacity: 0.8;">
+                            This site is not associated with Valve Corporation.<br />
+                            Steam and the Steam logo are trademarks of Valve Corporation.
+                        </p>
+                    </div>
 
                     <div class="text-center mt-3">
                         <p class="text-muted small mb-1">Brak konta?</p>
