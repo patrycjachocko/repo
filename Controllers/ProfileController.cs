@@ -8,7 +8,7 @@ using praca_dyplomowa.Data;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
 using praca_dyplomowa_zesp.Models.Users;
-using praca_dyplomowa_zesp.Models.ViewModels; // Zakładając, że tu jest ChangePasswordViewModel
+using praca_dyplomowa_zesp.Models.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,10 +17,6 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler zarządzający profilem użytkownika, integracją z platformą Steam 
-    /// oraz ustawieniami konta (hasło, awatar).
-    /// </summary>
     [Authorize]
     public class ProfileController : Controller
     {
@@ -39,6 +35,7 @@ namespace praca_dyplomowa_zesp.Controllers
             ApplicationDbContext context,
             IGDBClient igdbClient)
         {
+            //przypisanie wstrzyknietych serwisow do pol klasy
             _userManager = userManager;
             _signInManager = signInManager;
             _webHostEnvironment = webHostEnvironment;
@@ -49,9 +46,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Profile View & Basic Actions
 
-        /// <summary>
-        /// Wyświetla główny panel profilu użytkownika.
-        /// </summary>
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -61,6 +55,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
+            //sprawdzenie czy konto ma ustawione haslo w celu identyfikacji kont steam
             bool hasPassword = await _userManager.HasPasswordAsync(user);
 
             var viewModel = new ProfileViewModel
@@ -77,9 +72,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(viewModel);
         }
 
-        /// <summary>
-        /// Usuwa konto zalogowanego użytkownika i wylogowuje go.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteAccount()
@@ -87,6 +79,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
+            //calkowite usuniecie uzytkownika poprzedzone zamknieciem sesji
             await _signInManager.SignOutAsync();
             await _userManager.DeleteAsync(user);
 
@@ -97,9 +90,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Password & Avatar Management
 
-        /// <summary>
-        /// Obsługuje zmianę hasła użytkownika.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword([Bind(Prefix = "changePasswordModel")] ChangePasswordViewModel model)
@@ -113,6 +103,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
+            //bezpieczna zmiana hasla przy uzyciu wbudowanej metody identity
             var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
             if (!result.Succeeded)
             {
@@ -125,9 +116,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        /// <summary>
-        /// Aktualizuje zdjęcie profilowe użytkownika.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeAvatar(IFormFile avatarFile)
@@ -141,6 +129,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
+            //walidacja limitu wielkosci pliku graficznego
             if (avatarFile.Length > 2 * 1024 * 1024)
             {
                 TempData["ErrorMessage"] = "Plik przekracza limit 2MB.";
@@ -156,6 +145,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             using (var memoryStream = new MemoryStream())
             {
+                //konwersja pliku na format binarny do zapisu w kolumnie bazy danych
                 await avatarFile.CopyToAsync(memoryStream);
                 user.ProfilePicture = memoryStream.ToArray();
                 user.ProfilePictureContentType = avatarFile.ContentType;
@@ -168,21 +158,18 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        /// <summary>
-        /// Pobiera strumień danych zdjęcia profilowego użytkownika.
-        /// </summary>
         [AllowAnonymous]
         public async Task<IActionResult> GetAvatar(Guid id)
         {
             var user = await _userManager.FindByIdAsync(id.ToString());
 
-            // 1. Jeśli użytkownik ma wgrany własny awatar w bazie
             if (user?.ProfilePicture != null && !string.IsNullOrEmpty(user.ProfilePictureContentType))
             {
+                //zwrocenie pliku binarnego zapisanego w profilu uzytkownika
                 return File(user.ProfilePicture, user.ProfilePictureContentType);
             }
 
-            // 2. Jeśli nie ma awatara, sprawdzamy rangę i dobieramy plik z dysku
+            //wybor domyslnego pliku z dysku jesli uzytkownik nie posiada wlasnego zdjecia
             string fileName = "default_avatar.png";
             if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
             {
@@ -199,21 +186,16 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Steam Integration
 
-        /// <summary>
-        /// Inicjuje proces łączenia konta z platformą Steam.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult LinkSteam()
         {
+            //przygotowanie przekierowania do zewnetrznej autoryzacji steam
             var redirectUrl = Url.Action(nameof(LinkSteamCallback), "Profile");
             var properties = _signInManager.ConfigureExternalAuthenticationProperties("Steam", redirectUrl);
             return Challenge(properties, "Steam");
         }
 
-        /// <summary>
-        /// Obsługuje powrót z autoryzacji Steam i zapisuje SteamID użytkownika.
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> LinkSteamCallback()
         {
@@ -227,9 +209,11 @@ namespace praca_dyplomowa_zesp.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            //ekstrakcja identyfikatora steamid z roszczen autoryzacyjnych
             var steamId = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Split('/').LastOrDefault();
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.SteamId == steamId);
 
+            //blokada podlaczenia konta steam ktore jest juz przypisane do innego profilu
             if (existingUser != null && existingUser.Id != user.Id)
             {
                 TempData["ErrorMessage"] = "To konto Steam jest już przypisane do innego użytkownika!";
@@ -243,9 +227,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        /// <summary>
-        /// Odłącza konto Steam i przelicza postęp gier na podstawie lokalnych osiągnięć.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DisconnectSteam()
@@ -258,16 +239,17 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (steamLogin != null)
             {
+                //usuniecie zewnetrznego powiazania logowania z bazy identity
                 await _userManager.RemoveLoginAsync(user, "Steam", steamLogin.ProviderKey);
             }
 
             user.SteamId = null;
             await _userManager.UpdateAsync(user);
 
-            // Aktualizacja postępów gier po odłączeniu Steam
             var userGames = await _context.GamesInLibraries.Where(g => g.UserId == user.Id).ToListAsync();
             foreach (var game in userGames)
             {
+                //recalc: przeliczenie postepu gry na podstawie osiagniec zapisanych lokalnie po odlaczeniu steam
                 var localStats = await _context.UserAchievements
                     .Where(ua => ua.UserId == user.Id && ua.IgdbGameId == game.IgdbGameId)
                     .Select(ua => ua.IsUnlocked)
@@ -287,21 +269,16 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Steam Library & Import
 
-        /// <summary>
-        /// Wyświetla listę gier posiadanych przez użytkownika na Steam.
-        /// </summary>
         public async Task<IActionResult> SteamLibrary()
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null || string.IsNullOrEmpty(user.SteamId)) return RedirectToAction(nameof(Index));
 
+            //pobranie pelnej listy gier z api steam i sortowanie po czasie rozgrywki
             var games = await _steamService.GetUserGamesAsync(user.SteamId);
             return View(games.OrderByDescending(g => g.PlaytimeForever).ToList());
         }
 
-        /// <summary>
-        /// Importuje gry ze Steam do lokalnej biblioteki, mapując je na bazę IGDB.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ImportSteamGames()
@@ -327,13 +304,14 @@ namespace praca_dyplomowa_zesp.Controllers
                                      .GroupBy(g => CleanSteamGameName(g.Name))
                                      .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-            // Przetwarzanie w paczkach (dokładne dopasowanie nazw)
             var namesToProcess = gamesMap.Keys.ToList();
+            //iteracyjne dopasowywanie nazw gier w paczkach po 50 sztuk do bazy igdb
             for (int i = 0; i < namesToProcess.Count; i += 50)
             {
                 var batch = namesToProcess.Skip(i).Take(50).ToList();
                 var query = $"fields id, name, category, version_parent, aggregated_rating; where name = ({string.Join(",", batch.Select(n => $"\"{n}\""))}) & category = 0 & version_parent = null; limit 50;";
 
+                //wprowadzenie opoznienia w celu unikniecia limitow zapytan do api
                 if (i > 0) await Task.Delay(150);
                 var results = await ExecuteIgdbSearch(query);
 
@@ -352,9 +330,9 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
 
-            // Fallback: Wyszukiwanie pełnotekstowe dla pozostałych gier
             foreach (var steamGame in gamesMap.Values.ToList())
             {
+                //fallback: proba dopasowania pozostalych gier przy uzyciu wyszukiwania pelnotekstowego
                 var query = $"fields id, name, category, version_parent, aggregated_rating; search \"{CleanSteamGameName(steamGame.Name)}\"; where parent_game = null; limit 10;";
                 await Task.Delay(250);
                 var searchResults = await ExecuteIgdbSearch(query);
@@ -377,16 +355,13 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction(nameof(SteamLibrary));
         }
 
-        /// <summary>
-        /// Pobiera okładkę gry z IGDB na podstawie SteamID lub nazwy.
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetIgdbCover(string steamId, string gameName)
         {
             if (string.IsNullOrEmpty(steamId)) return Json(new { url = "" });
             string coverUrl = null;
 
-            // Próba po Steam UID
+            //wyszukanie okladki w api na podstawie zewnetrznego identyfikatora steam uid
             var json = await _igdbClient.ApiRequestAsync("external_games", $"fields game.cover.url; where category = 1 & uid = \"{steamId}\"; limit 1;");
             if (!string.IsNullOrEmpty(json))
             {
@@ -394,9 +369,9 @@ namespace praca_dyplomowa_zesp.Controllers
                 coverUrl = result?.FirstOrDefault()?.game?.cover?.url;
             }
 
-            // Próba po nazwie (fallback)
             if (string.IsNullOrEmpty(coverUrl) && !string.IsNullOrEmpty(gameName))
             {
+                //proba pobrania okladki na podstawie nazwy jesli uid nie zwrocilo wynikow
                 var searchJson = await _igdbClient.ApiRequestAsync("games", $"fields cover.url; search \"{CleanSteamGameName(gameName)}\"; limit 1;");
                 var searchResult = JsonConvert.DeserializeObject<List<dynamic>>(searchJson);
                 coverUrl = searchResult?.FirstOrDefault()?.cover?.url;
@@ -435,6 +410,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 int progress = 0;
                 try
                 {
+                    //pobranie stanu osiagniec dla importowanej gry w celu ustalenia postepu startowego
                     var achievements = await _steamService.GetGameAchievementsAsync(user.SteamId, item.Value.ToString());
                     if (achievements != null && achievements.Any())
                     {
@@ -460,6 +436,7 @@ namespace praca_dyplomowa_zesp.Controllers
         private void HandleImportErrors(List<string> notFoundNames)
         {
             if (!notFoundNames.Any()) return;
+            //skrocenie listy bledow importu do pierwszych 10 pozycji w komunikacie
             string list = string.Join(", ", notFoundNames.Take(10));
             TempData["ErrorMessage"] = $"Nie znaleziono {notFoundNames.Count} gier w IGDB: {list} " + (notFoundNames.Count > 10 ? "..." : "");
         }

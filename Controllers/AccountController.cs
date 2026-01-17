@@ -12,10 +12,6 @@ using praca_dyplomowa_zesp.Models.API;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler odpowiedzialny za obsługę procesów uwierzytelniania, rejestracji 
-    /// oraz integracji z zewnętrznymi dostawcami (Steam).
-    /// </summary>
     public class AccountController : Controller
     {
         private readonly UserManager<User> _userManager;
@@ -29,6 +25,7 @@ namespace praca_dyplomowa_zesp.Controllers
             ApplicationDbContext context,
             SteamApiService steamService)
         {
+            //przypisanie wstrzyknietych zaleznosci do pol klasy
             _userManager = userManager;
             _signInManager = signInManager;
             _context = context;
@@ -45,6 +42,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (TempData["Error"] != null)
             {
+                //przekazanie bledu z sesji do stanu modelu widoku
                 ModelState.AddModelError(string.Empty, TempData["Error"].ToString());
             }
 
@@ -61,7 +59,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            // Lokalizacja użytkownika na podstawie unikalnego loginu
+            //pobranie uzytkownika z bazy na podstawie wlasnego pola login
             var user = await _context.Users.SingleOrDefaultAsync(u => u.Login == model.Login);
 
             if (user == null)
@@ -70,7 +68,6 @@ namespace praca_dyplomowa_zesp.Controllers
                 return View(model);
             }
 
-            // Weryfikacja blokady konta (Ban)
             if (user.isBanned)
             {
                 if (user.BanEnd.HasValue && user.BanEnd > DateTimeOffset.Now)
@@ -80,17 +77,19 @@ namespace praca_dyplomowa_zesp.Controllers
                     return View(model);
                 }
 
-                // Automatyczne odblokowanie po upływie czasu kary
+                //wyczyszczenie danych o blokadzie jesli czas kary juz minal
                 user.isBanned = false;
                 user.BanEnd = null;
                 user.BanReason = null;
                 await _userManager.UpdateAsync(user);
             }
 
+            //logowanie z wykorzystaniem wbudowanego managera identity
             var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
 
             if (result.Succeeded)
             {
+                //odnotowanie czasu ostatniego wejscia uzytkownika do systemu
                 user.LastActive = DateTime.Now;
                 await _userManager.UpdateAsync(user);
                 return RedirectToLocal(returnUrl);
@@ -142,6 +141,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            //reczna walidacja unikalnosci pola login przed utworzeniem konta
             if (await _context.Users.AnyAsync(u => u.Login == model.Login))
             {
                 ModelState.AddModelError(nameof(model.Login), "Ten login jest już zajęty.");
@@ -160,6 +160,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var result = await _userManager.CreateAsync(user, model.Password);
             if (result.Succeeded)
             {
+                //przypisanie domyslnej roli systemowej dla nowego profilu
                 await _userManager.AddToRoleAsync(user, "User");
                 await _signInManager.SignInAsync(user, isPersistent: false);
                 TempData["Success"] = "Rejestracja udana! Witaj w GameHub.";
@@ -179,6 +180,7 @@ namespace praca_dyplomowa_zesp.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult LoginWithSteam(string returnUrl = null)
         {
+            //konfiguracja parametrów dla zewnętrznego dostawcy tozsamosci
             var redirectUrl = Url.Action("SteamLoginCallback", "Account", new { returnUrl });
             var properties = _signInManager.ConfigureExternalAuthenticationProperties("Steam", redirectUrl);
             return Challenge(properties, "Steam");
@@ -193,6 +195,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null) return RedirectToAction(nameof(Login));
 
+            //wydobycie 64-bitowego identyfikatora z adresu url zwroconego przez steam
             var steamIdClaim = info.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var steamId = steamIdClaim?.Split('/').LastOrDefault();
 
@@ -200,7 +203,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.SteamId == steamId);
 
-            // Logowanie istniejącego użytkownika Steam
             if (user != null)
             {
                 if (user.isBanned && user.BanEnd.HasValue && user.BanEnd > DateTimeOffset.Now)
@@ -215,11 +217,11 @@ namespace praca_dyplomowa_zesp.Controllers
                 return RedirectToLocal(returnUrl);
             }
 
-            // Proces tworzenia nowego konta na podstawie danych ze Steam
+            //pobranie szczegolowych informacji o profilu przez api steam
             var steamProfile = await _steamService.GetPlayerSummaryAsync(steamId);
             string nick = steamProfile?.PersonaName ?? $"Gracz_{steamId.Substring(0, 5)}";
 
-            // Zapewnienie unikalności UserName i Login
+            //wywolanie funkcji zapewniajacych brak konfliktow nazw w bazie
             string finalUserName = await GenerateUniqueUserName(nick);
             string finalLogin = await GenerateUniqueLogin(nick);
 
@@ -233,9 +235,9 @@ namespace praca_dyplomowa_zesp.Controllers
                 LastActive = DateTime.Now
             };
 
-            // Pobieranie awatara z profilu Steam
             if (!string.IsNullOrEmpty(steamProfile?.AvatarFullUrl))
             {
+                //konwersja zdjecia profilowego ze steam na format binarny do bazy
                 var avatarBytes = await _steamService.DownloadAvatarAsync(steamProfile.AvatarFullUrl);
                 if (avatarBytes != null)
                 {
@@ -265,6 +267,7 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             string name = baseName;
             int counter = 1;
+            //iteracyjne sprawdzanie dostepnosci nazwy i dodawanie numeracji
             while (await _userManager.FindByNameAsync(name) != null)
             {
                 name = $"{baseName}{counter++}";
@@ -276,6 +279,7 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             string login = baseLogin;
             int counter = 1;
+            //analogiczne zapewnienie unikalnosci dla pola login
             while (await _context.Users.AnyAsync(u => u.Login == login))
             {
                 login = $"{baseLogin}{counter++}";
@@ -285,6 +289,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
         private void SetLoginError(string message)
         {
+            //jednoczesne ustawienie bledu w modelu i powiadomienia tymczasowego
             ModelState.AddModelError(string.Empty, message);
             TempData["Error"] = message;
         }
@@ -308,6 +313,7 @@ namespace praca_dyplomowa_zesp.Controllers
             string errorMsg = "Twoje konto zostało zablokowane.";
             if (user.BanEnd.HasValue)
             {
+                //formatowanie daty wygasniecia blokady na czytelny format lokalny
                 var endDate = user.BanEnd.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
                 errorMsg = $"Twoje konto jest zbanowane do: {endDate}.";
                 if (!string.IsNullOrEmpty(user.BanReason)) errorMsg += $" Powód: {user.BanReason}";

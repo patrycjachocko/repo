@@ -16,9 +16,6 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler obsługujący recenzje gier, ich sortowanie oraz reakcje użytkowników (lajki/dislajki).
-    /// </summary>
     public class ReviewsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -30,6 +27,7 @@ namespace praca_dyplomowa_zesp.Controllers
             UserManager<User> userManager,
             IGDBClient igdbClient)
         {
+            //przypisanie wstrzyknietych serwisow do prywatnych pol klasy
             _context = context;
             _userManager = userManager;
             _igdbClient = igdbClient;
@@ -37,24 +35,22 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Core Actions
 
-        /// <summary>
-        /// Wyświetla listę recenzji dla danej gry wraz ze statystykami ocen.
-        /// </summary>
         public async Task<IActionResult> Index(long gameId, string gameName, string sortOrder = "best")
         {
-            // Pobieranie i dołączanie powiązanych danych recenzji
+            //pobranie recenzji z bazy wraz z powiazanymi danymi autorow i reakcji
             var reviewsQuery = _context.GameReviews
                 .Include(r => r.User)
                 .Include(r => r.Reactions)
                 .Where(r => r.IgdbGameId == gameId);
 
             var reviewsList = await reviewsQuery.ToListAsync();
+            //wywolanie metody sortujacej liste na podstawie parametru wejsciowego
             SortReviews(ref reviewsList, sortOrder);
 
             var user = await _userManager.GetUserAsync(User);
             var currentUserId = user?.Id ?? Guid.Empty;
 
-            // Przygotowanie danych o ocenach (IGDB + Lokalne)
+            //pobranie modelu ocen zawierajacego dane z api oraz bazy lokalnej
             var ratingsModel = await GetGameRatingsViewModel(gameId, currentUserId);
 
             ViewBag.Ratings = ratingsModel;
@@ -70,9 +66,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Review CRUD
 
-        /// <summary>
-        /// Dodaje nową recenzję do bazy danych.
-        /// </summary>
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -102,9 +95,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToIndex(gameId, gameName);
         }
 
-        /// <summary>
-        /// Aktualizuje treść istniejącej recenzji (tylko dla właściciela).
-        /// </summary>
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -113,6 +103,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var review = await _context.GameReviews.FindAsync(id);
             if (review == null) return NotFound();
 
+            //blokada edycji dla uzytkownikow niebedacych autorami wpisu
             if (review.UserId.ToString() != _userManager.GetUserId(User)) return Forbid();
 
             if (string.IsNullOrWhiteSpace(content))
@@ -129,9 +120,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToIndex(review.IgdbGameId, gameName);
         }
 
-        /// <summary>
-        /// Usuwa recenzję z bazy (dla właściciela lub administracji).
-        /// </summary>
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -143,6 +131,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var userId = _userManager.GetUserId(User);
             bool isAdminOrMod = User.IsInRole("Admin") || User.IsInRole("Moderator");
 
+            //weryfikacja uprawnien do usuniecia wpisu przez autora lub administracje
             if (review.UserId.ToString() != userId && !isAdminOrMod) return Forbid();
 
             _context.GameReviews.Remove(review);
@@ -156,9 +145,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Interactions
 
-        /// <summary>
-        /// Obsługuje dodawanie/usuwanie reakcji (Like/Dislike) pod recenzją.
-        /// </summary>
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -170,6 +156,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var review = await _context.GameReviews.FindAsync(reviewId);
             if (review == null) return NotFound();
 
+            //sprawdzenie czy uzytkownik juz wczesniej zareagowal na ten wpis
             var existingReaction = await _context.Reactions
                 .FirstOrDefaultAsync(r => r.UserId == user.Id && r.GameReviewId == reviewId);
 
@@ -177,6 +164,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (existingReaction == null)
             {
+                //dodanie nowej reakcji jesli wczesniej nie istniala
                 _context.Reactions.Add(new Reaction
                 {
                     UserId = user.Id,
@@ -188,10 +176,12 @@ namespace praca_dyplomowa_zesp.Controllers
             {
                 if (existingReaction.Type == targetType)
                 {
+                    //usuniecie reakcji przy ponownym kliknieciu w ten sam przycisk
                     _context.Reactions.Remove(existingReaction);
                 }
                 else
                 {
+                    //zmiana typu reakcji na przeciwny
                     existingReaction.Type = targetType;
                     _context.Update(existingReaction);
                 }
@@ -209,10 +199,12 @@ namespace praca_dyplomowa_zesp.Controllers
 
         private void SortReviews(ref List<GameReview> reviews, string sortOrder)
         {
+            //logika sortowania recenzji w pamieci na podstawie wybranych kryteriow
             reviews = sortOrder switch
             {
                 "newest" => reviews.OrderByDescending(r => r.CreatedAt).ToList(),
                 "popular" => reviews.OrderByDescending(r => r.Reactions.Count).ToList(),
+                //domyslne sortowanie wedlug bilansu punktowego reakcji
                 _ => reviews.OrderByDescending(r =>
                         (r.Reactions?.Count(x => x.Type == ReactionType.Like) ?? 0) -
                         (r.Reactions?.Count(x => x.Type == ReactionType.Dislike) ?? 0))
@@ -224,9 +216,9 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             var model = new GameRatingViewModel { IgdbGameId = gameId };
 
-            // Dane z IGDB
             try
             {
+                //pobranie oficjalnych ocen z zewnetrznego serwisu igdb
                 var query = $"fields rating, aggregated_rating; where id = {gameId}; limit 1;";
                 var json = await _igdbClient.ApiRequestAsync("games", query);
                 if (!string.IsNullOrEmpty(json))
@@ -239,9 +231,9 @@ namespace praca_dyplomowa_zesp.Controllers
                     }
                 }
             }
-            catch { /* API Errors silent fail */ }
+            catch { }
 
-            // Dane lokalne
+            //pobranie i wyliczenie sredniej z ocen wystawionych lokalnie przez uzytkownikow
             var localRates = await _context.GameRates.Where(r => r.IgdbGameId == gameId).ToListAsync();
             model.LocalAverageRating = localRates.Any() ? localRates.Average(r => r.Value) : 0;
             model.LocalRatingCount = localRates.Count;

@@ -17,10 +17,6 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler zarządzający osobistą biblioteką gier użytkownika.
-    /// Obsługuje przeglądanie, szczegóły, postępy oraz listę zadań (To-Do).
-    /// </summary>
     [Authorize]
     public class LibraryController : Controller
     {
@@ -37,6 +33,7 @@ namespace praca_dyplomowa_zesp.Controllers
             UserManager<User> userManager,
             SteamApiService steamService)
         {
+            //przypisanie wstrzyknietych serwisow do pol klasy
             _context = context;
             _igdbClient = igdbClient;
             _userManager = userManager;
@@ -45,22 +42,19 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Core Actions
 
-        /// <summary>
-        /// Wyświetla listę gier w bibliotece użytkownika z uwzględnieniem filtrów i paginacji.
-        /// </summary>
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Index(string? searchString, string statusFilter = "all", int page = 1)
         {
             var currentUserId = GetCurrentUserId();
 
-            // Pobranie bazowych danych o grach użytkownika
+            //pobranie kolekcji gier uzytkownika posortowanej od ostatnio uzywanych
             var query = _context.GamesInLibraries
                 .Where(g => g.UserId == currentUserId)
                 .OrderByDescending(g => g.LastAccessed)
                 .AsQueryable();
 
-            // Filtrowanie po statusie ukończenia
+            //filtrowanie rekordow na podstawie postepu fabularnego
             query = statusFilter switch
             {
                 "completed" => query.Where(g => g.CurrentUserStoryProgressPercent == 100),
@@ -75,7 +69,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                // Scenariusz wyszukiwania: pobieramy dane API dla wszystkich gier, aby przefiltrować po nazwie
+                //pobranie wszystkich identyfikatorow w celu filtracji po nazwie z api in-memory
                 var allIgdbIds = filteredDbList.Select(g => g.IgdbGameId).Distinct().ToList();
                 var allApiGames = await FetchApiGamesInBatches(allIgdbIds);
 
@@ -89,7 +83,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
             else
             {
-                // Scenariusz optymalny: pobieramy dane API tylko dla gier na bieżącej stronie
+                //optymalizacja: pobieranie danych z api tylko dla elementow na aktualnej stronie
                 totalGames = filteredDbList.Count;
                 var pagedDbList = filteredDbList.Skip((page - 1) * PageSize).Take(PageSize).ToList();
                 var pageIgdbIds = pagedDbList.Select(g => g.IgdbGameId).Distinct().ToList();
@@ -118,9 +112,6 @@ namespace praca_dyplomowa_zesp.Controllers
             });
         }
 
-        /// <summary>
-        /// Wyświetla szczegółowe informacje o grze z biblioteki, w tym osiągnięcia i statystyki.
-        /// </summary>
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -128,18 +119,17 @@ namespace praca_dyplomowa_zesp.Controllers
             var currentUserId = GetCurrentUserId();
             var user = await _userManager.GetUserAsync(User);
 
+            //weryfikacja czy uzytkownik posiada uprawnienia do podgladu tego wpisu
             var gameFromDb = await _context.GamesInLibraries
                 .Include(g => g.ToDoItems)
                 .FirstOrDefaultAsync(m => m.Id == id && m.UserId == currentUserId);
 
             if (gameFromDb == null) return NotFound();
 
-            // Pobieranie rozszerzonych danych o grze z IGDB
             var gameQuery = $"fields name, cover.url, genres.name, involved_companies.company.name, involved_companies.developer, release_dates.human, websites.url, websites.category, external_games.category, external_games.uid, rating, aggregated_rating; where id = {gameFromDb.IgdbGameId}; limit 1;";
             var apiGames = await ExecuteIgdbQuery(gameQuery);
             var gameDetailsFromApi = apiGames.FirstOrDefault();
 
-            // Przetwarzanie ocen
             var localRates = await _context.GameRates.Where(r => r.IgdbGameId == gameFromDb.IgdbGameId).ToListAsync();
             var ratingsModel = new GameRatingViewModel
             {
@@ -151,14 +141,14 @@ namespace praca_dyplomowa_zesp.Controllers
                 UserPersonalRating = localRates.FirstOrDefault(r => r.UserId == currentUserId)?.Value ?? 0
             };
 
-            // Obsługa integracji ze Steam (AppID i osiągnięcia)
+            //identyfikacja appid i synchronizacja trofeów z platforma steam
             string steamAppId = await ResolveSteamAppId(gameDetailsFromApi);
             var achievementsData = await ProcessAchievements(currentUserId, user?.SteamId, gameFromDb.IgdbGameId, steamAppId);
 
-            // Aktualizacja czasu ostatniego dostępu i ewentualnie postępu
             gameFromDb.LastAccessed = DateTime.Now;
             if (achievementsData.FinalAchievements.Any())
             {
+                //nadpisanie postepu jesli gra posiada system osiagniec
                 gameFromDb.CurrentUserStoryProgressPercent = achievementsData.CalculatedProgress;
             }
 
@@ -196,9 +186,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         public IActionResult Create() => View();
 
-        /// <summary>
-        /// Dodaje nową grę do biblioteki użytkownika.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("IgdbGameId")] GameInLibrary gameInLibrary, string returnUrl)
@@ -214,7 +201,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 var gamesInfo = await ExecuteIgdbQuery(query);
                 var gameInfo = gamesInfo?.FirstOrDefault();
 
-                // Walidacja istnienia okładki
+                //blokada dodania gry bez poprawnej miniatury okladki
                 if (gameInfo?.Cover == null || string.IsNullOrEmpty(gameInfo.Cover.Url))
                 {
                     return RedirectToLocal(returnUrl);
@@ -258,6 +245,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (game != null && game.UserId == currentUserId)
             {
+                //usuniecie powiazanych lokalnych osiagniec przed usunieciem gry
                 var achievements = await _context.UserAchievements
                     .Where(ua => ua.UserId == currentUserId && ua.IgdbGameId == game.IgdbGameId)
                     .ToListAsync();
@@ -269,9 +257,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        /// <summary>
-        /// Czyści bibliotekę użytkownika na podstawie aktywnych filtrów wyszukiwania.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ClearLibrary(string? searchString, string statusFilter = "all")
@@ -291,6 +276,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 var allIgdbIds = potentialGames.Select(g => g.IgdbGameId).Distinct().ToList();
                 var allApiGames = await FetchApiGamesInBatches(allIgdbIds);
 
+                //filtrowanie kolekcji do usuniecia na podstawie nazw z api
                 gamesToDelete = potentialGames.Where(dbGame =>
                 {
                     var apiInfo = allApiGames.FirstOrDefault(a => a.Id == dbGame.IgdbGameId);
@@ -314,6 +300,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var userAchievements = await _context.UserAchievements.Where(ua => ua.UserId == currentUserId && gamesIds.Contains(ua.IgdbGameId)).ToListAsync();
             var todoItems = await _context.ToDoItems.Where(t => dbIds.Contains(t.GameInLibraryId)).ToListAsync();
 
+            //zbiorcze czyszczenie wszystkich powiazanych danych i zadan
             _context.ToDoItems.RemoveRange(todoItems);
             _context.UserAchievements.RemoveRange(userAchievements);
             _context.GamesInLibraries.RemoveRange(gamesToDelete);
@@ -348,6 +335,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var game = await _context.GamesInLibraries.FirstOrDefaultAsync(g => g.Id == id && g.UserId == GetCurrentUserId());
             if (game == null) return Json(new { success = false, error = "Nie znaleziono gry." });
 
+            //zapewnienie ze wartosc procentowa miesci sie w poprawnym zakresie
             game.CurrentUserStoryProgressPercent = Math.Clamp(percent, 0, 100);
             _context.Update(game);
             await _context.SaveChangesAsync();
@@ -367,6 +355,7 @@ namespace praca_dyplomowa_zesp.Controllers
             bool newStatus;
             if (achievement == null)
             {
+                //dodanie nowego wpisu o odblokowaniu jesli wczesniej nie istnial
                 _context.UserAchievements.Add(new UserAchievement
                 {
                     UserId = currentUserId,
@@ -378,6 +367,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
             else
             {
+                //zmiana stanu istniejacego trofeum
                 achievement.IsUnlocked = !achievement.IsUnlocked;
                 newStatus = achievement.IsUnlocked;
             }
@@ -497,6 +487,7 @@ namespace praca_dyplomowa_zesp.Controllers
         private async Task<List<ApiGame>> FetchApiGamesInBatches(List<long> ids)
         {
             var allApiGames = new List<ApiGame>();
+            //przetwarzanie duzych ilosci identyfikatorow w paczkach po 50 rekordow
             for (int i = 0; i < ids.Count; i += 50)
             {
                 var batchIds = ids.Skip(i).Take(50).ToList();
@@ -522,11 +513,11 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (apiGame == null) return null;
 
-            // 1. Sprawdzenie w external_games
+            //pobranie identyfikatora z metadanych zewnetrznych powiazanych z gra
             var steamExternal = apiGame.External_games?.FirstOrDefault(e => e.Category == 1);
             if (steamExternal != null) return steamExternal.Uid;
 
-            // 2. Parsowanie z URL strony Steam
+            //ekstrakcja numeru aplikacji z adresu url oficjalnej strony steam
             var steamWebsite = apiGame.Websites?.FirstOrDefault(w => w.Category == 13);
             if (steamWebsite != null)
             {
@@ -534,7 +525,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 if (match.Success) return match.Groups[1].Value;
             }
 
-            // 3. Wyszukiwanie przez serwis Steam
+            //wykorzystanie zewnetrznego serwisu do wyszukiwania dopasowania po nazwie
             return await _steamService.SearchAppIdAsync(apiGame.Name);
         }
 
@@ -546,6 +537,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (string.IsNullOrEmpty(steamAppId)) return (finalAchievements, steamUnlockedIds, progress);
 
+            //pobranie definicji osiagniec dla danego tytulu z api steam
             var steamSchema = await _steamService.GetSchemaForGameAsync(steamAppId);
             if (steamSchema != null && steamSchema.Any())
             {
@@ -555,6 +547,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (!string.IsNullOrEmpty(steamId))
                 {
+                    //pobranie faktycznego postepu konkretnego uzytkownika
                     var playerAchievements = await _steamService.GetGameAchievementsAsync(steamId, steamAppId);
                     steamUnlockedIds = playerAchievements.Where(pa => pa.Achieved == 1).Select(pa => pa.ApiName).ToList();
                 }
@@ -565,12 +558,14 @@ namespace praca_dyplomowa_zesp.Controllers
                     Description = schema.Description,
                     IconUrl = schema.Icon,
                     ExternalId = schema.ApiName,
+                    //sprawdzenie czy trofeum zostalo odblokowane automatycznie lub recznie
                     IsUnlocked = steamUnlockedIds.Contains(schema.ApiName) ||
                                  localAchievements.Any(la => la.AchievementExternalId == schema.ApiName && la.IsUnlocked)
                 }).ToList();
 
                 if (finalAchievements.Any())
                 {
+                    //wyliczenie postepu procentowego na podstawie stosunku zdobytych osiagniec
                     progress = (int)Math.Round((double)finalAchievements.Count(a => a.IsUnlocked) / finalAchievements.Count * 100);
                 }
             }

@@ -22,10 +22,6 @@ using Microsoft.AspNetCore.Http;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler zarządzający modułem poradników, wskazówek (tips) oraz interakcji użytkowników (oceny, komentarze).
-    /// Obsługuje integrację z API IGDB w celu weryfikacji tożsamości gier.
-    /// </summary>
     [AllowAnonymous]
     public class GuidesController : Controller
     {
@@ -51,6 +47,7 @@ namespace praca_dyplomowa_zesp.Controllers
         private bool IsUserMuted(User user)
         {
             if (user == null) return false;
+            //weryfikacja czy data zakonczenia wyciszenia jest wciaz aktualna
             return user.BanEnd.HasValue && user.BanEnd.Value > DateTimeOffset.Now;
         }
 
@@ -58,10 +55,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Main Views (List & Details)
 
-        /// <summary>
-        /// Wyświetla listę poradników i wskazówek dla konkretnej gry.
-        /// Obsługuje logikę przekierowań dla gier nadrzędnych (Parent Games/Collections) z IGDB.
-        /// </summary>
         public async Task<IActionResult> Index(long gameId, string searchString, string sortOrder)
         {
             if (gameId <= 0) return NotFound();
@@ -69,22 +62,22 @@ namespace praca_dyplomowa_zesp.Controllers
             ViewData["CurrentFilter"] = searchString;
             ViewData["CurrentSort"] = sortOrder;
 
-            // Weryfikacja struktury gry w IGDB (przekierowania do wersji nadrzędnych)
             var gameQuery = $"fields name, parent_game, version_parent, category, collections.id; where id = {gameId}; limit 1;";
             var gameJsonResponse = await _igdbClient.ApiRequestAsync("games", gameQuery);
             var gameDetails = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
 
             if (gameDetails == null) return NotFound();
 
+            //przekierowanie do gry matki jesli aktualne id to tylko dodatek lub inna wersja
             if (gameDetails.Parent_game.HasValue)
                 return RedirectToAction(nameof(Index), new { gameId = gameDetails.Parent_game.Value });
 
             if (gameDetails.Version_parent.HasValue)
                 return RedirectToAction(nameof(Index), new { gameId = gameDetails.Version_parent.Value });
 
-            // Obsługa kolekcji i dopasowanie głównej gry
             if (gameDetails.Category != 0 && gameDetails.Collections != null && gameDetails.Collections.Any())
             {
+                //proba odnalezienia glownej gry w obrebie tej samej kolekcji
                 var collectionId = gameDetails.Collections.First().Id;
                 var collectionQuery = $"fields id, name; where collections = ({collectionId}) & category = 0; limit 50;";
                 var collectionJson = await _igdbClient.ApiRequestAsync("games", collectionQuery);
@@ -101,7 +94,7 @@ namespace praca_dyplomowa_zesp.Controllers
             bool canSeeAllPending = User.IsInRole("Admin") || User.IsInRole("Moderator");
             bool isInLibrary = currentUserId != Guid.Empty && await _context.GamesInLibraries.AnyAsync(g => g.UserId == currentUserId && g.IgdbGameId == gameId);
 
-            // Pobieranie poradników z uwzględnieniem uprawnień (Publiczne / Autor / Administracja)
+            //selekcja poradnikow ktore sa zatwierdzone lub naleza do zalogowanego uzytkownika
             var guidesQuery = _context.Guides
                 .Include(g => g.User)
                 .Include(g => g.Rates)
@@ -116,7 +109,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             var guidesList = await guidesQuery.ToListAsync();
 
-            // Sortowanie wyników w pamięci
+            //reczne sortowanie pobranej listy w zaleznosci od wybranego parametru
             guidesList = sortOrder switch
             {
                 "mine" => currentUserId != Guid.Empty
@@ -144,9 +137,6 @@ namespace praca_dyplomowa_zesp.Controllers
             });
         }
 
-        /// <summary>
-        /// Wyświetla pełną treść poradnika wraz z ocenami i sekcją komentarzy.
-        /// </summary>
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -156,6 +146,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Include(g => g.Rates)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
+            //blokada dostepu do usunietych poradnikow dla zwyklych uzytkownikow
             if (guide == null || (guide.IsDeleted && !User.IsInRole("Admin") && !User.IsInRole("Moderator")))
                 return NotFound();
 
@@ -226,7 +217,7 @@ namespace praca_dyplomowa_zesp.Controllers
             guide.UserId = user.Id;
             guide.CreatedAt = DateTime.Now;
 
-            // Zarządzanie statusem poradnika (Szkic vs Publikacja)
+            //nadanie statusu szkicu lub wyslanie do zatwierdzenia przez administracje
             if (action == "draft")
             {
                 guide.IsDraft = true;
@@ -236,12 +227,14 @@ namespace praca_dyplomowa_zesp.Controllers
             else
             {
                 guide.IsDraft = false;
+                //automatyczne zatwierdzenie tresci jesli autorem jest admin lub moderator
                 guide.IsApproved = User.IsInRole("Admin") || User.IsInRole("Moderator");
                 TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano poradnik!" : "Przesłano do akceptacji.";
             }
 
             using (var memoryStream = new MemoryStream())
             {
+                //konwersja pliku graficznego na bajty do zapisu w bazie danych
                 await coverImageFile.CopyToAsync(memoryStream);
                 guide.CoverImage = memoryStream.ToArray();
                 guide.CoverImageContentType = coverImageFile.ContentType;
@@ -284,7 +277,6 @@ namespace praca_dyplomowa_zesp.Controllers
             bool isAdminOrMod = User.IsInRole("Admin") || User.IsInRole("Moderator");
             if (existingGuide.UserId != GetCurrentUserId() && !isAdminOrMod) return Forbid();
 
-            // Aktualizacja metadanych
             guide.UserId = existingGuide.UserId;
             guide.CreatedAt = existingGuide.CreatedAt;
             guide.UpdatedAt = DateTime.Now;
@@ -307,6 +299,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (existingGuide.IsDraft || existingGuide.IsRejected)
                 {
+                    //ponowne wyslanie do akceptacji po poprawkach autora
                     guide.IsApproved = isAdminOrMod;
                     TempData["StatusMessage"] = guide.IsApproved ? "Opublikowano!" : "Przesłano do ponownej akceptacji.";
                 }
@@ -326,6 +319,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
             else
             {
+                //zachowanie starej okladki jesli nowa nie zostala przeslana
                 guide.CoverImage = existingGuide.CoverImage;
                 guide.CoverImageContentType = existingGuide.CoverImageContentType;
             }
@@ -362,9 +356,9 @@ namespace praca_dyplomowa_zesp.Controllers
 
             long gameId = guide.IgdbGameId;
 
-            // Logika usuwania: Zatwierdzone trafiają do kosza (Soft), pozostałe usuwane są trwale
             if (guide.IsApproved)
             {
+                //miekkie usuwanie dla tresci publicznych (przeniesienie do kosza)
                 guide.IsDeleted = true;
                 guide.DeletedAt = DateTime.Now;
                 _context.Update(guide);
@@ -372,6 +366,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
             else
             {
+                //trwale usuwanie szkicow i tresci niezaakceptowanych
                 _context.Guides.Remove(guide);
                 TempData["StatusMessage"] = "Poradnik został trwale usunięty.";
             }
@@ -438,6 +433,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (tip.UserId != GetCurrentUserId() && !User.IsInRole("Admin") && !User.IsInRole("Moderator")) return Forbid();
 
             long gameId = tip.IgdbGameId;
+            //usuniecie wszystkich powiazanych reakcji przed usunieciem wskazowki
             if (tip.Reactions != null && tip.Reactions.Any()) _context.Reactions.RemoveRange(tip.Reactions);
 
             _context.Tips.Remove(tip);
@@ -462,6 +458,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (reaction != null)
             {
+                //usuniecie reakcji jesli uzytkownik kliknal w ten sam typ ponownie
                 if (reaction.Type == targetType) _context.Reactions.Remove(reaction);
                 else { reaction.Type = targetType; _context.Update(reaction); }
             }
@@ -485,6 +482,7 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (request == null) return BadRequest();
 
+            //normalizacja oceny do skali 1-5 z krokiem co 0.5
             double val = Math.Clamp(request.RatingValue, 1, 5);
             val = Math.Round(val * 2, MidpointRounding.AwayFromZero) / 2;
 
@@ -548,6 +546,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null || IsUserMuted(user)) return Forbid();
 
+            //wspolna logika reakcji dla komentarzy glownych oraz odpowiedzi
             Reaction reaction = commentId.HasValue
                 ? await _context.Reactions.FirstOrDefaultAsync(r => r.CommentId == commentId.Value && r.UserId == user.Id)
                 : await _context.Reactions.FirstOrDefaultAsync(r => r.ReplyId == replyId.Value && r.UserId == user.Id);
@@ -578,6 +577,7 @@ namespace praca_dyplomowa_zesp.Controllers
             if (guide == null) return NotFound();
 
             var viewModel = new GuideDetailsViewModel { Guide = guide, AverageRating = guide.Rates.Any() ? guide.Rates.Average(r => r.Value) : 0 };
+            //generowanie pliku pdf na podstawie dedykowanego widoku html
             return new ViewAsPdf("DetailsPdf", viewModel)
             {
                 FileName = $"Poradnik_{guide.Title}.pdf",
@@ -599,6 +599,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             _context.Update(guide);
             await _context.SaveChangesAsync();
+            //powrot do strony z ktorej przyszlo zadanie zatwierdzenia
             return Redirect(Request.Headers["Referer"].ToString());
         }
 

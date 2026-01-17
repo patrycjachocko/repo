@@ -15,10 +15,6 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler obs³uguj¹cy stronê g³ówn¹ aplikacji. 
-    /// Odpowiada za wyœwietlanie gier z biblioteki u¿ytkownika oraz zestawienia popularnych tytu³ów.
-    /// </summary>
     public class HomeController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -27,6 +23,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
         public HomeController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager)
         {
+            //przypisanie wstrzyknietych serwisow do pol prywatnych kontrolera
             _context = context;
             _igdbClient = igdbClient;
             _userManager = userManager;
@@ -34,22 +31,19 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Actions
 
-        /// <summary>
-        /// Wyœwietla stronê g³ówn¹ z dynamicznie generowan¹ list¹ gier (Biblioteka + Popularne).
-        /// </summary>
         public async Task<IActionResult> Index()
         {
             var viewModel = new HomeViewModel();
             var finalGamesList = new List<HomeGameDisplay>();
             var addedIgdbIds = new HashSet<long>();
 
-            // 1. Pobieranie gier z biblioteki zalogowanego u¿ytkownika
             if (User.Identity != null && User.Identity.IsAuthenticated)
             {
+                //pobranie gier nalezacych do biblioteki zalogowanego uzytkownika
                 await AppendUserLibraryGames(finalGamesList, addedIgdbIds);
             }
 
-            // 2. Pobieranie i filtrowanie popularnych gier z IGDB
+            //uzupelnienie listy o globalnie popularne tytuly z zewnetrznego api
             await AppendPopularGames(finalGamesList, addedIgdbIds);
 
             viewModel.Games = finalGamesList;
@@ -61,12 +55,10 @@ namespace praca_dyplomowa_zesp.Controllers
             return View();
         }
 
-        /// <summary>
-        /// Obs³uga b³êdów aplikacji z cache'owaniem wy³¹czonym dla precyzyjnej diagnostyki.
-        /// </summary>
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
+            //wygenerowanie modelu bledu z unikalnym identyfikatorem zadania dla celow diagnostycznych
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
@@ -74,14 +66,12 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Private Methods (Logic)
 
-        /// <summary>
-        /// Pobiera identyfikatory gier z bazy danych u¿ytkownika i uzupe³nia ich metadane z API IGDB.
-        /// </summary>
         private async Task AppendUserLibraryGames(List<HomeGameDisplay> gamesList, HashSet<long> addedIds)
         {
             var userIdString = _userManager.GetUserId(User);
             if (Guid.TryParse(userIdString, out Guid userId))
             {
+                //wyciagniecie z bazy id gier igdb przypisanych do konta
                 var userLibraryIds = await _context.GamesInLibraries
                     .Where(g => g.UserId == userId)
                     .OrderByDescending(g => g.DateAddedToLibrary)
@@ -101,6 +91,7 @@ namespace praca_dyplomowa_zesp.Controllers
                         {
                             foreach (var game in apiGames)
                             {
+                                //dodanie gry do listy glownej i oznaczenie jej jako posiadanej
                                 gamesList.Add(MapToHomeDisplay(game, true));
                                 addedIds.Add(game.Id);
                             }
@@ -110,12 +101,9 @@ namespace praca_dyplomowa_zesp.Controllers
             }
         }
 
-        /// <summary>
-        /// Pobiera listê popularnych gier z IGDB, filtruj¹c dodatki (DLC) i pakiety (Bundles).
-        /// </summary>
         private async Task AppendPopularGames(List<HomeGameDisplay> gamesList, HashSet<long> addedIds)
         {
-            // Zapytanie o gry g³ówne (category 0) z wysok¹ ocen¹ i wymagan¹ ok³adk¹
+            //pobranie najlepiej ocenianych gier z bazy igdb spelniajacych kryteria wiarygodnosci
             string query = "fields name, cover.url, rating, category, version_parent; sort rating desc; " +
                            "where rating != null & cover.url != null & parent_game = null & rating_count > 50; limit 100;";
 
@@ -125,7 +113,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 var popularGames = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse);
                 if (popularGames != null)
                 {
-                    // Filtrowanie in-memory (kategoria, wersje legacy, s³owa kluczowe w nazwie)
+                    //reczne filtrowanie dlc i pakietow w pamieci serwera
                     var filtered = popularGames.Where(g =>
                         g.Category == 0 &&
                         g.Version_parent == null &&
@@ -137,7 +125,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                     foreach (var game in filtered)
                     {
-                        // Dodajemy tylko unikalne gry (jeœli nie ma ich ju¿ z biblioteki) do limitu 30 sztuk
+                        //zapewnienie braku duplikatow miedzy biblioteka a lista popularnych
                         if (!addedIds.Contains(game.Id) && gamesList.Count < 30)
                         {
                             gamesList.Add(MapToHomeDisplay(game, false));
@@ -148,15 +136,13 @@ namespace praca_dyplomowa_zesp.Controllers
             }
         }
 
-        /// <summary>
-        /// Mapuje obiekt z API IGDB na model wyœwietlania strony g³ównej.
-        /// </summary>
         private HomeGameDisplay MapToHomeDisplay(ApiGame apiGame, bool isInLibrary)
         {
             return new HomeGameDisplay
             {
                 IgdbId = apiGame.Id,
                 Name = apiGame.Name,
+                //podmiana parametru w adresie url okladki w celu uzyskania wyzszej jakosci
                 CoverUrl = apiGame.Cover?.Url?.Replace("t_thumb", "t_720p"),
                 IsInLibrary = isInLibrary
             };

@@ -16,10 +16,6 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler odpowiedzialny za przeglądanie bazy gier (IGDB), wyświetlanie szczegółów 
-    /// oraz obsługę systemu ocen i recenzji.
-    /// </summary>
     [AllowAnonymous]
     public class GamesController : Controller
     {
@@ -29,6 +25,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
         public GamesController(ApplicationDbContext context, IGDBClient igdbClient, UserManager<User> userManager)
         {
+            //wstrzykniecie zaleznosci do bazy, klienta api oraz managera uzytkownikow
             _context = context;
             _igdbClient = igdbClient;
             _userManager = userManager;
@@ -36,9 +33,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Game Browsing
 
-        /// <summary>
-        /// Wyświetla listę gier pobraną z API IGDB z uwzględnieniem filtrów ocen i wyszukiwania.
-        /// </summary>
         public async Task<IActionResult> Index(
             string? searchString,
             int page = 1,
@@ -49,13 +43,13 @@ namespace praca_dyplomowa_zesp.Controllers
             bool showCritic = false,
             bool showLocal = false)
         {
-            // Walidacja rozmiaru strony
+            //wymuszenie poprawnego rozmiaru strony z dostepnych opcji
             if (pageSize != 36 && pageSize != 48 && pageSize != 60)
             {
                 pageSize = 60;
             }
 
-            // Domyślne ustawienia filtrów przy pierwszym wejściu
+            //ustawienie domyslnych filtrow przy pierwszym załadowaniu widoku
             if (!isFiltered)
             {
                 showUser = showCritic = showLocal = true;
@@ -64,16 +58,17 @@ namespace praca_dyplomowa_zesp.Controllers
             if (page < 1) page = 1;
             int offset = (page - 1) * pageSize;
 
+            //oczyszczenie frazy wyszukiwania ze znakow specjalnych
             string safeSearch = searchString?.Replace("\"", "").Trim();
             string fields = "fields name, cover.url, rating, aggregated_rating, total_rating, category, version_parent";
             string baseFilter = "where parent_game = null";
 
-            // Określenie priorytetu sortowania w API
+            //wybor pola sortowania na podstawie preferencji ocen w filtrach
             string sortField = "total_rating";
             if (showCritic && !showUser) sortField = "aggregated_rating";
             else if (showUser && !showCritic) sortField = "rating";
 
-            // Pobieranie danych z lekkim nadmiarem dla bufora filtrowania in-memory
+            //zwiekszenie limitu api o bufor na potrzeby pozniejszego filtrowania in-memory
             int apiLimit = pageSize + 40;
             string query = string.IsNullOrEmpty(safeSearch)
                 ? $"{fields}; sort {sortField} desc; {baseFilter} & {sortField} != null & cover.url != null; limit {apiLimit}; offset {offset};"
@@ -84,7 +79,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 ? new List<ApiGame>()
                 : JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
-            // Filtrowanie treści (pomijanie dodatków, paczek itp.)
+            //odfiltrowanie dodatkow, kolekcji i innych elementow niebedacych pełnymi grami
             var filteredGames = gamesFromApi
                 .Where(g => g.Category == 0 && g.Version_parent == null && !string.IsNullOrEmpty(g.Name) &&
                             !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
@@ -94,7 +89,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 .Take(pageSize)
                 .ToList();
 
-            // Pobieranie średnich ocen z lokalnej bazy danych
+            //pobranie lokalnych ocen uzytkownikow dla aktualnie wyswietlanych gier
             Dictionary<long, double> localAverages = new Dictionary<long, double>();
             if (showLocal)
             {
@@ -109,7 +104,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     .ToDictionary(g => g.Key, g => g.Average(r => r.Value));
             }
 
-            // Mapowanie wyników i obliczanie wypadkowej oceny
+            //obliczenie wypadkowej oceny na podstawie wybranych zrodel danych
             var finalGamesList = filteredGames.Select(apiGame =>
             {
                 double sum = 0;
@@ -124,6 +119,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     Id = apiGame.Id,
                     Name = apiGame.Name,
                     Total_rating = count > 0 ? sum / count : null,
+                    //zamiana miniatury okładki na wersje w wysokiej rozdzielczosci
                     Cover = apiGame.Cover != null ? new ApiCover { Url = apiGame.Cover.Url.Replace("t_thumb", "t_cover_big") } : null
                 };
             }).OrderByDescending(g => g.Total_rating ?? -1).ToList();
@@ -146,15 +142,12 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Game Details
 
-        /// <summary>
-        /// Wyświetla szczegółowe informacje o grze, w tym oceny użytkowników i topowe recenzje.
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Details(long id)
         {
             var currentUserId = GetCurrentUserId();
 
-            // Jeśli użytkownik posiada grę w bibliotece, przekieruj do widoku biblioteki
+            //przekierowanie do widoku biblioteki jesli uzytkownik ma juz ta gre dodana
             if (currentUserId != Guid.Empty)
             {
                 var gameInLibrary = await _context.GamesInLibraries
@@ -172,19 +165,19 @@ namespace praca_dyplomowa_zesp.Controllers
             var gameApiData = (JsonConvert.DeserializeObject<List<ApiGame>>(gameJsonResponse) ?? new List<ApiGame>()).FirstOrDefault();
             if (gameApiData == null) return NotFound();
 
-            // Przetwarzanie ocen lokalnych
+            //pobranie personalnej oceny zalogowanego uzytkownika dla tej gry
             var localRates = await _context.GameRates.Where(r => r.IgdbGameId == id).ToListAsync();
             double personalRating = currentUserId != Guid.Empty
                 ? localRates.FirstOrDefault(r => r.UserId == currentUserId)?.Value ?? 0
                 : 0;
 
-            // Pobieranie i sortowanie recenzji (Najlepszy wynik Reactions -> Najnowsze)
             var reviews = await _context.GameReviews
                 .Include(r => r.User)
                 .Include(r => r.Reactions)
                 .Where(r => r.IgdbGameId == id)
                 .ToListAsync();
 
+            //wybor trzech najlepszych recenzji na podstawie bilansu reakcji
             var topReviews = reviews
                 .Select(r => new {
                     Review = r,
@@ -221,14 +214,12 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Steam Integration
 
-        /// <summary>
-        /// Obsługuje przekierowanie z importu Steam, próbując dopasować grę do bazy IGDB.
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> SteamRedirect(string query)
         {
             if (string.IsNullOrEmpty(query)) return RedirectToAction("Index");
 
+            //wyczyszczenie nazwy pochodzacej ze steam w celu lepszego dopasowania w igdb
             string cleanName = CleanSteamGameName(query);
             var igdbQuery = $"fields id, name, category, version_parent, aggregated_rating; search \"{cleanName}\"; where parent_game = null; limit 10;";
 
@@ -237,6 +228,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 var jsonResponse = await _igdbClient.ApiRequestAsync("games", igdbQuery);
                 var games = JsonConvert.DeserializeObject<List<ApiGame>>(jsonResponse) ?? new List<ApiGame>();
 
+                //selekcja najbardziej wiarygodnego kandydata sposrod wynikow wyszukiwania
                 var validCandidates = games.Where(g =>
                     g.Category == 0 && g.Version_parent == null && !string.IsNullOrEmpty(g.Name) &&
                     !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
@@ -253,6 +245,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 Console.WriteLine($"Steam Redirect Error: {ex.Message}");
             }
 
+            //poinformowanie uzytkownika o braku automatycznego dopasowania i przejscie do recznego wyszukiwania
             TempData["ErrorMessage"] = $"Nie udało się automatycznie dopasować gry '{cleanName}'. Spróbuj wyszukać ją ręcznie.";
             return RedirectToAction("Index", new { searchString = cleanName });
         }
@@ -261,9 +254,6 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Rating Actions (AJAX)
 
-        /// <summary>
-        /// Zapisuje lub aktualizuje ocenę gry wystawioną przez zalogowanego użytkownika.
-        /// </summary>
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -271,6 +261,7 @@ namespace praca_dyplomowa_zesp.Controllers
         {
             if (request == null) return BadRequest();
 
+            //zaokraglenie oceny do najblizszej połowy (np. 7.3 -> 7.5)
             double val = Math.Clamp(request.RatingValue, 0.5, 10);
             val = Math.Round(val * 2, MidpointRounding.AwayFromZero) / 2;
 
@@ -285,6 +276,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
             else
             {
+                //dodanie nowej oceny jesli uzytkownik wczesniej nie ocenial tego tytułu
                 _context.GameRates.Add(new Models.Interactions.Rates.GameRate
                 {
                     UserId = userId,
@@ -300,9 +292,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return Ok(new { success = true, newAverage = allRates.Average(r => r.Value), newCount = allRates.Count });
         }
 
-        /// <summary>
-        /// Usuwa ocenę użytkownika oraz powiązane z nią recenzje dla danej gry.
-        /// </summary>
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -316,6 +305,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (rating != null) _context.GameRates.Remove(rating);
 
+            //automatyczne usuniecie recenzji przy cofaniu oceny gry
             var reviews = await _context.GameReviews
                 .Where(r => r.UserId == userId && r.IgdbGameId == request.IgdbGameId)
                 .ToListAsync();
@@ -334,6 +324,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
         private Guid GetCurrentUserId()
         {
+            //bezpieczne pobranie identyfikatora guid zalogowanego uzytkownika
             var userIdString = _userManager.GetUserId(User);
             return Guid.TryParse(userIdString, out Guid userId) ? userId : Guid.Empty;
         }
@@ -341,6 +332,7 @@ namespace praca_dyplomowa_zesp.Controllers
         private string CleanSteamGameName(string name)
         {
             if (string.IsNullOrEmpty(name)) return "";
+            //usuwanie symboli handlowych utrudniajacych wyszukiwanie w api
             return name.Replace("\"", "").Replace("™", "").Replace("®", "").Replace("©", "").Trim();
         }
 

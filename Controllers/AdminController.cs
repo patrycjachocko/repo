@@ -15,10 +15,6 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler administracyjny zarządzający użytkownikami, treściami (poradnikami) 
-    /// oraz systemem zgłoszeń technicznych (ticketów).
-    /// </summary>
     [Authorize(Roles = "Admin,Moderator")]
     public class AdminController : Controller
     {
@@ -27,15 +23,14 @@ namespace praca_dyplomowa_zesp.Controllers
 
         public AdminController(UserManager<User> userManager, ApplicationDbContext context)
         {
+            //inicjalizacja wstrzyknietych serwisow do pol klasy
             _userManager = userManager;
             _context = context;
         }
 
-        /// <summary>
-        /// Wyświetla główny panel administracyjny z podziałem na sekcje zależne od uprawnień.
-        /// </summary>
         public async Task<IActionResult> Index(string searchString)
         {
+            //przygotowanie pustego modelu panelu administracyjnego
             var model = new AdminPanelViewModel
             {
                 SearchString = searchString,
@@ -45,13 +40,13 @@ namespace praca_dyplomowa_zesp.Controllers
                 Tickets = new List<Ticket>()
             };
 
-            // Sekcja zarządzania użytkownikami - dostępna tylko dla Administratora
             if (User.IsInRole("Admin"))
             {
                 var usersQuery = _userManager.Users.AsQueryable();
 
                 if (!string.IsNullOrEmpty(searchString))
                 {
+                    //filtrowanie listy uzytkownikow po nazwie lub adresie email
                     usersQuery = usersQuery.Where(u => u.UserName.Contains(searchString) || u.Email.Contains(searchString));
                 }
 
@@ -59,6 +54,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 foreach (var user in usersList)
                 {
+                    //mapowanie danych uzytkownika na obiekt dto z uwzglednieniem rol i blokad
                     model.Users.Add(new AdminUserDto
                     {
                         Id = user.Id,
@@ -74,19 +70,21 @@ namespace praca_dyplomowa_zesp.Controllers
                 }
             }
 
-            // Pobieranie danych dla Moderatora i Administratora
+            //pobieranie poradników oczekujacych na zatwierdzenie przez moderacje
             model.PendingGuides = await _context.Guides
                 .Include(g => g.User)
                 .Where(g => !g.IsApproved && !g.IsDeleted && !g.IsDraft && !g.IsRejected)
                 .OrderBy(g => g.CreatedAt)
                 .ToListAsync();
 
+            //pobieranie elementow oznaczonych jako usuniete (kosz)
             model.DeletedGuides = await _context.Guides
                 .Include(g => g.User)
                 .Where(g => g.IsDeleted)
                 .OrderBy(g => g.DeletedAt)
                 .ToListAsync();
 
+            //pobranie wszystkich zgloszen technicznych od najnowszych
             model.Tickets = await _context.Tickets
                 .Include(t => t.User)
                 .OrderByDescending(t => t.CreatedAt)
@@ -103,6 +101,7 @@ namespace praca_dyplomowa_zesp.Controllers
         public async Task<IActionResult> ToggleModerator(Guid userId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
+            //blokada modyfikacji wlasnego konta oraz glownego konta admin
             if (user == null || user.UserName == "Admin" || user.UserName == User.Identity.Name)
             {
                 TempData["Error"] = "Nie można zmienić uprawnień tego użytkownika.";
@@ -111,12 +110,14 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (await _userManager.IsInRoleAsync(user, "Moderator"))
             {
+                //odebranie uprawnien moderatora i przywrocenie roli zwyklego uzytkownika
                 await _userManager.RemoveFromRoleAsync(user, "Moderator");
                 user.Role = "User";
                 TempData["Success"] = $"Odebrano uprawnienia Moderatora użytkownikowi {user.UserName}.";
             }
             else
             {
+                //nadanie uprawnien moderatorskich
                 await _userManager.AddToRoleAsync(user, "Moderator");
                 user.Role = "Moderator";
                 TempData["Success"] = $"Nadano uprawnienia Moderatora użytkownikowi {user.UserName}.";
@@ -140,6 +141,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (days > 0)
             {
+                //nakladanie blokady czasowej logowania przy uzyciu mechanizmu identity lockout
                 var banUntil = DateTimeOffset.Now.AddDays(days);
                 await _userManager.SetLockoutEndDateAsync(user, banUntil);
                 await _userManager.SetLockoutEnabledAsync(user, true);
@@ -148,6 +150,7 @@ namespace praca_dyplomowa_zesp.Controllers
             }
             else
             {
+                //zdjecie blokady logowania
                 await _userManager.SetLockoutEndDateAsync(user, null);
                 user.BanReason = null;
                 TempData["Success"] = $"Użytkownik {user.UserName} został odbanowany.";
@@ -167,12 +170,14 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (hours > 0)
             {
+                //ustawienie flagi blokujacej mozliwosc publikowania tresci
                 user.BanEnd = DateTimeOffset.Now.AddHours(hours);
                 user.isBanned = true;
                 TempData["Success"] = $"Użytkownik {user.UserName} został wyciszony na {hours} godzin.";
             }
             else
             {
+                //odblokowanie interakcji uzytkownika
                 user.BanEnd = null;
                 user.isBanned = false;
                 TempData["Success"] = $"Użytkownik {user.UserName} został odciszony.";
@@ -193,6 +198,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var guide = await _context.Guides.FindAsync(id);
             if (guide == null) return NotFound();
 
+            //zatwierdzenie poradnika sprawia ze staje sie widoczny publicznie
             guide.IsApproved = true;
             _context.Update(guide);
             await _context.SaveChangesAsync();
@@ -208,6 +214,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var guide = await _context.Guides.FindAsync(id);
             if (guide == null) return NotFound();
 
+            //oznaczenie poradnika jako odrzucony wraz z zapisem powodu dla autora
             guide.IsRejected = true;
             guide.RejectionReason = reason;
             guide.IsApproved = false;
@@ -227,6 +234,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var guide = await _context.Guides.FindAsync(id);
             if (guide != null)
             {
+                //cofniecie miekkiego usuniecia i przywrocenie elementu z kosza
                 guide.IsDeleted = false;
                 guide.DeletedAt = null;
                 _context.Update(guide);
@@ -243,6 +251,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var guide = await _context.Guides.FindAsync(id);
             if (guide != null)
             {
+                //calkowite usuniecie rekordu z bazy danych
                 _context.Guides.Remove(guide);
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Poradnik został usunięty permanentnie.";
@@ -253,6 +262,7 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpPost]
         public async Task<IActionResult> EmptyTrash()
         {
+            //zbiorowe usuwanie wszystkich poradnikow znajdujacych sie w koszu
             var trashGuides = await _context.Guides.Where(g => g.IsDeleted).ToListAsync();
             if (trashGuides.Any())
             {
@@ -270,6 +280,7 @@ namespace praca_dyplomowa_zesp.Controllers
         [HttpGet]
         public async Task<IActionResult> TicketDetails(int id)
         {
+            //pobranie zgloszenia wraz z pelna historia wiadomosci i zalacznikami
             var ticket = await _context.Tickets
                 .Include(t => t.User)
                 .Include(t => t.Messages)
@@ -282,6 +293,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (ticket.HasUnreadMessage)
             {
+                //resetowanie powiadomienia o nowej wiadomosci po wejsciu w detale
                 ticket.HasUnreadMessage = false;
                 await _context.SaveChangesAsync();
             }
@@ -299,6 +311,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
             if (!string.IsNullOrWhiteSpace(message) || (attachments != null && attachments.Any()))
             {
+                //tworzenie nowej wiadomosci od personelu pomocniczego
                 var msg = new TicketMessage
                 {
                     TicketId = id,
@@ -313,9 +326,11 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (attachments != null && attachments.Any())
                 {
+                    //zapisywanie plikow przeslanych w odpowiedzi admina
                     await ProcessTicketAttachments(msg.Id, attachments);
                 }
 
+                //zmiana statusu zgloszenia na aktywne po udzieleniu odpowiedzi
                 ticket.HasUnreadResponse = true;
                 if (ticket.Status == TicketStatus.Oczekujące) ticket.Status = TicketStatus.W_trakcie;
 
@@ -331,6 +346,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var ticket = await _context.Tickets.FindAsync(id);
             if (ticket == null) return NotFound();
 
+            //reczna aktualizacja statusu zgloszenia przez moderatora
             ticket.Status = status;
             if (status == TicketStatus.Zamknięte) ticket.ClosedAt = DateTime.Now;
 
@@ -344,6 +360,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var ticket = await _context.Tickets.FindAsync(id);
             if (ticket == null) return NotFound();
 
+            //szybkie zamkniecie zgloszenia i odnotowanie czasu zakonczenia
             ticket.Status = TicketStatus.Zamknięte;
             ticket.ClosedAt = DateTime.Now;
             ticket.HasUnreadMessage = false;
@@ -358,6 +375,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
         private string GetUserAvatar(User user)
         {
+            //konwersja obrazu binarnego na format base64 do wyswietlenia w przegladarce
             return user.ProfilePicture != null
                 ? $"data:{user.ProfilePictureContentType};base64,{Convert.ToBase64String(user.ProfilePicture)}"
                 : "/uploads/avatars/default_avatar.png";
@@ -371,6 +389,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 {
                     using (var ms = new MemoryStream())
                     {
+                        //przetwarzanie pliku na tablice bajtow do zapisu w bazie
                         await file.CopyToAsync(ms);
                         var att = new TicketAttachment
                         {
@@ -388,6 +407,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
         private IActionResult RedirectToReferer()
         {
+            //pobranie adresu poprzedniej strony z naglowkow zapytania http
             var referer = Request.Headers["Referer"].ToString();
             return !string.IsNullOrEmpty(referer) ? Redirect(referer) : RedirectToAction(nameof(Index));
         }

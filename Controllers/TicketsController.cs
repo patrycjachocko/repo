@@ -13,10 +13,6 @@ using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {
-    /// <summary>
-    /// Kontroler obsługujący system zgłoszeń (support ticket) od strony użytkownika.
-    /// Umożliwia tworzenie zgłoszeń, przeglądanie historii oraz wysyłanie odpowiedzi z załącznikami.
-    /// </summary>
     [Authorize]
     public class TicketsController : Controller
     {
@@ -25,19 +21,18 @@ namespace praca_dyplomowa_zesp.Controllers
 
         public TicketsController(ApplicationDbContext context, UserManager<User> userManager)
         {
+            //przypisanie wstrzyknietych serwisow do pol klasy
             _context = context;
             _userManager = userManager;
         }
 
         #region Actions
 
-        /// <summary>
-        /// Wyświetla listę wszystkich zgłoszeń należących do zalogowanego użytkownika.
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
+            //pobranie wszystkich zgloszen uzytkownika posortowanych od najnowszych
             var tickets = await _context.Tickets
                 .Where(t => t.UserId == user.Id)
                 .OrderByDescending(t => t.CreatedAt)
@@ -46,32 +41,28 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(tickets);
         }
 
-        /// <summary>
-        /// Wyświetla formularz tworzenia nowego zgłoszenia.
-        /// </summary>
         [HttpGet]
         public IActionResult Create()
         {
             return View();
         }
 
-        /// <summary>
-        /// Przetwarza formularz nowego zgłoszenia wraz z opcjonalnymi załącznikami graficznymi.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Ticket ticket, List<IFormFile> attachments)
         {
             var user = await _userManager.GetUserAsync(User);
 
-            // Usunięcie walidacji dla pól przypisywanych ręcznie w kontrolerze
+            //reczne usuniecie zbednych pol z walidacji modelu
             ModelState.Remove(nameof(Ticket.User));
             ModelState.Remove(nameof(Ticket.UserId));
 
+            //uruchomienie pomocniczej walidacji typow plikow
             ValidateAttachments(attachments);
 
             if (ModelState.IsValid)
             {
+                //inicjalizacja danych startowych dla nowego ticketu
                 ticket.UserId = user.Id;
                 ticket.CreatedAt = DateTime.Now;
                 ticket.Status = TicketStatus.Oczekujące;
@@ -82,6 +73,7 @@ namespace praca_dyplomowa_zesp.Controllers
 
                 if (attachments != null && attachments.Any())
                 {
+                    //stworzenie powiazanej wiadomosci w celu przypisania do niej zalacznikow
                     var initialMessage = new TicketMessage
                     {
                         TicketId = ticket.Id,
@@ -94,6 +86,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     _context.TicketMessages.Add(initialMessage);
                     await _context.SaveChangesAsync();
 
+                    //procesowanie i zapis plikow binarnych w bazie
                     await ProcessAndSaveAttachments(initialMessage.Id, attachments);
                 }
 
@@ -104,15 +97,13 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(ticket);
         }
 
-        /// <summary>
-        /// Wyświetla szczegóły konkretnego zgłoszenia wraz z historią wiadomości.
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
+            //pobranie zgloszenia z pelnym drzewem zaleznosci i wiadomosciami
             var ticket = await _context.Tickets
                 .Include(t => t.User)
                 .Include(t => t.Messages)
@@ -121,14 +112,15 @@ namespace praca_dyplomowa_zesp.Controllers
                     .ThenInclude(m => m.Attachments)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
+            //zabezpieczenie przed proby odczytu cudzych zgloszen
             if (ticket == null || ticket.UserId != user.Id)
             {
                 return NotFound();
             }
 
-            // Oznaczanie odpowiedzi od personelu jako przeczytanej przez użytkownika
             if (ticket.HasUnreadResponse)
             {
+                //reset flagi nowej wiadomosci po wejsciu uzytkownika w detale
                 ticket.HasUnreadResponse = false;
                 await _context.SaveChangesAsync();
             }
@@ -136,9 +128,6 @@ namespace praca_dyplomowa_zesp.Controllers
             return View(ticket);
         }
 
-        /// <summary>
-        /// Dodaje nową wiadomość użytkownika do istniejącego zgłoszenia.
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reply(int id, string message, List<IFormFile> attachments)
@@ -147,6 +136,7 @@ namespace praca_dyplomowa_zesp.Controllers
             var user = await _userManager.GetUserAsync(User);
 
             if (ticket == null || ticket.UserId != user.Id) return NotFound();
+            //blokada mozliwosci dopisywania wiadomosci do zgloszen oznaczonych jako zamkniete
             if (ticket.Status == TicketStatus.Zamknięte) return RedirectToAction(nameof(Details), new { id });
 
             if (!string.IsNullOrWhiteSpace(message) || (attachments != null && attachments.Any()))
@@ -168,6 +158,7 @@ namespace praca_dyplomowa_zesp.Controllers
                     await ProcessAndSaveAttachments(newMessage.Id, attachments);
                 }
 
+                //ustawienie powiadomienia dla personelu o nowej tresci od uzytkownika
                 ticket.HasUnreadMessage = true;
                 await _context.SaveChangesAsync();
             }
@@ -179,28 +170,24 @@ namespace praca_dyplomowa_zesp.Controllers
 
         #region Private Helpers
 
-        /// <summary>
-        /// Sprawdza, czy przesłane załączniki mają dozwolone rozszerzenia graficzne.
-        /// </summary>
         private void ValidateAttachments(List<IFormFile> attachments)
         {
             if (attachments == null || !attachments.Any()) return;
 
+            //definicja wspieranych formatow graficznych
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
             foreach (var file in attachments)
             {
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
                 if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
                 {
+                    //dodanie bledu do stanu modelu jesli wykryto niebezpieczny plik
                     ModelState.AddModelError("attachments",
                         $"Plik {file.FileName} ma niedozwolone rozszerzenie. Dozwolone formaty: jpg, png, gif.");
                 }
             }
         }
 
-        /// <summary>
-        /// Konwertuje pliki przesłane przez formularz na format binarny i zapisuje je w bazie danych.
-        /// </summary>
         private async Task ProcessAndSaveAttachments(int messageId, List<IFormFile> files)
         {
             foreach (var file in files)
@@ -208,6 +195,7 @@ namespace praca_dyplomowa_zesp.Controllers
                 if (file.Length > 0)
                 {
                     using var memoryStream = new MemoryStream();
+                    //zapisanie strumienia pliku do tablicy bajtow
                     await file.CopyToAsync(memoryStream);
 
                     var attachment = new TicketAttachment
