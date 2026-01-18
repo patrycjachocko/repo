@@ -1,9 +1,9 @@
 ﻿using praca_dyplomowa_zesp.Models.Interactions.Comments;
-using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
-using praca_dyplomowa_zesp.Models.Users;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using praca_dyplomowa_zesp.Models.Modules.Games;
+using praca_dyplomowa_zesp.Models.Modules.Guides;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Models.Interactions.Reactions
 {

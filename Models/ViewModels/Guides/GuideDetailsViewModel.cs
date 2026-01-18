@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
+using praca_dyplomowa_zesp.Models.Modules.Guides;
 
-namespace praca_dyplomowa_zesp.Models.Modules.Guides
+namespace praca_dyplomowa_zesp.Models.ViewModels.Guides
 {
     public class GuideDetailsViewModel
     {

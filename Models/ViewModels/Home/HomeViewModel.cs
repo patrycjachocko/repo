@@ -1,4 +1,4 @@
-﻿namespace praca_dyplomowa_zesp.Models.Modules.Home
+﻿namespace praca_dyplomowa_zesp.Models.ViewModels.Home
 {
     public class HomeViewModel
     {

@@ -1,8 +1,9 @@
-﻿@using praca_dyplomowa_zesp.Models.Interactions.Reactions
-@using Microsoft.AspNetCore.Identity
-@using praca_dyplomowa_zesp.Models.Users
+﻿@using Microsoft.AspNetCore.Identity
+@using praca_dyplomowa_zesp.Models.Interactions.Reactions
+@using praca_dyplomowa_zesp.Models.Modules.Users
+@using praca_dyplomowa_zesp.Models.ViewModels.Guides
 @inject UserManager<User> UserManager
-@model praca_dyplomowa_zesp.Models.Modules.Guides.GuidesViewModel
+@model GuidesViewModel
 
 @{
     ViewData["Title"] = $"{Model.GameName} - Poradniki";

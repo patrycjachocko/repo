@@ -5,16 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using praca_dyplomowa_zesp.Models.API;
-using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
-using praca_dyplomowa_zesp.Models.Users;
-using praca_dyplomowa_zesp.Models.ViewModels;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using praca_dyplomowa_zesp.Services;
 using praca_dyplomowa_zesp.Data;
+using praca_dyplomowa_zesp.Models.ViewModels.Users;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

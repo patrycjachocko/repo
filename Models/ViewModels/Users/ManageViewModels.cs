@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace praca_dyplomowa_zesp.Models.Users
+namespace praca_dyplomowa_zesp.Models.ViewModels.Users
 {
     // Ten plik zawiera ViewModele używane na stronie profilu i w oknach modalnych
 

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary
+namespace praca_dyplomowa_zesp.Models.Modules.Libraries
 {
     public class ToDoItem
     {

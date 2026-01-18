@@ -1,4 +1,4 @@
-﻿namespace praca_dyplomowa_zesp.Models.ViewModels
+﻿namespace praca_dyplomowa_zesp.Models.ViewModels.Games
 {
     public class GameRatingViewModel
     {

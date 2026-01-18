@@ -2,7 +2,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace praca_dyplomowa_zesp.Models.Users
+namespace praca_dyplomowa_zesp.Models.Modules.Users
 {
     public class User : IdentityUser<Guid>
     {

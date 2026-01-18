@@ -2,16 +2,16 @@ using Microsoft.AspNetCore.Mvc;
 using praca_dyplomowa_zesp.Models;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Identity;
-using praca_dyplomowa_zesp.Models.Users;
 using praca_dyplomowa_zesp.Models.API;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using praca_dyplomowa_zesp.Models.Modules.Home;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using praca_dyplomowa_zesp.Data;
+using praca_dyplomowa_zesp.Models.ViewModels.Home;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

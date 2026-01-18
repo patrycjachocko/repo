@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace praca_dyplomowa_zesp.Models.Users
+namespace praca_dyplomowa_zesp.Models.ViewModels.Users
 {
     // Ten plik powinien być oddzielny od User.cs
     public class ProfileViewModel

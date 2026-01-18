@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using praca_dyplomowa_zesp.Models.Users;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +9,7 @@ using System.Linq;
 using praca_dyplomowa_zesp.Services;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Data;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

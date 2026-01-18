@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa_zesp.Data;
 using praca_dyplomowa_zesp.Models;
-using praca_dyplomowa_zesp.Models.Users;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 using System;
 using System.Collections.Generic;
 using System.IO;

@@ -1,23 +1,18 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using praca_dyplomowa_zesp.Models.API;
 using Microsoft.AspNetCore.Identity;
-using praca_dyplomowa_zesp.Models.Users;
 using Microsoft.AspNetCore.Authorization;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using System.IO;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
-using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using Rotativa.AspNetCore;
-using Microsoft.AspNetCore.Http;
 using praca_dyplomowa_zesp.Data;
+using praca_dyplomowa_zesp.Models.Modules.Users;
+using praca_dyplomowa_zesp.Models.ViewModels.Guides;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

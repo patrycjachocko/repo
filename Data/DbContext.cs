@@ -6,12 +6,11 @@ using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
-using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
-using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
 using praca_dyplomowa_zesp.Models.Modules.Games; // Dodano namespace
-using praca_dyplomowa_zesp.Models.Users;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using praca_dyplomowa_zesp.Models.Modules.Libraries;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Data
 {

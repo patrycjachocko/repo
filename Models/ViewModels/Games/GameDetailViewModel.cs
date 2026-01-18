@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using praca_dyplomowa_zesp.Models.ViewModels; // Do GameRatingViewModel
+using praca_dyplomowa_zesp.Models.Modules.Games;
 
-namespace praca_dyplomowa_zesp.Models.Modules.Games
+namespace praca_dyplomowa_zesp.Models.ViewModels.Games
 {
     public class GameDetailViewModel
     {

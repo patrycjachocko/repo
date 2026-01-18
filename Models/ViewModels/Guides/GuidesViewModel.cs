@@ -1,8 +1,7 @@
 ﻿using praca_dyplomowa_zesp.Models.Modules.Guides;
-using praca_dyplomowa_zesp.Models.Modules.Guides.Tips;
 using System.Collections.Generic;
 
-namespace praca_dyplomowa_zesp.Models.Modules.Guides
+namespace praca_dyplomowa_zesp.Models.ViewModels.Guides
 {
     public class GuidesViewModel
     {

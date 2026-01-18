@@ -5,16 +5,12 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Modules.Libraries;
-using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
-using praca_dyplomowa_zesp.Models.Users;
-using praca_dyplomowa_zesp.Models.ViewModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using praca_dyplomowa_zesp.Models.ViewModels.Libraries;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using praca_dyplomowa_zesp.Services;
 using praca_dyplomowa_zesp.Data;
+using praca_dyplomowa_zesp.Models.Modules.Users;
+using praca_dyplomowa_zesp.Models.ViewModels.Games;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

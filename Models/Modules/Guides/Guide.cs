@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
-using praca_dyplomowa_zesp.Models.Users;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {

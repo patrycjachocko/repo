@@ -1,6 +1,6 @@
-﻿using praca_dyplomowa_zesp.Models.Users;
-using System.ComponentModel.DataAnnotations;
-using System; // Potrzebne dla Guid
+﻿using System.ComponentModel.DataAnnotations;
+using System;
+using praca_dyplomowa_zesp.Models.Modules.Users; // Potrzebne dla Guid
 
 public class UserAchievement
 {

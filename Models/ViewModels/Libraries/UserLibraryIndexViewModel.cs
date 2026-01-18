@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary
+namespace praca_dyplomowa_zesp.Models.ViewModels.Libraries
 {
     public class UserLibraryIndexViewModel
     {

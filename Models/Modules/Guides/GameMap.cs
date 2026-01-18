@@ -1,4 +1,4 @@
-﻿using praca_dyplomowa_zesp.Models.Users;
+﻿using praca_dyplomowa_zesp.Models.Modules.Users;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 

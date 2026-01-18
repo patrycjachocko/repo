@@ -1,5 +1,5 @@
-﻿using praca_dyplomowa_zesp.Models.Modules.Libraries.UserLibrary;
-using praca_dyplomowa_zesp.Models.Users;
+﻿using praca_dyplomowa_zesp.Models.Modules.Libraries;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 using System;
 using System.ComponentModel.DataAnnotations;
 
