@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic; // Potrzebne do ICollection
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using praca_dyplomowa_zesp.Models.Interactions.Reactions; // Using do Reaction
+using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Models.Modules.Guides
 {
-    public class Tip
+    public class Tip //model krótkiej wskazówki publikowanej przez społeczność graczy
     {
         [Key]
         public int Id { get; set; }
@@ -21,11 +19,9 @@ namespace praca_dyplomowa_zesp.Models.Modules.Guides
         public long IgdbGameId { get; set; }
 
         public Guid UserId { get; set; }
-
         [ForeignKey("UserId")]
         public virtual User? User { get; set; }
 
-        // --- NOWOŚĆ: Lista reakcji ---
         public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
     }
 }

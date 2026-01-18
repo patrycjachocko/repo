@@ -1,12 +1,15 @@
-﻿public class AchievementViewModel
+﻿namespace praca_dyplomowa_zesp.Models.Modules.Libraries
 {
-    /// <summary>
-    /// Unikalne ID osiągnięcia z bazy IGDB. Niezbędne do identyfikacji przy zapisie.
-    /// </summary>
-    public string ExternalId { get; set; } // DODANA WŁAŚCIWOŚĆ
+    public class AchievementViewModel //model widoku prezentujący szczegółowe dane o osiągnięciu w interfejsie
+    {
+        public string ExternalId { get; set; } //unikalny identyfikator osiągnięcia w systemie Steam
 
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string IconUrl { get; set; }
-    public bool IsUnlocked { get; set; }
+        public string Name { get; set; }
+
+        public string Description { get; set; }
+
+        public string IconUrl { get; set; } //adres URL do grafiki reprezentującej dane osiągnięcie
+
+        public bool IsUnlocked { get; set; } //status określający, czy gracz zdobył już dane osiągnięcie
+    }
 }

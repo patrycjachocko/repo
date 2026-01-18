@@ -1,23 +1,24 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System;
-using praca_dyplomowa_zesp.Models.Modules.Users; // Potrzebne dla Guid
+using System.ComponentModel.DataAnnotations.Schema;
+using praca_dyplomowa_zesp.Models.Modules.Users;
 
-public class UserAchievement
+namespace praca_dyplomowa_zesp.Models.Modules.Libraries
 {
-    [Key]
-    public int Id { get; set; }
+    public class UserAchievement //model rejestrujący fakt zdobycia konkretnego osiągnięcia przez gracza
+    {
+        [Key]
+        public int Id { get; set; }
 
-    /// <summary>
-    /// ID użytkownika - musi być tego samego typu co User.Id, czyli Guid
-    /// </summary>
-    public Guid UserId { get; set; } // ZMIANA Z INT NA GUID
-    public virtual User User { get; set; }
+        public Guid UserId { get; set; }
+        [ForeignKey("UserId")]
+        public virtual User User { get; set; }
 
-    [Required]
-    public long IgdbGameId { get; set; }
+        [Required]
+        public long IgdbGameId { get; set; } //identyfikator gry, której dotyczy osiągnięcie
 
-    [Required]
-    public string AchievementExternalId { get; set; }
+        [Required]
+        public string AchievementExternalId { get; set; } //zewnętrzny identyfikator trofeum z Steam API
 
-    public bool IsUnlocked { get; set; }
+        public bool IsUnlocked { get; set; }
+    }
 }

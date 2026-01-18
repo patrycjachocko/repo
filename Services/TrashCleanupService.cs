@@ -1,15 +1,8 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using praca_dyplomowa_zesp.Data; // Twój namespace z DbContext
+﻿using praca_dyplomowa_zesp.Data;
 
 namespace praca_dyplomowa_zesp.Services
 {
-    public class TrashCleanupService : BackgroundService
+    public class TrashCleanupService : BackgroundService //usługa działająca w tle, odpowiedzialna za cykliczne opróżnianie kosza z usuniętymi poradnikami
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<TrashCleanupService> _logger;
@@ -22,7 +15,7 @@ namespace praca_dyplomowa_zesp.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Serwis czyszczenia kosza został uruchomiony.");
+            _logger.LogInformation("Serwis czyszczenia kosza został zainicjalizowany.");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -32,37 +25,37 @@ namespace praca_dyplomowa_zesp.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Błąd podczas automatycznego czyszczenia kosza.");
+                    _logger.LogError(ex, "Wystąpił nieoczekiwany błąd podczas procedury czyszczenia kosza.");
                 }
 
-                // Sprawdzaj co 24 godziny (lub częściej, np. TimeSpan.FromHours(1))
+                //czyszczenie co 24 godziny
                 await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
             }
         }
 
         private async Task CleanTrashAsync()
         {
-            // Musimy utworzyć zakres (scope), bo DbContext jest "Scoped", a BackgroundService jest "Singleton"
+            //tworzenie tymczasowego zakresu (scope) w celu uzyskania dostępu do usług o cyklu życia Scoped (DbContext)
             using (var scope = _serviceProvider.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-                // Data graniczna: 30 dni temu
+                //definicja progu retencji danych: starsze niż 30 dni
                 var thresholdDate = DateTime.Now.AddDays(-30);
 
-                // Pobierz elementy w koszu starsze niż 30 dni
+                //identyfikacja poradników oznaczonych jako usunięte, których termin przechowywania w koszu upłynął
                 var oldGuides = context.Guides
                     .Where(g => g.IsDeleted && g.DeletedAt < thresholdDate)
                     .ToList();
 
                 if (oldGuides.Any())
                 {
-                    _logger.LogInformation($"Znaleziono {oldGuides.Count} starych poradników do usunięcia.");
+                    _logger.LogInformation($"Procedura czyszczenia: wykryto {oldGuides.Count} rekordów do trwałego usunięcia.");
 
                     context.Guides.RemoveRange(oldGuides);
                     await context.SaveChangesAsync();
 
-                    _logger.LogInformation("Kosz został automatycznie oczyszczony.");
+                    _logger.LogInformation("Zasoby kosza zostały pomyślnie zutylizowane.");
                 }
             }
         }

@@ -4,14 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa_zesp.Data;
 using praca_dyplomowa_zesp.Models;
-using praca_dyplomowa_zesp.Models.Modules.Admin;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Modules.Users;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+using praca_dyplomowa_zesp.Models.ViewModels.Admin;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

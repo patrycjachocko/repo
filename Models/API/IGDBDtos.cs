@@ -1,8 +1,5 @@
-﻿using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 internal class AuthToken//klasa przechowująca dane uwierzytelniające z twitch api

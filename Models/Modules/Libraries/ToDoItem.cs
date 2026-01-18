@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace praca_dyplomowa_zesp.Models.Modules.Libraries
 {
-    public class ToDoItem
+    public class ToDoItem //model reprezentujący pojedynczy punkt na liście zadań ("to-do") przypisanej do gry
     {
         [Key]
         public int Id { get; set; }
@@ -14,10 +14,8 @@ namespace praca_dyplomowa_zesp.Models.Modules.Libraries
 
         public bool IsCompleted { get; set; } = false;
 
-        // Relacja do gry w bibliotece
         public int GameInLibraryId { get; set; }
-
         [ForeignKey("GameInLibraryId")]
-        public virtual GameInLibrary GameInLibrary { get; set; } = null!;
+        public virtual GameInLibrary GameInLibrary { get; set; } = null!; //powiązanie z konkretną grą w bibliotece użytkownika
     }
 }

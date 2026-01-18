@@ -5,7 +5,6 @@ using praca_dyplomowa_zesp.Models.API;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
-using System.IO;
 using praca_dyplomowa_zesp.Models.Interactions.Rates;
 using praca_dyplomowa_zesp.Models.Interactions.Comments;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;

@@ -1,14 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using praca_dyplomowa_zesp.Models.API;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.ViewComponents
 {
-    public class PopularGamesViewComponent : ViewComponent
+    public class PopularGamesViewComponent : ViewComponent //komponent odpowiedzialny za generowanie dynamicznej listy najlepiej ocenianych gier
     {
         private readonly IGDBClient _igdbClient;
 
@@ -19,11 +15,12 @@ namespace praca_dyplomowa_zesp.ViewComponents
 
         public async Task<IViewComponentResult> InvokeAsync()
         {
-            // 1. Zapytanie do API
-            // ZMIANA: Używamy 'sort total_rating desc'. 
-            // total_rating to średnia z ocen użytkowników (rating) i krytyków (aggregated_rating).
-            // Dzięki temu dostaniemy "najlepsze" gry ogółem.
-            string query = "fields name, cover.url, total_rating, category, version_parent; sort total_rating desc; where total_rating != null & cover.url != null & parent_game = null; limit 50;";
+            //definicja zapytania: pobieramy gry z ocenami, odrzucając wersje alternatywne, bundle i dodatki
+            //sortowanie po total_rating (średnia krytyków i graczy)
+            string query = "fields name, cover.url, total_rating, category, version_parent; " +
+                           "sort total_rating desc; " +
+                           "where total_rating != null & cover.url != null & parent_game = null; " +
+                           "limit 50;";
 
             List<IGDBGameDtos> games = new List<IGDBGameDtos>();
 
@@ -37,21 +34,22 @@ namespace praca_dyplomowa_zesp.ViewComponents
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd w PopularGamesViewComponent: {ex.Message}");
+                //logowanie błędu komunikacji
+                Console.WriteLine($"[PopularGamesViewComponent] Błąd API: {ex.Message}");
             }
 
-            // 2. Filtrowanie (Bez zmian - odrzucamy śmieci, bundle itp.)
+            //zaawansowane filtrowanie wyników
             var filteredGames = games
                 .Where(g =>
-                    g.Category == 0 &&
-                    g.Version_parent == null &&
+                    g.Category == 0 && //tylko główne wydania
+                    g.Version_parent == null && //pomijamy edycje, które mają bazowego rodzica
                     !string.IsNullOrEmpty(g.Name) &&
-                    !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) &&
+                    !g.Name.Contains("Bundle", StringComparison.OrdinalIgnoreCase) && //eliminacja pakietów zbiorczych
                     !g.Name.Contains("Collection", StringComparison.OrdinalIgnoreCase) &&
                     !g.Name.Contains("Anthology", StringComparison.OrdinalIgnoreCase) &&
                     !g.Name.EndsWith("Pack", StringComparison.OrdinalIgnoreCase)
                 )
-                .Take(10) // Bierzemy top 10 najlepszych
+                .Take(10) //finalny wybór top 10 produkcji do wyświetlenia w liście
                 .ToList();
 
             return View(filteredGames);

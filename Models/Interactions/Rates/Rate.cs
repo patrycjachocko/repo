@@ -5,22 +5,20 @@ using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Models.Interactions.Rates
 {
-    public class Rate
+    public class Rate //model ocen punktowych wystawianych poradnikom przez społeczność
     {
         [Key]
         public Guid Id { get; set; }
 
         [Range(1, 5)]
-        public double Value { get; set; } // Zmieniono na double, aby obsługiwać 3.5, 4.5 itp.
+        public double Value { get; set; } //wartość oceny
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Relacja z Użytkownikiem
         public Guid UserId { get; set; }
         [ForeignKey("UserId")]
-        public virtual User User { get; set; }
+        public virtual User User { get; set; } //powiązanie z kontem wystawiającego ocenę
 
-        // Relacja z Poradnikiem
         public int GuideId { get; set; }
         [ForeignKey("GuideId")]
         public virtual Guide Guide { get; set; }

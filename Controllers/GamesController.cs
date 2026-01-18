@@ -8,11 +8,6 @@ using praca_dyplomowa_zesp.Models.API;
 using praca_dyplomowa_zesp.Models.Interactions.Reactions;
 using praca_dyplomowa_zesp.Models.Modules.Games;
 using praca_dyplomowa_zesp.Models.Modules.Users;
-using praca_dyplomowa_zesp.Models.ViewModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using praca_dyplomowa_zesp.Models.ViewModels.Games;
 
 namespace praca_dyplomowa_zesp.Controllers

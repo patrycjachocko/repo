@@ -1,20 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using praca_dyplomowa_zesp.Models.Modules.Libraries;
 
-public class MainLibraryViewModel
+namespace praca_dyplomowa_zesp.Models.ViewModels.Libraries
 {
-    /// <summary>
-    /// ID wpisu z Twojej lokalnej bazy danych. Niezbędne do linków (Details, Edit, Delete).
-    /// </summary>
-    public int DbId { get; set; } // DODANA WŁAŚCIWOŚĆ
+    public class MainLibraryViewModel //model widoku reprezentujący pojedynczy element gry w zestawieniu głównej biblioteki
+    {
+        public int DbId { get; set; }
 
-    public long IgdbGameId { get; set; }
-    public string Name { get; set; }
-    public string CoverUrl { get; set; }
-    public List<string> Genres { get; set; }
-    public string Developer { get; set; }
-    public string ReleaseDate { get; set; }
-    public List<AchievementViewModel> Achievements { get; set; }
-    public string SystemRequirementsUrl { get; set; }
-    public int ProgressPercent { get; set; }
+        public long IgdbGameId { get; set; }
+
+        public string Name { get; set; }
+
+        public string CoverUrl { get; set; }
+
+        public List<string> Genres { get; set; }
+
+        public string Developer { get; set; }
+
+        public string ReleaseDate { get; set; }
+
+        public List<AchievementViewModel> Achievements { get; set; } //lista osiągnięć powiązanych z danym tytułem (pobierane z API Steam)
+
+        public string SystemRequirementsUrl { get; set; }
+
+        public int ProgressPercent { get; set; } //wizualny wskaźnik ukończenia gry
+    }
 }

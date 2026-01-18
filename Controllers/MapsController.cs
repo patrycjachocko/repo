@@ -5,10 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using praca_dyplomowa_zesp.Data;
 using praca_dyplomowa_zesp.Models.Modules.Guides;
 using praca_dyplomowa_zesp.Models.Modules.Users;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace praca_dyplomowa_zesp.Controllers
 {

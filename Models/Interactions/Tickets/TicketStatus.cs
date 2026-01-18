@@ -1,9 +1,9 @@
 ﻿namespace praca_dyplomowa_zesp.Models
 {
-    public enum TicketStatus
+    public enum TicketStatus //definicja stanów zgłoszenia
     {
-        Oczekujące, // Nowe zgłoszenie
-        W_trakcie,  // Admin nad tym pracuje
-        Zamknięte   // Sprawa rozwiązana
+        Oczekujące,
+        W_trakcie,
+        Zamknięte
     }
 }

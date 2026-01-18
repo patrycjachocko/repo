@@ -2,9 +2,7 @@
 
 namespace praca_dyplomowa_zesp.Models.ViewModels.Users
 {
-    // Ten plik zawiera ViewModele używane na stronie profilu i w oknach modalnych
-
-    public class ChangePasswordViewModel
+    public class ChangePasswordViewModel //model widoku obsługujący zmianę hasła przez użytkownika
     {
         [Required(ErrorMessage = "Obecne hasło jest wymagane.")]
         [DataType(DataType.Password)]

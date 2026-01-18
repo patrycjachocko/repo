@@ -1,16 +1,10 @@
-﻿using System;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
-using System.Linq;
+﻿using System.Text.Json;
 using System.Net;
-using praca_dyplomowa_zesp.Models.API; //dostęp do modeli dto z innego folderu
+using praca_dyplomowa_zesp.Models.API;
 
-namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
+namespace praca_dyplomowa_zesp.Services
 {
-    public class SteamApiService//serwis odpowiedzialny za komunikację z zewnętrznym api steam
+    public class SteamApiService //serwis odpowiedzialny za komunikację z zewnętrznym STEAM API
     {
         private readonly HttpClient _httpClient;
         private readonly string _apiKey;
@@ -21,7 +15,7 @@ namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
             _apiKey = configuration["Steam:ApiKey"];
         }
 
-        public virtual async Task<List<SteamGameDto>> GetUserGamesAsync(string steamId)//pobieranie listy gier przypisanych do konta użytkownika
+        public virtual async Task<List<SteamGameDto>> GetUserGamesAsync(string steamId) //pobieranie listy gier przypisanych do konta steam użytkownika
         {
             var url = $"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={_apiKey}&steamid={steamId}&include_appinfo=true&format=json";
 
@@ -42,7 +36,7 @@ namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
             }
         }
 
-        public virtual async Task<List<SteamAchievementDto>> GetGameAchievementsAsync(string steamId, string appId)//pobieranie stanu osiągnięć gracza w wybranym tytule
+        public virtual async Task<List<SteamAchievementDto>> GetGameAchievementsAsync(string steamId, string appId) //pobieranie stanu osiągnięć gracza w wybranym tytule
         {
             var url = $"http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid={appId}&key={_apiKey}&steamid={steamId}&l=english";
 
@@ -62,7 +56,7 @@ namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
             }
         }
 
-        public virtual async Task<List<SteamAchievementSchemaDto>> GetSchemaForGameAsync(string appId)//pobieranie nazw i ikon osiągnięć ze schematu gry
+        public virtual async Task<List<SteamAchievementSchemaDto>> GetSchemaForGameAsync(string appId) //pobieranie nazw i ikon osiągnięć ze schematu gry
         {
             var url = $"http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={_apiKey}&appid={appId}&l=english";
 
@@ -83,7 +77,7 @@ namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
             }
         }
 
-        public virtual async Task<string> SearchAppIdAsync(string query)//wyszukiwanie id gry w bazie steam na podstawie nazwy tekstowej
+        public virtual async Task<string> SearchAppIdAsync(string query) //wyszukiwanie id gry w bazie steam na podstawie nazwy tekstowej
         {
             if (string.IsNullOrEmpty(query)) return null;
 
@@ -100,7 +94,7 @@ namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
 
                 if (result?.Items != null && result.Items.Any())
                 {
-                    var bestMatch = result.Items.First();//wybór pierwszego wyniku jako najbardziej pasującego
+                    var bestMatch = result.Items.First(); //wybór pierwszego wyniku jako najbardziej pasującego
                     return bestMatch.Id.ToString();
                 }
             }
@@ -111,7 +105,7 @@ namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
             return null;
         }
 
-        public virtual async Task<SteamPlayerSummaryDto?> GetPlayerSummaryAsync(string steamId)//pobieranie danych profilu publicznego gracza
+        public virtual async Task<SteamPlayerSummaryDto?> GetPlayerSummaryAsync(string steamId) //pobieranie danych profilu publicznego gracza
         {
             var url = $"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={_apiKey}&steamids={steamId}";
 
@@ -131,7 +125,7 @@ namespace praca_dyplomowa_zesp.Services//zmiana na folder usług
             }
         }
 
-        public async Task<byte[]> DownloadAvatarAsync(string url)//pobieranie grafiki awatara do zapisu w pamięci lub na dysku
+        public async Task<byte[]> DownloadAvatarAsync(string url) //pobieranie grafiki awatara
         {
             try
             {

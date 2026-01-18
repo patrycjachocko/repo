@@ -4,7 +4,7 @@ using praca_dyplomowa_zesp.Models.Modules.Users;
 
 namespace praca_dyplomowa_zesp.Models
 {
-    public class TicketMessage
+    public class TicketMessage //model reprezentujący pojedynczą wiadomość wewnątrz wątku zgłoszenia
     {
         [Key]
         public int Id { get; set; }
@@ -22,8 +22,8 @@ namespace praca_dyplomowa_zesp.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Czy to wiadomość od pracownika (Admin/Mod)?
-        public bool IsStaffReply { get; set; } = false;
-        public virtual ICollection<TicketAttachment> Attachments { get; set; } = new List<TicketAttachment>();
+        public bool IsStaffReply { get; set; } = false; //oznaczenie czy odpowiedź pochodzi od administratora/moderatora
+
+        public virtual ICollection<TicketAttachment> Attachments { get; set; } = new List<TicketAttachment>(); //lista plików przypisanych do konkretnej wypowiedzi
     }
 }

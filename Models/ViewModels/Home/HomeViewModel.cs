@@ -1,15 +1,9 @@
-﻿namespace praca_dyplomowa_zesp.Models.ViewModels.Home
-{
-    public class HomeViewModel
-    {
-        public List<HomeGameDisplay> Games { get; set; } = new List<HomeGameDisplay>();
-    }
+﻿using praca_dyplomowa_zesp.Models.Modules.Home;
 
-    public class HomeGameDisplay
+namespace praca_dyplomowa_zesp.Models.ViewModels.Home
+{
+    public class HomeViewModel //model widoku strony głównej agregujący listę gier do wyświetlenia w sekcji promowanej
     {
-        public long IgdbId { get; set; }
-        public string Name { get; set; }
-        public string CoverUrl { get; set; }
-        public bool IsInLibrary { get; set; }
+        public List<HomeGameDisplay> Games { get; set; } = new List<HomeGameDisplay>(); //kolekcja gier prezentowanych na swiperze
     }
 }
